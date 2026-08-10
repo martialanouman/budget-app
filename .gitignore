@@ -16,6 +16,7 @@ pb_public/
 # PocketBase — données locales et binaire.
 # pb_migrations/ et pb_hooks/ sont au contraire versionnés (cf. specs techniques §6).
 pb_data/
+bin/
 pocketbase
 pocketbase.exe
 

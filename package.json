@@ -9,6 +9,8 @@
   },
   "scripts": {
     "dev": "pnpm --filter @budget/frontend dev",
+    "pb:install": "./scripts/fetch-pocketbase.sh",
+    "pb:dev": "./bin/pocketbase serve --dev --dir=pb_data --migrationsDir=pb_migrations --hooksDir=pb_hooks --publicDir=pb_public",
     "build": "pnpm --filter @budget/frontend build",
     "typecheck": "pnpm -r --parallel typecheck",
     "lint": "eslint .",
