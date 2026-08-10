@@ -1,0 +1,40 @@
+# macOS
+.DS_Store
+
+# Dépendances
+node_modules/
+
+# Build frontend (copié dans pb_public au déploiement)
+frontend/dist/
+pb_public/
+
+# Environnement
+.env
+.env.*
+!.env.example
+
+# PocketBase — données locales et binaire.
+# pb_migrations/ et pb_hooks/ sont au contraire versionnés (cf. specs techniques §6).
+pb_data/
+pocketbase
+pocketbase.exe
+
+# Litestream
+*.db
+*.db-shm
+*.db-wal
+*.ltx
+
+# Logs et caches d'outillage
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+.vite/
+coverage/
+.eslintcache
+
+# Éditeurs
+.idea/
+.vscode/*
+!.vscode/extensions.json
