@@ -27,6 +27,9 @@ jobs:
       - name: Install chromium for browser-mode journeys
         run: pnpm --filter @budget/frontend exec playwright install --with-deps chromium
 
+      - name: Fetch the pinned PocketBase binary
+        run: pnpm pb:install
+
       - run: pnpm format
       - run: pnpm lint
       - run: pnpm typecheck
