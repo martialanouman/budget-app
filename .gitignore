@@ -8,10 +8,13 @@ node_modules/
 frontend/dist/
 pb_public/
 
-# Environnement
+# Environnement. Les fichiers .env.development et .env.test ne portent que des
+# URLs locales (pas de secret) et doivent être versionnés : la CI en dépend.
 .env
 .env.*
 !.env.example
+!.env.development
+!.env.test
 
 # PocketBase — données locales et binaire.
 # pb_migrations/ et pb_hooks/ sont au contraire versionnés (cf. specs techniques §6).

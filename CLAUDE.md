@@ -59,6 +59,13 @@ On n'écrit pas : tests de composants de présentation, snapshots, tests de gett
 
 Piège vérifié : `Intl` formate les montants XOF avec des espaces insécables (U+202F, U+00A0) dont les points de code dépendent de la version d'ICU embarquée dans Node. Les assertions de format utilisent `\s`, jamais un espace littéral.
 
+## Authentification
+
+- PocketBase **fournit déjà** une collection `users` dont les règles d'accès sont `id = @request.auth.id`. La migration `pb_migrations/1786404350_extend_users_collection.js` ne fait qu'ajouter `settings` et relever le plancher de mot de passe de 8 à 10 (specs §5). Ne pas recréer cette collection.
+- Le routage est **par code** (`frontend/src/router.tsx`), pas par fichiers : à l'échelle prévue, le plugin et le `routeTree.gen.ts` ne s'amortissent pas. `createAppRouter(history?)` accepte un historique mémoire, ce dont les parcours se servent.
+- La garde d'accès lit `pb.authStore.isValid` directement dans `beforeLoad`, sans passer par le contexte du router — une source de vérité unique, pas de synchronisation à tenir.
+- Le client PocketBase pointe sur `VITE_POCKETBASE_URL`, avec `/` par défaut : en production PocketBase sert lui-même la SPA, donc même origine.
+
 ## Contraintes d'outillage
 
 - **TypeScript est figé en 6.0.3**, alors que 7.0.2 (réécriture Go) est le `latest`. Raison : typescript-eslint 8.67 déclare `typescript: >=4.8.4 <6.1.0` et ne supporte pas encore TS 7. Monter TS 7 signifierait perdre le lint type-aware. À réévaluer quand typescript-eslint suivra.
@@ -89,6 +96,8 @@ Toutes se lancent depuis la racine ; le workspace est géré par pnpm.
 
 ```bash
 pnpm install            # requiert Node >= 24
+pnpm pb:install         # récupère le binaire PocketBase épinglé dans bin/
+pnpm pb:dev             # démarre PocketBase sur 127.0.0.1:8090
 pnpm dev                # serveur de développement Vite
 pnpm build              # build du frontend vers pb_public/
 pnpm typecheck          # tsc --noEmit sur chaque paquet, en parallèle
@@ -103,5 +112,9 @@ Pour un seul scénario : `pnpm test:domain -t "formats it as whole francs"`.
 
 Le browser mode exige chromium, à installer une fois :
 `pnpm --filter @budget/frontend exec playwright install chromium`.
+
+Les parcours démarrent eux-mêmes une instance PocketBase jetable sur le port **8091**
+(`frontend/test/pocketbase-server.ts`, en `globalSetup`), avec un `pb_data` temporaire
+supprimé en fin de run. Ils exigent donc `pnpm pb:install` au préalable.
 
 À venir avec les étapes suivantes : démarrage de PocketBase en local, `fly deploy`, et `litestream restore` (à tester une fois par trimestre).

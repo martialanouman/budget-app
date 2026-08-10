@@ -26,6 +26,13 @@ export default tseslint.config(
     },
   },
   {
+    // TanStack Router signals a redirect by throwing a plain object, by design.
+    files: ['frontend/src/router.tsx'],
+    rules: {
+      '@typescript-eslint/only-throw-error': 'off',
+    },
+  },
+  {
     files: ['**/*.config.{js,ts}'],
     extends: [tseslint.configs.disableTypeChecked],
   },
