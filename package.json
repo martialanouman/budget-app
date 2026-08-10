@@ -1,0 +1,32 @@
+{
+  "name": "budget-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.13.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @budget/frontend dev",
+    "build": "pnpm --filter @budget/frontend build",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "lint": "eslint .",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "test": "vitest run",
+    "test:domain": "vitest run --project domain",
+    "test:journeys": "vitest run --project journeys"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.9.0",
+    "prettier": "^3.9.6",
+    "typescript": "6.0.3",
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^4.1.10"
+  }
+}
