@@ -34,6 +34,10 @@ yarn-error.log*
 coverage/
 .eslintcache
 
+# Artefacts produits par Vitest browser mode sur test en échec
+__screenshots__/
+.vitest-attachments/
+
 # Éditeurs
 .idea/
 .vscode/*

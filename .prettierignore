@@ -1,0 +1,5 @@
+pb_public
+pnpm-lock.yaml
+
+# Reference documents: their formatting is authored, not generated.
+docs
