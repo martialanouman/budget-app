@@ -65,6 +65,8 @@ Piège vérifié : `Intl` formate les montants XOF avec des espaces insécables 
 - Le routage est **par code** (`frontend/src/router.tsx`), pas par fichiers : à l'échelle prévue, le plugin et le `routeTree.gen.ts` ne s'amortissent pas. `createAppRouter(history?)` accepte un historique mémoire, ce dont les parcours se servent.
 - La garde d'accès lit `pb.authStore.isValid` directement dans `beforeLoad`, sans passer par le contexte du router — une source de vérité unique, pas de synchronisation à tenir.
 - Le client PocketBase pointe sur `VITE_POCKETBASE_URL`, avec `/` par défaut : en production PocketBase sert lui-même la SPA, donc même origine.
+- Le modèle d'e-mail de réinitialisation est **remplacé par migration** : celui de PocketBase renvoie vers son interface admin (`{APP_URL}/_/#/auth/confirm-password-reset/{TOKEN}`), pas vers la SPA. Toute nouvelle collection auth aura le même défaut à corriger.
+- **Le SMTP de production reste à configurer** (Brevo ou Resend, cf. specs §2.2). Sans lui, la réinitialisation de mot de passe ne fonctionne pas en production.
 
 ## Contraintes d'outillage
 
@@ -96,8 +98,9 @@ Toutes se lancent depuis la racine ; le workspace est géré par pnpm.
 
 ```bash
 pnpm install            # requiert Node >= 24
-pnpm pb:install         # récupère le binaire PocketBase épinglé dans bin/
+pnpm services:install   # récupère les binaires épinglés PocketBase et Mailpit dans bin/
 pnpm pb:dev             # démarre PocketBase sur 127.0.0.1:8090
+pnpm mailpit:dev        # boîte SMTP locale : SMTP 1025, interface 8025
 pnpm dev                # serveur de développement Vite
 pnpm build              # build du frontend vers pb_public/
 pnpm typecheck          # tsc --noEmit sur chaque paquet, en parallèle
@@ -113,8 +116,12 @@ Pour un seul scénario : `pnpm test:domain -t "formats it as whole francs"`.
 Le browser mode exige chromium, à installer une fois :
 `pnpm --filter @budget/frontend exec playwright install chromium`.
 
-Les parcours démarrent eux-mêmes une instance PocketBase jetable sur le port **8091**
-(`frontend/test/pocketbase-server.ts`, en `globalSetup`), avec un `pb_data` temporaire
-supprimé en fin de run. Ils exigent donc `pnpm pb:install` au préalable.
+Les parcours démarrent eux-mêmes leurs services (`frontend/test/global-setup.ts`, en
+`globalSetup`), avec un `pb_data` temporaire supprimé en fin de run — d'où le prérequis
+`pnpm services:install`. Ports dédiés pour ne pas percuter le dev : PocketBase **8091**,
+Mailpit SMTP **1026** et interface **8026** (contre 8090 / 1025 / 8025 en développement).
+
+Le SMTP de PocketBase vit en base, pas en ligne de commande : le `globalSetup` crée un
+superuser puis pointe les réglages vers Mailpit via `PATCH /api/settings`.
 
 À venir avec les étapes suivantes : démarrage de PocketBase en local, `fly deploy`, et `litestream restore` (à tester une fois par trimestre).

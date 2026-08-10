@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_POCKETBASE_URL?: string
+  readonly VITE_MAILPIT_URL?: string
 }
 
 interface ImportMeta {

@@ -18,7 +18,7 @@ export default defineConfig({
   test: {
     name: 'journeys',
     include: ['src/**/*.journey.tsx'],
-    globalSetup: ['./test/pocketbase-server.ts'],
+    globalSetup: ['./test/global-setup.ts'],
     browser: {
       enabled: true,
       provider: playwright(),

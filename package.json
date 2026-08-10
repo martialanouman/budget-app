@@ -10,6 +10,9 @@
   "scripts": {
     "dev": "pnpm --filter @budget/frontend dev",
     "pb:install": "./scripts/fetch-pocketbase.sh",
+    "mailpit:install": "./scripts/fetch-mailpit.sh",
+    "services:install": "pnpm pb:install && pnpm mailpit:install",
+    "mailpit:dev": "./bin/mailpit --listen=127.0.0.1:8025 --smtp=127.0.0.1:1025 --smtp-auth-accept-any --smtp-auth-allow-insecure",
     "pb:dev": "./bin/pocketbase serve --dev --dir=pb_data --migrationsDir=pb_migrations --hooksDir=pb_hooks --publicDir=pb_public",
     "build": "pnpm --filter @budget/frontend build",
     "typecheck": "pnpm -r --parallel typecheck",
