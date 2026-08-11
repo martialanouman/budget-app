@@ -1,15 +1,18 @@
 import {
   Outlet,
+  RouterProvider,
   type RouterHistory,
   createRootRoute,
   createRoute,
   createRouter,
   redirect,
 } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import { ForgotPasswordPage } from '@/auth/forgot-password-page.tsx'
 import { ResetPasswordPage } from '@/auth/reset-password-page.tsx'
 import { SignInPage } from '@/auth/sign-in-page.tsx'
 import { SignUpPage } from '@/auth/sign-up-page.tsx'
+import { NotFoundPage } from '@/components/not-found-page'
 import { HomePage } from '@/home/home-page.tsx'
 import { pb } from '@/lib/pocketbase'
 
@@ -47,6 +50,13 @@ const resetPasswordRoute = createRoute({
   validateSearch: (search: Record<string, unknown>) => ({
     token: typeof search['token'] === 'string' ? search['token'] : '',
   }),
+  // A truncated link is a routing problem, not a form error: send the user back
+  // to ask for a fresh one instead of letting them fill in a doomed form.
+  beforeLoad: ({ search }) => {
+    if (!search.token) {
+      throw redirect({ to: '/forgot-password' })
+    }
+  },
   component: function ResetPassword() {
     const { token } = resetPasswordRoute.useSearch()
 
@@ -80,11 +90,26 @@ const routeTree = rootRoute.addChildren([
 ])
 
 export function createAppRouter(history?: RouterHistory) {
-  return createRouter({ routeTree, ...(history ? { history } : {}) })
+  return createRouter({
+    routeTree,
+    defaultNotFoundComponent: NotFoundPage,
+    ...(history ? { history } : {}),
+  })
+}
+
+export type AppRouter = ReturnType<typeof createAppRouter>
+
+// beforeLoad only runs on navigation, so a session cleared elsewhere (another
+// tab, an expired token) would otherwise leave the user sitting on a protected
+// screen. Re-running the guards on every authStore change closes that gap.
+export function AppRouterProvider({ router }: { router: AppRouter }) {
+  useEffect(() => pb.authStore.onChange(() => void router.invalidate()), [router])
+
+  return <RouterProvider router={router} />
 }
 
 declare module '@tanstack/react-router' {
   interface Register {
-    router: ReturnType<typeof createAppRouter>
+    router: AppRouter
   }
 }

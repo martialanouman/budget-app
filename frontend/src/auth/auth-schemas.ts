@@ -12,22 +12,25 @@ const newPassword = z
     `Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères`,
   )
 
+const mismatch = {
+  message: 'Les mots de passe ne correspondent pas',
+  path: ['passwordConfirm'],
+}
+
 export const signInSchema = z.object({
   email,
   password: z.string().min(1, 'Mot de passe requis'),
 })
 
-export const signUpSchema = z.object({
-  email,
-  password: newPassword,
-})
+export const signUpSchema = z
+  .object({ email, password: newPassword, passwordConfirm: z.string() })
+  .refine((values) => values.password === values.passwordConfirm, mismatch)
 
 export const forgotPasswordSchema = z.object({ email })
 
-export const resetPasswordSchema = z.object({
-  token: z.string().min(1, 'Lien de réinitialisation invalide'),
-  password: newPassword,
-})
+export const resetPasswordSchema = z
+  .object({ password: newPassword, passwordConfirm: z.string() })
+  .refine((values) => values.password === values.passwordConfirm, mismatch)
 
 export type SignInValues = z.infer<typeof signInSchema>
 export type SignUpValues = z.infer<typeof signUpSchema>

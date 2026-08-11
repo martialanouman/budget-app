@@ -7,9 +7,14 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 version="$(tr -d '[:space:]' <"${root}/.pocketbase-version")"
 target="${root}/bin/pocketbase"
 
-if [[ -x "${target}" ]] && "${target}" --version 2>/dev/null | grep -q "${version}"; then
-  echo "PocketBase ${version} already present."
-  exit 0
+# Compared exactly, not with grep: an unanchored match lets a pin that is a
+# substring of the installed version silently skip the download.
+if [[ -x "${target}" ]]; then
+  installed="$("${target}" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
+  if [[ "${installed}" == "${version}" ]]; then
+    echo "PocketBase ${version} already present."
+    exit 0
+  fi
 fi
 
 case "$(uname -s)" in

@@ -7,18 +7,20 @@ import { AuthLayout, FormError, SubmitButton } from './auth-layout.tsx'
 import { confirmPasswordReset } from './auth.ts'
 import { type ResetPasswordValues, resetPasswordSchema } from './auth-schemas.ts'
 
+// The token stays a prop read on every render rather than form state: the route
+// guarantees it is present, and a fresh one must never be shadowed by a stale
+// value captured at mount.
 export function ResetPasswordPage({ token }: { token: string }) {
   const navigate = useNavigate()
   const [serverError, setServerError] = useState<string>()
   const { register, handleSubmit, formState } = useForm<ResetPasswordValues>({
     resolver: zodResolver(resetPasswordSchema),
-    defaultValues: { token, password: '' },
   })
 
-  const onSubmit = handleSubmit(async (values) => {
+  const onSubmit = handleSubmit(async ({ password, passwordConfirm }) => {
     setServerError(undefined)
     try {
-      await confirmPasswordReset(values.token, values.password)
+      await confirmPasswordReset(token, password, passwordConfirm)
       await navigate({ to: '/sign-in' })
     } catch {
       setServerError('Ce lien de réinitialisation est invalide ou expiré.')
@@ -36,13 +38,19 @@ export function ResetPasswordPage({ token }: { token: string }) {
     >
       <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
         <FormError message={serverError} />
-        <input type="hidden" {...register('token')} />
         <TextField
           label="Nouveau mot de passe"
           type="password"
           autoComplete="new-password"
-          error={formState.errors.password?.message ?? formState.errors.token?.message}
+          error={formState.errors.password?.message}
           {...register('password')}
+        />
+        <TextField
+          label="Confirmer le mot de passe"
+          type="password"
+          autoComplete="new-password"
+          error={formState.errors.passwordConfirm?.message}
+          {...register('passwordConfirm')}
         />
         <SubmitButton pending={formState.isSubmitting}>Réinitialiser</SubmitButton>
       </form>
