@@ -1,9 +1,10 @@
 import { type ChildProcess, execFile, spawn } from 'node:child_process'
+import { once } from 'node:events'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
 
 const run = promisify(execFile)
 
@@ -35,21 +36,20 @@ async function waitUntilReachable(url: string, label: string) {
     await new Promise((resolve) => setTimeout(resolve, 100))
   }
 
-  throw new Error(`${label} did not become reachable within ${STARTUP_TIMEOUT_MS}ms`)
+  throw new Error(
+    `${label} did not become reachable within ${STARTUP_TIMEOUT_MS}ms. ` +
+      'Check that "pnpm services:install" has run and that the port is free.',
+  )
 }
 
-function startMailpit(): ChildProcess {
-  return spawn(
-    binary('mailpit'),
-    [
-      `--listen=${HOST}:${MAILPIT_HTTP_PORT}`,
-      `--smtp=${HOST}:${MAILPIT_SMTP_PORT}`,
-      '--smtp-auth-accept-any',
-      '--smtp-auth-allow-insecure',
-      '--api-cors=*',
-    ],
-    { stdio: 'ignore' },
-  )
+// SIGTERM only asks: PocketBase still has to flush its SQLite WAL into the data
+// directory, so wait for the exit before deleting it.
+async function stop(child: ChildProcess) {
+  if (child.exitCode !== null || child.signalCode !== null) return
+
+  const exited = once(child, 'exit')
+  child.kill()
+  await exited
 }
 
 // PocketBase keeps SMTP settings in the database, so they cannot be passed as
@@ -101,7 +101,18 @@ export default async function setup() {
     `--dir=${dataDir}`,
   ])
 
-  const mailpit = startMailpit()
+  const mailpit = spawn(
+    binary('mailpit'),
+    [
+      `--listen=${HOST}:${MAILPIT_HTTP_PORT}`,
+      `--smtp=${HOST}:${MAILPIT_SMTP_PORT}`,
+      '--smtp-auth-accept-any',
+      '--smtp-auth-allow-insecure',
+      '--api-cors=*',
+    ],
+    { stdio: 'ignore' },
+  )
+
   const pocketbase = spawn(
     binary('pocketbase'),
     [
@@ -113,22 +124,22 @@ export default async function setup() {
     { stdio: 'ignore' },
   )
 
-  for (const [process, name] of [
-    [mailpit, 'Mailpit'],
-    [pocketbase, 'PocketBase'],
-  ] as const) {
-    process.on('error', (error) => {
-      throw new Error(`Failed to start ${name}: ${error.message}. Run "pnpm services:install".`)
-    })
-  }
-
-  await waitUntilReachable(`${MAILPIT_URL}/readyz`, 'Mailpit')
-  await waitUntilReachable(`${POCKETBASE_URL}/api/health`, 'PocketBase')
-  await pointPocketBaseAtMailpit()
-
-  return async () => {
-    pocketbase.kill()
-    mailpit.kill()
+  const teardown = async () => {
+    await stop(pocketbase)
+    await stop(mailpit)
     await rm(dataDir, { recursive: true, force: true })
   }
+
+  // Anything past this point can throw, and Vitest only receives the teardown
+  // closure on success: clean up here or the children outlive the failed run.
+  try {
+    await waitUntilReachable(`${MAILPIT_URL}/readyz`, 'Mailpit')
+    await waitUntilReachable(`${POCKETBASE_URL}/api/health`, 'PocketBase')
+    await pointPocketBaseAtMailpit()
+  } catch (error) {
+    await teardown()
+    throw error
+  }
+
+  return teardown
 }
