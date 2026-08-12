@@ -7,9 +7,11 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "node build.js"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "vitest": "^4.1.10"
   }
 }

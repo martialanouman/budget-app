@@ -1,6 +1,6 @@
 import { type ChildProcess, execFile, spawn } from 'node:child_process'
 import { once } from 'node:events'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { access, cp, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -90,8 +90,33 @@ async function pointPocketBaseAtMailpit() {
   if (!settings.ok) throw new Error(`Failed to configure SMTP: ${await settings.text()}`)
 }
 
+/**
+ * Runs PocketBase against the real production hooks plus a test-only probe, by
+ * assembling both into a throwaway directory. Later steps get their hooks
+ * exercised the same way.
+ */
+async function assembleHooks() {
+  const bundle = join(repoRoot, 'pb_hooks', 'lib', 'domain.cjs')
+
+  try {
+    await access(bundle)
+  } catch {
+    throw new Error(
+      `Shared domain bundle missing at ${bundle}. Run "pnpm --filter @budget/domain build".`,
+    )
+  }
+
+  const hooksDir = await mkdtemp(join(tmpdir(), 'budget-hooks-'))
+
+  await cp(join(repoRoot, 'pb_hooks'), hooksDir, { recursive: true })
+  await cp(fileURLToPath(new URL('./pb_hooks', import.meta.url)), hooksDir, { recursive: true })
+
+  return hooksDir
+}
+
 export default async function setup() {
   const dataDir = await mkdtemp(join(tmpdir(), 'budget-pb-'))
+  const hooksDir = await assembleHooks()
 
   await run(binary('pocketbase'), [
     'superuser',
@@ -120,6 +145,7 @@ export default async function setup() {
       `--http=${HOST}:${POCKETBASE_PORT}`,
       `--dir=${dataDir}`,
       `--migrationsDir=${join(repoRoot, 'pb_migrations')}`,
+      `--hooksDir=${hooksDir}`,
     ],
     { stdio: 'ignore' },
   )
@@ -128,6 +154,7 @@ export default async function setup() {
     await stop(pocketbase)
     await stop(mailpit)
     await rm(dataDir, { recursive: true, force: true })
+    await rm(hooksDir, { recursive: true, force: true })
   }
 
   // Anything past this point can throw, and Vitest only receives the teardown

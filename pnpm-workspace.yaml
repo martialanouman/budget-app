@@ -2,6 +2,12 @@ packages:
   - frontend
   - packages/*
 
+# esbuild ships a platform-specific binary and needs its install script.
+# "allowBuilds" replaces the older "onlyBuiltDependencies", which recent pnpm
+# ignores — leaving the install to exit non-zero on the blocked script.
+allowBuilds:
+  esbuild: true
+
 minimumReleaseAgeExclude:
   - '@typescript-eslint/eslint-plugin@8.67.0'
   - '@typescript-eslint/parser@8.67.0'
@@ -14,7 +20,3 @@ minimumReleaseAgeExclude:
   - '@typescript-eslint/utils@8.67.0'
   - '@typescript-eslint/visitor-keys@8.67.0'
   - typescript-eslint@8.67.0
-
-onlyBuiltDependencies:
-  - esbuild
-  - playwright

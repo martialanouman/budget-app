@@ -17,7 +17,7 @@ export default defineConfig({
   },
   test: {
     name: 'journeys',
-    include: ['src/**/*.journey.tsx'],
+    include: ['src/**/*.journey.{ts,tsx}'],
     globalSetup: ['./test/global-setup.ts'],
     browser: {
       enabled: true,
