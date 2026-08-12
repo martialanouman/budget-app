@@ -16,6 +16,7 @@ import { SignInPage } from '@/auth/sign-in-page.tsx'
 import { SignUpPage } from '@/auth/sign-up-page.tsx'
 import { CategoriesPage } from '@/categories/categories-page.tsx'
 import { NotFoundPage } from '@/components/not-found-page'
+import { TransactionsPage } from '@/transactions/transactions-page.tsx'
 import { HomePage } from '@/home/home-page.tsx'
 import { pb } from '@/lib/pocketbase'
 import { createQueryClient } from '@/lib/query-client'
@@ -97,12 +98,18 @@ const categoriesRoute = createRoute({
   component: CategoriesPage,
 })
 
+const transactionsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/transactions',
+  component: TransactionsPage,
+})
+
 const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
-  protectedRoute.addChildren([homeRoute, accountsRoute, categoriesRoute]),
+  protectedRoute.addChildren([homeRoute, transactionsRoute, accountsRoute, categoriesRoute]),
 ])
 
 export function createAppRouter(history?: RouterHistory) {
