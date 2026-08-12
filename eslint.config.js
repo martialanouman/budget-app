@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   {
-    ignores: ['pb_public/**', '**/dist/**', '**/__screenshots__/**'],
+    ignores: ['pb_public/**', '**/dist/**', '**/__screenshots__/**', 'pb_hooks/lib/**'],
   },
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
@@ -33,16 +33,21 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.config.{js,ts}'],
+    files: ['**/*.config.{js,ts}', 'packages/domain/build.js'],
     extends: [tseslint.configs.disableTypeChecked],
   },
   {
     // PocketBase runs these in its own JS VM: no bundler, no TypeScript
     // project, and a set of injected globals.
-    files: ['pb_migrations/**/*.js', 'pb_hooks/**/*.js'],
+    files: ['pb_migrations/**/*.js', '**/pb_hooks/**/*.js'],
     extends: [tseslint.configs.disableTypeChecked],
+    rules: {
+      // goja loads CommonJS only; require is the sole way in.
+      '@typescript-eslint/no-require-imports': 'off',
+    },
     languageOptions: {
       globals: {
+        require: 'readonly',
         $app: 'readonly',
         $apis: 'readonly',
         $os: 'readonly',

@@ -8,6 +8,9 @@ node_modules/
 frontend/dist/
 pb_public/
 
+# Domaine compilé pour les hooks PocketBase, produit par `pnpm domain:build`
+pb_hooks/lib/
+
 # Environnement. Les fichiers .env.development et .env.test ne portent que des
 # URLs locales (pas de secret) et doivent être versionnés : la CI en dépend.
 .env

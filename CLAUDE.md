@@ -69,6 +69,21 @@ Piège vérifié : `Intl` formate les montants XOF avec des espaces insécables 
 - Le modèle d'e-mail de réinitialisation est **remplacé par migration** : celui de PocketBase renvoie vers son interface admin (`{APP_URL}/_/#/auth/confirm-password-reset/{TOKEN}`), pas vers la SPA. Toute nouvelle collection auth aura le même défaut à corriger.
 - **Le SMTP de production reste à configurer** (Brevo ou Resend, cf. specs §2.2). Sans lui, la réinitialisation de mot de passe ne fonctionne pas en production.
 
+## Domaine partagé et moteur goja
+
+`packages/domain` a **deux points d'entrée**, et la distinction n'est pas cosmétique :
+
+- `src/index.ts` — tout, pour le frontend.
+- `src/server.ts` — uniquement ce qui tourne sous PocketBase. C'est lui qu'on bundle.
+
+**Le moteur goja n'a pas `Intl` du tout** (`ReferenceError: Intl is not defined`), et son `Number.prototype.toLocaleString` lit son argument comme un radix de `toString` : `(150000).toLocaleString('fr-FR')` lève une `RangeError`. Aucun formatage localisé n'est donc possible côté serveur. `src/format.ts` construit son `Intl.NumberFormat` au chargement du module : **l'ajouter à `server.ts` ferait planter les hooks au démarrage**. Quand un montant devra figurer dans un e-mail (étape 6), il faudra un formateur maison, testé.
+
+Ce que goja accepte, vérifié à l'exécution : `class`, `const`, fonctions fléchées, `Number.isInteger`. Le bundle cible donc **es2015**, pas l'`es5` annoncé par la doc — esbuild ne sait de toute façon pas abaisser `const` ni `class` jusqu'à es5.
+
+`pnpm domain:build` produit `pb_hooks/lib/domain.cjs` (CommonJS, es2015, fichier unique). L'extension `.cjs` est nécessaire : le `package.json` racine déclare `"type": "module"`, et l'outillage lirait sinon ce bundle comme de l'ESM. Les hooks l'importent par `require(`${__hooks}/lib/domain.cjs`)` — les chemins relatifs se résolvent depuis le répertoire courant, jamais depuis `pb_hooks`.
+
+L'artefact est **généré et gitignoré**. `pnpm test` le reconstruit via `pretest`, et le harnais refuse de démarrer avec un message explicite s'il manque.
+
 ## Contraintes d'outillage
 
 - **TypeScript est figé en 6.0.3**, alors que 7.0.2 (réécriture Go) est le `latest`. Raison : typescript-eslint 8.67 déclare `typescript: >=4.8.4 <6.1.0` et ne supporte pas encore TS 7. Monter TS 7 signifierait perdre le lint type-aware. À réévaluer quand typescript-eslint suivra.
@@ -103,7 +118,8 @@ pnpm services:install   # récupère les binaires épinglés PocketBase et Mailp
 pnpm pb:dev             # démarre PocketBase sur 127.0.0.1:8090
 pnpm mailpit:dev        # boîte SMTP locale : SMTP 1025, interface 8025
 pnpm dev                # serveur de développement Vite
-pnpm build              # build du frontend vers pb_public/
+pnpm domain:build       # bundle du domaine vers pb_hooks/lib/domain.cjs
+pnpm build              # domaine puis frontend vers pb_public/
 pnpm typecheck          # tsc --noEmit sur chaque paquet, en parallèle
 pnpm lint               # ESLint, avec règles type-aware
 pnpm format             # vérification Prettier (format:write pour corriger)
@@ -121,6 +137,10 @@ Les parcours démarrent eux-mêmes leurs services (`frontend/test/global-setup.t
 `globalSetup`), avec un `pb_data` temporaire supprimé en fin de run — d'où le prérequis
 `pnpm services:install`. Ports dédiés pour ne pas percuter le dev : PocketBase **8091**,
 Mailpit SMTP **1026** et interface **8026** (contre 8090 / 1025 / 8025 en développement).
+
+Le harnais assemble le répertoire de hooks dans un temporaire : `pb_hooks/` de production
+**plus** les sondes de test de `frontend/test/pb_hooks/`. Les vrais hooks sont donc chargés
+par les parcours, et les sondes ne partent jamais en production.
 
 Le SMTP de PocketBase vit en base, pas en ligne de commande : le `globalSetup` crée un
 superuser puis pointe les réglages vers Mailpit via `PATCH /api/settings`.
