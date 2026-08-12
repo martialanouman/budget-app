@@ -7,7 +7,7 @@ import {
   createRouter,
   redirect,
 } from '@tanstack/react-router'
-import { QueryClientProvider } from '@tanstack/react-query'
+import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { AccountsPage } from '@/accounts/accounts-page.tsx'
 import { ForgotPasswordPage } from '@/auth/forgot-password-page.tsx'
@@ -118,11 +118,29 @@ export type AppRouter = ReturnType<typeof createAppRouter>
 // beforeLoad only runs on navigation, so a session cleared elsewhere (another
 // tab, an expired token) would otherwise leave the user sitting on a protected
 // screen. Re-running the guards on every authStore change closes that gap.
-export function AppRouterProvider({ router }: { router: AppRouter }) {
+export function AppRouterProvider({
+  router,
+  client,
+}: {
+  router: AppRouter
+  /** Injectable so journeys can assert on the cache itself. */
+  client?: QueryClient
+}) {
   // One client per provider, so journeys never share cached data between tests.
-  const [queryClient] = useState(createQueryClient)
+  const [fallback] = useState(createQueryClient)
+  const queryClient = client ?? fallback
 
-  useEffect(() => pb.authStore.onChange(() => void router.invalidate()), [router])
+  // Clearing the cache on every session change is what keeps a second account
+  // signing in on the same tab from seeing the previous one's data: the
+  // provider never unmounts, so the client would otherwise outlive the user.
+  useEffect(
+    () =>
+      pb.authStore.onChange(() => {
+        queryClient.clear()
+        void router.invalidate()
+      }),
+    [queryClient, router],
+  )
 
   return (
     <QueryClientProvider client={queryClient}>
