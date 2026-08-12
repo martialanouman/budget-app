@@ -16,7 +16,6 @@
     "pb:dev": "./bin/pocketbase serve --dev --dir=pb_data --migrationsDir=pb_migrations --hooksDir=pb_hooks --publicDir=pb_public",
     "domain:build": "pnpm --filter @budget/domain build",
     "build": "pnpm domain:build && pnpm --filter @budget/frontend build",
-    "pretest": "pnpm domain:build",
     "typecheck": "pnpm -r --parallel typecheck",
     "lint": "eslint .",
     "format": "prettier --check .",

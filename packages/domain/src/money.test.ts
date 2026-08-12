@@ -23,6 +23,16 @@ describe('Given an amount to validate', () => {
       expect(() => toMoney(value)).toThrow(InvalidAmountError)
     },
   )
+
+  // Past 2^53 addition stops changing the result, so such an amount is a lie.
+  it('rejects amounts too large to stay exact', () => {
+    expect(() => toMoney(Number.MAX_SAFE_INTEGER + 2)).toThrow(InvalidAmountError)
+    expect(() => toMoney(1e20)).toThrow(InvalidAmountError)
+  })
+
+  it('normalises negative zero, which would display as "-0"', () => {
+    expect(Object.is(toMoney(-0), 0)).toBe(true)
+  })
 })
 
 describe('Given a user typing an amount', () => {
@@ -39,6 +49,14 @@ describe('Given a user typing an amount', () => {
   it.each(['', '   ', '1500,50', '1500.50', '12a', 'abc'])('rejects "%s"', (input) => {
     expect(() => parseAmount(input)).toThrow(InvalidAmountError)
   })
+
+  // Number() would round these to a different amount than the one typed.
+  it.each(['9007199254740993', '99999999999999999999'])(
+    'rejects "%s" rather than round it silently',
+    (input) => {
+      expect(() => parseAmount(input)).toThrow(InvalidAmountError)
+    },
+  )
 })
 
 describe('Given two amounts', () => {
@@ -81,6 +99,21 @@ describe('Given an amount to split across categories', () => {
   it('ignores parts weighted zero', () => {
     expect(allocate(toMoney(1_000), [1, 0])).toEqual([1_000, 0])
   })
+
+  it('never yields a negative zero, even splitting an overspend', () => {
+    const parts = allocate(toMoney(-100), [1, 0])
+
+    expect(parts.every((part) => !Object.is(part, -0))).toBe(true)
+  })
+
+  // Hooks call this from goja, where the Money brand does not exist and the
+  // argument is whatever the caller had.
+  it.each([100.5, 7.9, Number.NaN, 1e20])(
+    'rejects the untyped total %s instead of inventing francs',
+    (total) => {
+      expect(() => allocate(total as never, [1, 1])).toThrow(InvalidAmountError)
+    },
+  )
 
   it.each([[[]], [[0, 0]], [[-1, 2]], [[Number.NaN, 1]]])('rejects the weights %j', (weights) => {
     expect(() => allocate(toMoney(1_000), weights)).toThrow(InvalidAmountError)

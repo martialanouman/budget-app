@@ -78,11 +78,15 @@ Piège vérifié : `Intl` formate les montants XOF avec des espaces insécables 
 
 **Le moteur goja n'a pas `Intl` du tout** (`ReferenceError: Intl is not defined`), et son `Number.prototype.toLocaleString` lit son argument comme un radix de `toString` : `(150000).toLocaleString('fr-FR')` lève une `RangeError`. Aucun formatage localisé n'est donc possible côté serveur. `src/format.ts` construit son `Intl.NumberFormat` au chargement du module : **l'ajouter à `server.ts` ferait planter les hooks au démarrage**. Quand un montant devra figurer dans un e-mail (étape 6), il faudra un formateur maison, testé.
 
-Ce que goja accepte, vérifié à l'exécution : `class`, `const`, fonctions fléchées, `Number.isInteger`. Le bundle cible donc **es2015**, pas l'`es5` annoncé par la doc — esbuild ne sait de toute façon pas abaisser `const` ni `class` jusqu'à es5.
+Ce que goja accepte, vérifié à l'exécution : `class`, `const`, fonctions fléchées, `Number.isSafeInteger`. Le bundle cible donc **es2015**, pas l'`es5` annoncé par la doc — esbuild ne sait de toute façon pas abaisser `const` ni `class` jusqu'à es5.
+
+Le bundle est en `platform: 'neutral'`, et ce n'est pas indifférent : sous `'node'`, esbuild externalise les modules natifs et émet des `require("node:fs")` que goja ne sait pas résoudre — l'erreur ne surgirait qu'à l'exécution. En `'neutral'`, importer un builtin **échoue au build**.
 
 `pnpm domain:build` produit `pb_hooks/lib/domain.cjs` (CommonJS, es2015, fichier unique). L'extension `.cjs` est nécessaire : le `package.json` racine déclare `"type": "module"`, et l'outillage lirait sinon ce bundle comme de l'ESM. Les hooks l'importent par `require(`${__hooks}/lib/domain.cjs`)` — les chemins relatifs se résolvent depuis le répertoire courant, jamais depuis `pb_hooks`.
 
-L'artefact est **généré et gitignoré**. `pnpm test` le reconstruit via `pretest`, et le harnais refuse de démarrer avec un message explicite s'il manque.
+L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit lui-même** à chaque exécution (`buildDomain()` depuis `@budget/domain/build`) : s'en remettre à un hook `pretest` ne couvrait que `pnpm test`, et laissait `pnpm test:journeys` valider un bundle périmé en toute discrétion.
+
+**La marque `Money` disparaît à la compilation.** Les hooks appellent ce code depuis goja, sans types : toute fonction publique du domaine doit revalider ses entrées plutôt que se fier à sa signature.
 
 ## Contraintes d'outillage
 

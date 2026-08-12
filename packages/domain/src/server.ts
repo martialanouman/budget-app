@@ -1,5 +1,6 @@
-// Entry point bundled for PocketBase hooks. It runs under goja: ES5 only, no
-// Intl, no fetch, no timers. Anything added here must survive that.
+// Entry point bundled for PocketBase hooks. It runs under goja, which accepts
+// most of ES2015 but has no Intl, no fetch and no timers. Anything added here
+// must survive that — re-exporting ./format.ts would crash the hooks at load.
 export {
   InvalidAmountError,
   type Money,

@@ -1,22 +1,38 @@
-// Bundles the server entry point for PocketBase's goja engine: CommonJS, single
-// file. Uses the esbuild JS API rather than its CLI, whose pnpm shim tries to
-// run the native binary through node.
-//
-// Target is es2015, not the es5 the PocketBase docs name: esbuild cannot lower
-// const or class to es5 at all, and goja does implement most of ES6. What goja
-// actually accepts is settled by the journey that loads this bundle, not here.
+import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 
-await build({
-  entryPoints: ['src/server.ts'],
-  // .cjs, not .js: the root package.json declares "type": "module", so tooling
-  // would otherwise read this CommonJS bundle as ESM and see no exports.
-  outfile: '../../pb_hooks/lib/domain.cjs',
-  bundle: true,
-  format: 'cjs',
-  target: 'es2015',
-  // "neutral" builds the module but never assigns module.exports, leaving the
-  // bundle inert. Nothing here imports a node builtin.
-  platform: 'node',
-  logLevel: 'info',
-})
+const packageRoot = fileURLToPath(new URL('.', import.meta.url))
+
+/**
+ * Bundles the server entry point for PocketBase's goja engine.
+ *
+ * Target is es2015, not the es5 the PocketBase docs name: esbuild cannot lower
+ * const or class to es5 at all, and goja does accept class, const, arrow
+ * functions and Number.isSafeInteger — proven by the journey that runs this
+ * bundle inside PocketBase.
+ *
+ * platform is "neutral" so that importing a node builtin fails the build.
+ * Under "node" esbuild marks builtins external and emits require("node:fs"),
+ * which goja cannot resolve — turning a build error into a runtime one.
+ *
+ * The output is .cjs because the root package.json declares "type": "module",
+ * and tooling would otherwise read this CommonJS bundle as ESM.
+ */
+export async function buildDomain() {
+  await build({
+    absWorkingDir: packageRoot,
+    entryPoints: ['src/server.ts'],
+    outfile: '../../pb_hooks/lib/domain.cjs',
+    bundle: true,
+    format: 'cjs',
+    target: 'es2015',
+    platform: 'neutral',
+    logLevel: 'silent',
+  })
+}
+
+// Also runnable as a script, via `pnpm domain:build`.
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  await buildDomain()
+  console.log('Bundled packages/domain to pb_hooks/lib/domain.cjs')
+}

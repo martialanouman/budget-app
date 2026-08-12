@@ -1,10 +1,11 @@
 import { type ChildProcess, execFile, spawn } from 'node:child_process'
 import { once } from 'node:events'
-import { access, cp, mkdtemp, rm } from 'node:fs/promises'
+import { cp, mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
+import { buildDomain } from '@budget/domain/build'
 
 const run = promisify(execFile)
 
@@ -91,32 +92,42 @@ async function pointPocketBaseAtMailpit() {
 }
 
 /**
- * Runs PocketBase against the real production hooks plus a test-only probe, by
+ * Runs PocketBase against the real production hooks plus test-only probes, by
  * assembling both into a throwaway directory. Later steps get their hooks
  * exercised the same way.
  */
 async function assembleHooks() {
-  const bundle = join(repoRoot, 'pb_hooks', 'lib', 'domain.cjs')
+  // Rebuilt, not merely checked for existence: a stale bundle used to let the
+  // journeys pass against domain code that no longer existed.
+  await buildDomain()
 
-  try {
-    await access(bundle)
-  } catch {
+  const production = join(repoRoot, 'pb_hooks')
+  const probes = fileURLToPath(new URL('./pb_hooks', import.meta.url))
+
+  const [productionEntries, probeEntries] = await Promise.all([
+    readdir(production),
+    readdir(probes),
+  ])
+  const shadowed = probeEntries.filter((entry) => productionEntries.includes(entry))
+
+  if (shadowed.length > 0) {
     throw new Error(
-      `Shared domain bundle missing at ${bundle}. Run "pnpm --filter @budget/domain build".`,
+      `Test probes would silently replace production hooks: ${shadowed.join(', ')}. Rename them.`,
     )
   }
 
   const hooksDir = await mkdtemp(join(tmpdir(), 'budget-hooks-'))
 
-  await cp(join(repoRoot, 'pb_hooks'), hooksDir, { recursive: true })
-  await cp(fileURLToPath(new URL('./pb_hooks', import.meta.url)), hooksDir, { recursive: true })
+  await cp(production, hooksDir, { recursive: true })
+  await cp(probes, hooksDir, { recursive: true })
 
   return hooksDir
 }
 
 export default async function setup() {
-  const dataDir = await mkdtemp(join(tmpdir(), 'budget-pb-'))
+  // Before any temp directory exists, so a failure here leaks nothing.
   const hooksDir = await assembleHooks()
+  const dataDir = await mkdtemp(join(tmpdir(), 'budget-pb-'))
 
   await run(binary('pocketbase'), [
     'superuser',
