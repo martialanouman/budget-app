@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { formatAmount, parseAmount } from '@budget/domain'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { FormError } from '@/auth/auth-layout.tsx'
+import { FormError, SubmitButton } from '@/components/form-feedback'
 import { AppShell } from '@/components/app-shell'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
@@ -16,7 +16,9 @@ import {
 } from './accounts-api.ts'
 
 const schema = z.object({
-  name: z.string().min(1, 'Nom requis'),
+  // Mirrors the max: 60 on accounts.name; without it the server's rejection
+  // reaches the user as a generic failure.
+  name: z.string().min(1, 'Nom requis').max(60, '60 caractères maximum'),
   type: z.enum(ACCOUNT_TYPES),
   // Delegated to the domain rather than re-validated here: parseAmount owns
   // what a franc amount is, including the exactly-representable bound that a
@@ -51,6 +53,10 @@ export function AccountsPage() {
   })
 
   const onSubmit = handleSubmit(async (values) => {
+    // react-query keeps the last result until the same mutation runs again, so
+    // a stale failure would otherwise stay on screen through a success.
+    createAccount.reset()
+
     try {
       await createAccount.mutateAsync(values)
       reset()
@@ -58,6 +64,16 @@ export function AccountsPage() {
       // Surfaced through createAccount.isError below.
     }
   })
+
+  const archive = (id: string) => {
+    restoreAccount.reset()
+    archiveAccount.mutate(id)
+  }
+
+  const restore = (id: string) => {
+    archiveAccount.reset()
+    restoreAccount.mutate(id)
+  }
 
   // No fallback to initial_balance: presenting a stale figure as the balance
   // would be worse than admitting the value could not be loaded.
@@ -67,14 +83,16 @@ export function AccountsPage() {
   const active = accounts.data?.filter((account) => !account.archived) ?? []
   const archived = accounts.data?.filter((account) => account.archived) ?? []
 
-  const mutationFailed = createAccount.isError || archiveAccount.isError || restoreAccount.isError
+  // Kept apart: an archive failure belongs next to the list, not under the
+  // create form it has nothing to do with.
+  const listMutationFailed = archiveAccount.isError || restoreAccount.isError
 
   return (
     <AppShell title="Comptes">
       <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
         <h2 className="text-lg font-medium">Ajouter un compte</h2>
-        {mutationFailed ? (
-          <FormError message="L'opération a échoué. Vérifiez votre connexion et réessayez." />
+        {createAccount.isError ? (
+          <FormError message="La création du compte a échoué. Vérifiez votre connexion et réessayez." />
         ) : null}
         <TextField label="Nom" error={formState.errors.name?.message} {...register('name')} />
         <SelectField
@@ -89,19 +107,16 @@ export function AccountsPage() {
           error={formState.errors.initialBalance?.message}
           {...register('initialBalance')}
         />
-        <button
-          type="submit"
-          disabled={formState.isSubmitting}
-          className="rounded-md bg-slate-900 px-4 py-2.5 font-medium text-white outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60"
-        >
-          Créer le compte
-        </button>
+        <SubmitButton pending={formState.isSubmitting}>Créer le compte</SubmitButton>
       </form>
 
       <section className="space-y-2">
         <h2 className="text-lg font-medium">Mes comptes</h2>
         {accounts.isPending ? <p>Chargement…</p> : null}
         {accounts.isError ? <FormError message="Impossible de charger vos comptes." /> : null}
+        {listMutationFailed ? (
+          <FormError message="L'opération sur ce compte a échoué. Vérifiez votre connexion et réessayez." />
+        ) : null}
         {balances.isError ? <FormError message="Les soldes n'ont pas pu être chargés." /> : null}
         {accounts.isSuccess && active.length === 0 ? <p>Aucun compte pour le moment.</p> : null}
         <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
@@ -121,7 +136,7 @@ export function AccountsPage() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => archiveAccount.mutate(account.id)}
+                  onClick={() => archive(account.id)}
                   className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
                 >
                   Archiver {account.name}
@@ -141,7 +156,7 @@ export function AccountsPage() {
                 <span className="flex-1 text-slate-600">{account.name}</span>
                 <button
                   type="button"
-                  onClick={() => restoreAccount.mutate(account.id)}
+                  onClick={() => restore(account.id)}
                   className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
                 >
                   Restaurer {account.name}

@@ -130,17 +130,24 @@ export function AppRouterProvider({
   const [fallback] = useState(createQueryClient)
   const queryClient = client ?? fallback
 
-  // Clearing the cache on every session change is what keeps a second account
-  // signing in on the same tab from seeing the previous one's data: the
-  // provider never unmounts, so the client would otherwise outlive the user.
-  useEffect(
-    () =>
-      pb.authStore.onChange(() => {
+  // The provider never unmounts, so the cache would otherwise outlive the user
+  // and show a second account the first one's data. Purged on identity change
+  // only: onChange also fires on token refreshes and cross-tab storage events,
+  // and blanking a working screen for those would be noise.
+  useEffect(() => {
+    let signedInAs = pb.authStore.record?.id
+
+    return pb.authStore.onChange(() => {
+      const nowSignedInAs = pb.authStore.record?.id
+
+      if (nowSignedInAs !== signedInAs) {
+        signedInAs = nowSignedInAs
         queryClient.clear()
-        void router.invalidate()
-      }),
-    [queryClient, router],
-  )
+      }
+
+      void router.invalidate()
+    })
+  }, [queryClient, router])
 
   return (
     <QueryClientProvider client={queryClient}>
