@@ -16,4 +16,11 @@ describe('Given an amount in XOF', () => {
   it('keeps the sign on a negative amount', () => {
     expect(formatAmount(toMoney(-2_500))).toMatch(/^-2\s500\sF\sCFA$/u)
   })
+
+  // The Money brand is erased at runtime, so a float read back from a
+  // PocketBase number field reaches this unrounded. Pinning the invariant
+  // requires feeding it one.
+  it('never shows decimals, since the franc has none', () => {
+    expect(formatAmount(1500.75 as never)).toMatch(/^1\s501\sF\sCFA$/u)
+  })
 })

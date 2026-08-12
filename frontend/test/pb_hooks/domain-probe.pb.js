@@ -11,6 +11,9 @@ routerAdd('GET', '/api/_test/domain', (e) => {
       sum: domain.addMoney(domain.toMoney(2000), domain.toMoney(500)),
     })
   } catch (err) {
-    return e.json(500, { error: String(err) })
+    // "message", not "error": the PocketBase SDK builds ClientResponseError
+    // from data.message, and would drop anything under another key — losing
+    // the very diagnostic this catch exists to surface.
+    return e.json(500, { message: `Domain bundle failed under goja: ${String(err)}` })
   }
 })

@@ -11,12 +11,14 @@ export class InvalidAmountError extends Error {
 }
 
 export function toMoney(value: number): Money {
-  // Number.isInteger also rejects NaN and both infinities.
-  if (!Number.isInteger(value)) {
-    throw new InvalidAmountError(`Expected a whole number of francs, received ${value}`)
+  // isSafeInteger also rejects fractions, NaN, both infinities, and magnitudes
+  // past 2^53 where addition silently stops changing the result.
+  if (!Number.isSafeInteger(value)) {
+    throw new InvalidAmountError(`Expected an exact whole number of francs, received ${value}`)
   }
 
-  return value as Money
+  // Normalise -0, which Intl would otherwise render as "-0 F CFA".
+  return (value === 0 ? 0 : value) as Money
 }
 
 export const ZERO = toMoney(0)
@@ -49,6 +51,10 @@ export function subtractMoney(a: Money, b: Money): Money {
  * franc has no subunit, so a split must never invent or lose one.
  */
 export function allocate(total: Money, weights: readonly number[]): Money[] {
+  // The Money brand is erased at runtime, and goja hooks call this untyped:
+  // re-validate rather than trust the signature.
+  const amount = toMoney(total)
+
   if (weights.length === 0) {
     throw new InvalidAmountError('Cannot allocate across zero parts')
   }
@@ -63,9 +69,9 @@ export function allocate(total: Money, weights: readonly number[]): Money[] {
     throw new InvalidAmountError('Weights must not all be zero')
   }
 
-  const exact = weights.map((weight) => (total * weight) / totalWeight)
+  const exact = weights.map((weight) => (amount * weight) / totalWeight)
   const parts = exact.map(Math.floor)
-  const leftover = total - parts.reduce((sum, part) => sum + part, 0)
+  const leftover = amount - parts.reduce((sum, part) => sum + part, 0)
 
   const byLargestRemainder = exact
     .map((value, index) => ({ index, remainder: value - Math.floor(value) }))
