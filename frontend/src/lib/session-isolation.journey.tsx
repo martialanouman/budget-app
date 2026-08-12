@@ -19,6 +19,21 @@ beforeEach(() => {
   pb.authStore.clear()
 })
 
+// onChange also fires on token refreshes and cross-tab storage events. Purging
+// on those would blank a working screen for no reason.
+it('keeps the cache when the same user’s token is refreshed', async () => {
+  await createSignedInUser('steady')
+  await createAccountNamed('Compte stable', 'banque')
+
+  const { screen, client } = await renderApp('/accounts')
+  await expect.element(screen.getByRole('button', { name: 'Archiver Compte stable' })).toBeVisible()
+  expect(client.getQueryData(['accounts'])).toBeDefined()
+
+  pb.authStore.save(pb.authStore.token, pb.authStore.record)
+
+  expect(client.getQueryData(['accounts'])).toBeDefined()
+})
+
 // The provider never unmounts on sign-out, so without an explicit clear the
 // query cache outlives the session and renders the previous user's data.
 it('shows nothing of the previous account after switching users in the same tab', async () => {

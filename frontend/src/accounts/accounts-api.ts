@@ -24,10 +24,16 @@ export function useAccountBalances() {
     queryFn: async () => {
       const rows = await pb.collection('account_balances').getFullList<AccountBalance>()
 
-      // Revalidated here, at the boundary: an out-of-range figure must fail the
-      // query — and show the error banner — rather than throw during render and
-      // blank the page.
-      return rows.map((row) => ({ ...row, balance: toMoney(row.balance) }))
+      // Revalidated here rather than at render time, and row by row: an
+      // out-of-range figure must cost only its own account a balance, not
+      // blank the column for every other one.
+      return rows.map((row) => {
+        try {
+          return { ...row, balance: toMoney(row.balance) }
+        } catch {
+          return { ...row, balance: undefined }
+        }
+      })
     },
   })
 }

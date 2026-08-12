@@ -75,6 +75,25 @@ it('stops offering a deactivated category as a parent', async () => {
     .not.toBeInTheDocument()
 })
 
+// Removing the option resets what the browser shows but emits no change event,
+// so the form can still be holding the retired parent's id.
+it('does not file a new category under a parent deactivated meanwhile', async () => {
+  await createSignedInUser('cats')
+  const { screen } = await renderApp('/categories')
+
+  await screen.getByLabelText('Catégorie parente').selectOptions('Loisirs')
+  await screen.getByRole('button', { name: 'Désactiver Loisirs' }).click()
+  await expect.element(screen.getByRole('button', { name: 'Réactiver Loisirs' })).toBeVisible()
+
+  await screen.getByLabelText('Nom').fill('Concert')
+  await screen.getByRole('button', { name: 'Créer la catégorie' }).click()
+
+  await expect.element(screen.getByRole('button', { name: 'Désactiver Concert' })).toBeVisible()
+
+  const concert = (await listCategories()).find((category) => category.name === 'Concert')
+  expect(concert?.parent).toBe('')
+})
+
 it('never exposes another owner’s categories', async () => {
   await createSignedInUser('cats')
   const mine = await listCategories()

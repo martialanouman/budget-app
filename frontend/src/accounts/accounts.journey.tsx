@@ -50,6 +50,31 @@ it('displays the balance served by the view, formatted in francs', async () => {
   await expect.element(screen.getByText(xof('90 000'))).toBeVisible()
 })
 
+// PocketBase stores up to int64, well past the 2^53 where JS arithmetic stops
+// being exact — measured: MAX_SAFE_INTEGER + 1 is accepted, 1e20 is not. So a
+// direct write or an import can store a figure toMoney refuses, and one such
+// row must not take the whole balance column down with it.
+it('keeps showing the valid balances when one row is out of range', async () => {
+  await createSignedInUser('owner')
+
+  await pb.collection('accounts').create({
+    user: currentUserId(),
+    name: 'Compte sain',
+    type: 'banque',
+    initial_balance: 50_000,
+  })
+  await pb.collection('accounts').create({
+    user: currentUserId(),
+    name: 'Compte corrompu',
+    type: 'autre',
+    initial_balance: Number.MAX_SAFE_INTEGER + 1,
+  })
+
+  const { screen } = await renderApp('/accounts')
+
+  await expect.element(screen.getByText(xof('50 000'))).toBeVisible()
+})
+
 it.each(['1500,75', '1500.75', '99999999999999999999'])(
   'refuses the initial balance "%s"',
   async (amount) => {
@@ -64,6 +89,20 @@ it.each(['1500,75', '1500.75', '99999999999999999999'])(
     expect(await pb.collection('accounts').getFullList()).toEqual([])
   },
 )
+
+// The server caps the name at 60. Without a matching client rule the rejection
+// arrives as a generic failure and the user is told to check their connection.
+it('reports an over-long name on the field itself', async () => {
+  await createSignedInUser('owner')
+  const { screen } = await renderApp('/accounts')
+
+  await screen.getByLabelText('Nom').fill('x'.repeat(61))
+  await screen.getByLabelText('Solde initial').fill('1000')
+  await screen.getByRole('button', { name: 'Créer le compte' }).click()
+
+  await expect.element(screen.getByText('60 caractères maximum')).toBeVisible()
+  expect(await pb.collection('accounts').getFullList()).toEqual([])
+})
 
 it('never exposes another owner’s accounts or balances', async () => {
   await createSignedInUser('owner')

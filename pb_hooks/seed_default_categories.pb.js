@@ -23,10 +23,12 @@ onRecordAfterCreateSuccess((e) => {
   // The user row is already committed by the time this runs, so a seeding
   // failure must not surface as a failed sign-up: the caller would retry and
   // hit "email already in use", locked out of an account that exists.
-  try {
-    const categories = e.app.findCollectionByNameOrId('categories')
+  // Guarded per category, not around the loop: one failing save must not cost
+  // the user every category that follows it.
+  const categories = e.app.findCollectionByNameOrId('categories')
 
-    for (const [name, kind] of defaults) {
+  for (const [name, kind] of defaults) {
+    try {
       const category = new Record(categories)
 
       category.set('user', e.record.id)
@@ -35,9 +37,9 @@ onRecordAfterCreateSuccess((e) => {
       category.set('active', true)
 
       e.app.save(category)
+    } catch (err) {
+      console.warn(`Could not seed category "${name}" for ${e.record.id}: ${String(err)}`)
     }
-  } catch (err) {
-    console.warn(`Could not seed default categories for ${e.record.id}: ${String(err)}`)
   }
 
   e.next()

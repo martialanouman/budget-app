@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { FormError } from '@/auth/auth-layout.tsx'
+import { FormError, SubmitButton } from '@/components/form-feedback'
 import { AppShell } from '@/components/app-shell'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
@@ -14,7 +14,7 @@ import {
 import { useCategories, useCreateCategory, useSetCategoryActive } from './categories-api.ts'
 
 const schema = z.object({
-  name: z.string().min(1, 'Nom requis'),
+  name: z.string().min(1, 'Nom requis').max(60, '60 caractères maximum'),
   kind: z.enum(CATEGORY_KINDS),
   parent: z.string(),
 })
@@ -63,8 +63,17 @@ export function CategoriesPage() {
   })
 
   const onSubmit = handleSubmit(async (values) => {
+    createCategory.reset()
+
+    // Removing the <option> resets what the browser shows but fires no change
+    // event, so the form can still hold a parent deactivated meanwhile. What
+    // the user sees — "Aucune" — is what gets saved.
+    const parent = selectableParents.some((category) => category.id === values.parent)
+      ? values.parent
+      : ''
+
     try {
-      await createCategory.mutateAsync(values)
+      await createCategory.mutateAsync({ ...values, parent })
       reset()
     } catch {
       // Surfaced through createCategory.isError below.
@@ -79,11 +88,10 @@ export function CategoriesPage() {
     setActive.mutate({ id: category.id, active: !category.active })
 
   // A retired parent must not collect new children.
+  const selectableParents = roots.filter((category) => category.active)
   const parentOptions = [
     { value: '', label: 'Aucune (catégorie principale)' },
-    ...roots
-      .filter((category) => category.active)
-      .map((category) => ({ value: category.id, label: category.name })),
+    ...selectableParents.map((category) => ({ value: category.id, label: category.name })),
   ]
 
   return (
@@ -104,13 +112,7 @@ export function CategoriesPage() {
           {...register('kind')}
         />
         <SelectField label="Catégorie parente" options={parentOptions} {...register('parent')} />
-        <button
-          type="submit"
-          disabled={formState.isSubmitting}
-          className="rounded-md bg-slate-900 px-4 py-2.5 font-medium text-white outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60"
-        >
-          Créer la catégorie
-        </button>
+        <SubmitButton pending={formState.isSubmitting}>Créer la catégorie</SubmitButton>
       </form>
 
       <section className="space-y-2">
