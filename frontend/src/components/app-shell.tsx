@@ -5,6 +5,7 @@ import { useNavigate } from '@tanstack/react-router'
 
 const NAV = [
   { to: '/', label: 'Accueil' },
+  { to: '/transactions', label: 'Transactions' },
   { to: '/accounts', label: 'Comptes' },
   { to: '/categories', label: 'Catégories' },
 ] as const

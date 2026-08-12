@@ -36,6 +36,30 @@ export type Category = {
   active: boolean
 }
 
+export const TRANSACTION_TYPES = ['depense', 'revenu'] as const
+export type TransactionType = (typeof TRANSACTION_TYPES)[number]
+
+export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
+  depense: 'Dépense',
+  revenu: 'Revenu',
+}
+
+export type Transaction = {
+  id: string
+  user: string
+  account: string
+  category: string
+  type: TransactionType
+  /** Always positive; `type` carries the direction. */
+  amount: number
+  date: string
+  note: string
+  expand?: {
+    account?: Account
+    category?: Category
+  }
+}
+
 /** Read-only view: the balance is computed in SQLite, never stored. */
 export type AccountBalance = {
   id: string
