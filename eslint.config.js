@@ -51,6 +51,7 @@ export default tseslint.config(
     languageOptions: {
       globals: {
         require: 'readonly',
+        console: 'readonly',
         $app: 'readonly',
         $apis: 'readonly',
         $os: 'readonly',

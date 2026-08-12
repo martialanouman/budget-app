@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toMoney } from '@budget/domain'
 import { type Account, type AccountBalance, type AccountType } from '@/lib/collections'
 import { pb } from '@/lib/pocketbase'
 
@@ -20,7 +21,14 @@ export function useAccounts() {
 export function useAccountBalances() {
   return useQuery({
     queryKey: ['account-balances'],
-    queryFn: () => pb.collection('account_balances').getFullList<AccountBalance>(),
+    queryFn: async () => {
+      const rows = await pb.collection('account_balances').getFullList<AccountBalance>()
+
+      // Revalidated here, at the boundary: an out-of-range figure must fail the
+      // query — and show the error banner — rather than throw during render and
+      // blank the page.
+      return rows.map((row) => ({ ...row, balance: toMoney(row.balance) }))
+    },
   })
 }
 
