@@ -7,14 +7,18 @@ import {
   createRouter,
   redirect,
 } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { AccountsPage } from '@/accounts/accounts-page.tsx'
 import { ForgotPasswordPage } from '@/auth/forgot-password-page.tsx'
 import { ResetPasswordPage } from '@/auth/reset-password-page.tsx'
 import { SignInPage } from '@/auth/sign-in-page.tsx'
 import { SignUpPage } from '@/auth/sign-up-page.tsx'
+import { CategoriesPage } from '@/categories/categories-page.tsx'
 import { NotFoundPage } from '@/components/not-found-page'
 import { HomePage } from '@/home/home-page.tsx'
 import { pb } from '@/lib/pocketbase'
+import { createQueryClient } from '@/lib/query-client'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
@@ -81,12 +85,24 @@ const homeRoute = createRoute({
   component: HomePage,
 })
 
+const accountsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/accounts',
+  component: AccountsPage,
+})
+
+const categoriesRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/categories',
+  component: CategoriesPage,
+})
+
 const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
-  protectedRoute.addChildren([homeRoute]),
+  protectedRoute.addChildren([homeRoute, accountsRoute, categoriesRoute]),
 ])
 
 export function createAppRouter(history?: RouterHistory) {
@@ -103,9 +119,16 @@ export type AppRouter = ReturnType<typeof createAppRouter>
 // tab, an expired token) would otherwise leave the user sitting on a protected
 // screen. Re-running the guards on every authStore change closes that gap.
 export function AppRouterProvider({ router }: { router: AppRouter }) {
+  // One client per provider, so journeys never share cached data between tests.
+  const [queryClient] = useState(createQueryClient)
+
   useEffect(() => pb.authStore.onChange(() => void router.invalidate()), [router])
 
-  return <RouterProvider router={router} />
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  )
 }
 
 declare module '@tanstack/react-router' {

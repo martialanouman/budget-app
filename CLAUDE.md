@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État du dépôt
 
-Étape 0 du plan livrée : le scaffolding (workspace pnpm, frontend Vite/React, Vitest, lint, CI) est en place. **Aucune fonctionnalité métier n'existe encore** — pas de PocketBase, pas de collections, pas d'écran applicatif. La prochaine étape est le socle PocketBase et l'authentification.
+Étapes 0 à 3 du plan livrées : outillage et CI ; authentification complète (inscription, connexion, réinitialisation vérifiée via Mailpit) ; noyau monétaire XOF partagé et exécuté par le moteur de PocketBase ; comptes, catégories et view des soldes. **Prochaine étape : les transactions** (saisie rapide, virements, transactions scindées), qui remplaceront la requête de `account_balances` par la somme complète.
 
 Les deux documents de référence, à lire avant toute décision d'implémentation :
 
@@ -21,7 +21,7 @@ Deux blocs, **un seul déploiement** :
 - **Backend** : PocketBase (binaire Go unique) fournissant SQLite, l'auth e-mail/mot de passe, l'API REST/Realtime et l'admin. La logique métier serveur s'écrit en hooks JS dans `pb_hooks/`.
 - **Sauvegarde** : Litestream réplique en continu le fichier SQLite vers Backblaze B2 / S3.
 
-Layout du monorepo : `frontend/` (existe), `packages/domain/` (existe), puis `pb_hooks/`, `pb_migrations/` et `deploy/` à venir.
+Layout du monorepo : `frontend/`, `packages/domain/`, `pb_hooks/` et `pb_migrations/` existent ; `deploy/` viendra avec l'étape 8.
 
 `packages/domain` étend le layout des specs : il porte les calculs financiers en TypeScript pur, sans dépendance à React ni à PocketBase, pour être partagé entre le frontend et les hooks serveur (compilé en CommonJS vers `pb_hooks/lib/` à partir de l'étape 2). Les hooks se limitent à l'orchestration.
 
@@ -87,6 +87,15 @@ Le bundle est en `platform: 'neutral'`, et ce n'est pas indifférent : sous `'no
 L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit lui-même** à chaque exécution (`buildDomain()` depuis `@budget/domain/build`) : s'en remettre à un hook `pretest` ne couvrait que `pnpm test`, et laissait `pnpm test:journeys` valider un bundle périmé en toute discrétion.
 
 **La marque `Money` disparaît à la compilation.** Les hooks appellent ce code depuis goja, sans types : toute fonction publique du domaine doit revalider ses entrées plutôt que se fier à sa signature.
+
+**Chaque handler de hook est sérialisé et exécuté comme un programme isolé.** Il ne voit _rien_ de la portée du fichier : une `const` déclarée au-dessus de `onRecordAfterCreateSuccess(...)` y sera `undefined`, et l'erreur ne se manifeste qu'à l'exécution du hook, pas au démarrage. Les constantes vont donc dans le handler, et le code partagé passe par un `require()` **à l'intérieur** du handler.
+
+## Comptes et catégories
+
+- `accounts.initial_balance` est déclaré `onlyInt` : PocketBase refuse un montant fractionnaire en HTTP 400. L'invariant XOF tient jusqu'au stockage, pas seulement dans le domaine. Tout futur champ monétaire doit faire de même.
+- Rien ne se supprime : un compte s'archive (`archived`), une catégorie se désactive (`active`). L'historique des transactions doit rester rattachable.
+- `account_balances` est une view collection. Elle ne renvoie que le solde initial tant que `transactions` n'existe pas ; l'étape 4 remplacera sa requête par la somme complète.
+- Les mutations de comptes invalident aussi `['account-balances']` : le solde est dérivé côté serveur et aucun canal realtime ne le pousse.
 
 ## Contraintes d'outillage
 
