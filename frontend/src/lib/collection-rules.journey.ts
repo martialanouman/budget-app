@@ -52,6 +52,38 @@ it('refuses a parent category owned by somebody else', async () => {
   ).rejects.toThrow()
 })
 
+// PocketBase does not re-evaluate relation-path conditions on update, so the
+// createRule guard alone leaves the move open.
+it('refuses to move a transaction onto somebody else’s account', async () => {
+  await createSignedInUser('victim')
+  const theirAccount = await pb.collection('accounts').create({
+    user: currentUserId(),
+    name: 'Compte de la victime',
+    type: 'banque',
+    initial_balance: 100_000,
+  })
+
+  await createSignedInUser('intruder')
+  const ownAccount = await pb.collection('accounts').create({
+    user: currentUserId(),
+    name: 'Compte propre',
+    type: 'especes',
+    initial_balance: 1_000,
+  })
+  const entry = await pb.collection('transactions').create({
+    user: currentUserId(),
+    account: ownAccount.id,
+    category: (await firstCategory()).id,
+    type: 'depense',
+    amount: 500,
+    date: '2026-08-12 10:00:00',
+  })
+
+  await expect(
+    pb.collection('transactions').update(entry.id, { account: theirAccount.id }),
+  ).rejects.toThrow()
+})
+
 it('still accepts a parent the caller owns', async () => {
   await createSignedInUser('owner')
   const mine = await firstCategory()

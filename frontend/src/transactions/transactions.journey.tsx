@@ -33,6 +33,25 @@ async function fillEntry(
   await screen.getByRole('button', { name: 'Enregistrer' }).click()
 }
 
+// Deliberately never calls selectOptions: Playwright always dispatches a change
+// event, which papers over a select whose displayed option and form value have
+// drifted apart. A real user who accepts the defaults dispatches nothing.
+it('records an entry from the defaults the screen already shows', async () => {
+  await createSignedInUser('trx')
+  await anAccountAndCategory(150_000)
+
+  const { screen } = await renderApp('/transactions')
+  await expect.element(screen.getByLabelText('Compte', { exact: true })).toBeVisible()
+
+  // The account keeps whatever the screen shows; only the category, which must
+  // be a deliberate choice, is picked.
+  await screen.getByLabelText('Montant', { exact: true }).fill('20 000')
+  await screen.getByLabelText('Catégorie', { exact: true }).selectOptions('Alimentation')
+  await screen.getByRole('button', { name: 'Enregistrer' }).click()
+
+  await expect.element(screen.getByText(xof('20 000'))).toBeVisible()
+})
+
 // TRX-01 and the balance it moves: the whole point of the quick entry screen.
 it('records an expense and moves the account balance', async () => {
   await createSignedInUser('trx')
@@ -67,7 +86,11 @@ it('restores the balance when the transaction is deleted', async () => {
   await fillEntry(screen, '20 000', 'depense')
   await expect.element(screen.getByText(xof('20 000'))).toBeVisible()
 
+  // Two taps on purpose: the row is hard-deleted and the button sits next to
+  // the amount on a phone.
   await screen.getByRole('button', { name: /^Supprimer Alimentation/u }).click()
+  await screen.getByRole('button', { name: /^Confirmer la suppression Alimentation/u }).click()
+
   await expect.element(screen.getByText('Aucune transaction.')).toBeVisible()
 
   await screen.getByRole('link', { name: 'Comptes' }).click()

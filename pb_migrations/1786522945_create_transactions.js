@@ -59,6 +59,11 @@ migrate(
         { name: 'amount', type: 'number', required: true, onlyInt: true, min: 1 },
         { name: 'date', type: 'date', required: true },
         { name: 'note', type: 'text', max: 200 },
+        // Not implicit since PocketBase 0.23: without it there is no stable
+        // tiebreaker for entries typed on the same day, which all share a
+        // midnight timestamp.
+        { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
+        { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
       ],
       // The two lookups every balance and budget aggregate performs.
       indexes: [
