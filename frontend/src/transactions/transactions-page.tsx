@@ -6,8 +6,10 @@ import { AppShell } from '@/components/app-shell'
 import { FormError } from '@/components/form-feedback'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
-import { type Transaction } from '@/lib/collections'
-import { QuickEntryForm } from './quick-entry-form.tsx'
+import { ALL_TYPE_LABELS, type Transaction } from '@/lib/collections'
+import { QuickEntryForm, todayLocally } from './quick-entry-form.tsx'
+import { TransferForm } from './transfer-form.tsx'
+import { useTransfer } from './transfers-api.ts'
 import {
   type TransactionFilters,
   useDeleteTransaction,
@@ -17,10 +19,13 @@ import {
 
 const SEARCH_DELAY_MS = 300
 
+/** Types that add to a balance; everything else subtracts. */
+const CREDITS = new Set(['revenu', 'virement_entrant'])
+
 /** A row whose amount is out of range costs only itself, never the page. */
 function signedAmount(entry: Transaction) {
   try {
-    return formatAmount(toMoney(entry.type === 'revenu' ? entry.amount : -entry.amount))
+    return formatAmount(toMoney(CREDITS.has(entry.type) ? entry.amount : -entry.amount))
   } catch {
     return '—'
   }
@@ -36,6 +41,7 @@ export function TransactionsPage() {
   const entries = useTransactions(filters)
   const recordTransaction = useRecordTransaction()
   const deleteTransaction = useDeleteTransaction()
+  const makeTransfer = useTransfer()
 
   // Debounced: the search box feeds the query key, so every keystroke would
   // otherwise be a cache miss that blanks the list and refetches it whole.
@@ -86,6 +92,19 @@ export function TransactionsPage() {
         <p>Chargement…</p>
       )}
 
+      {ready && openAccounts.length >= 2 ? (
+        <TransferForm
+          accounts={openAccounts}
+          today={todayLocally()}
+          failed={makeTransfer.isError}
+          onTransfer={(request) => {
+            makeTransfer.reset()
+
+            return makeTransfer.mutateAsync(request)
+          }}
+        />
+      ) : null}
+
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Historique</h2>
 
@@ -134,11 +153,10 @@ export function TransactionsPage() {
           {(entries.data ?? []).map((entry) => (
             <li key={entry.id} className="flex items-center gap-3 p-3">
               <span className="flex-1">
-                <span className="font-medium">
-                  {entry.expand?.category?.name ?? 'Sans catégorie'}
-                </span>
+                <span className="font-medium">{entry.expand?.category?.name ?? 'Virement'}</span>
                 <span className="block text-sm text-slate-600">
-                  {entry.date.slice(0, 10)} · {entry.expand?.account?.name}
+                  {ALL_TYPE_LABELS[entry.type] ?? entry.type} · {entry.date.slice(0, 10)} ·{' '}
+                  {entry.expand?.account?.name}
                   {entry.note ? ` · ${entry.note}` : ''}
                 </span>
               </span>

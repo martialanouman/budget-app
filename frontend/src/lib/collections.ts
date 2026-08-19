@@ -37,12 +37,23 @@ export type Category = {
 }
 
 export const TRANSACTION_TYPES = ['depense', 'revenu'] as const
+/** Transfers are recorded as two rows; the direction gives the balance its sign. */
+export const TRANSFER_TYPES = ['virement_sortant', 'virement_entrant'] as const
 export type TransactionType = (typeof TRANSACTION_TYPES)[number]
 
 export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   depense: 'Dépense',
   revenu: 'Revenu',
 }
+
+export const ALL_TYPE_LABELS: Record<string, string> = {
+  ...TRANSACTION_TYPE_LABELS,
+  virement_sortant: 'Virement sortant',
+  virement_entrant: 'Virement entrant',
+}
+
+/** Transfers move money between the owner's own accounts, so they are not spending. */
+export const isSpending = (type: string) => type === 'depense'
 
 export type Transaction = {
   id: string
@@ -54,6 +65,8 @@ export type Transaction = {
   amount: number
   date: string
   note: string
+  transfer_group: string
+  split_group: string
   expand?: {
     account?: Account
     category?: Category

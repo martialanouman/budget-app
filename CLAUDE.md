@@ -97,6 +97,16 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
 - `account_balances` est une view collection. Elle ne renvoie que le solde initial tant que `transactions` n'existe pas ; l'étape 4 remplacera sa requête par la somme complète.
 - Les mutations de comptes invalident aussi `['account-balances']` : le solde est dérivé côté serveur et aucun canal realtime ne le pousse.
 
+## Transactions, virements et scissions
+
+- **Montants toujours positifs** ; `type` porte le sens. Une colonne signée laisserait une « dépense » de -5000 signifier un revenu, et chaque agrégat devrait s'en prémunir.
+- Un virement s'écrit en **deux lignes** de types `virement_sortant` et `virement_entrant`, reliées par `transfer_group`. Écart assumé au schéma des specs, qui prévoyait un unique `virement` : la view a besoin du sens pour choisir le signe, et deux valeurs explicites évitent un second champ conditionnel. `isSpending()` reste le seul test à utiliser pour exclure les virements d'un agrégat de dépense.
+- Une transaction scindée est **plusieurs lignes ordinaires** partageant `split_group`. Chacune compte une fois partout — soldes, budgets, rapports — donc une seule règle d'agrégat, pas deux opposées.
+- **Virements et scissions passent par une route serveur** (`pb_hooks/transfers.pb.js`, `splits.pb.js`) qui écrit dans une seule transaction SQLite. Deux écritures client laisseraient un débit sans crédit sur une coupure. Ne pas contourner ces routes depuis le frontend.
+- `pb_hooks/guard_transaction_ownership.pb.js` vérifie la propriété du compte et de la catégorie **à la création comme à la mise à jour** : PocketBase n'applique `account.user = @request.auth.id` qu'à la création, et un `PATCH` déplaçait sinon une transaction sur le compte d'un tiers.
+- Un formulaire dont un `<select>` démarre sur une valeur sans option correspondante **ne peut pas être soumis** : le navigateur affiche la première option sans émettre d'événement, et la valeur du formulaire reste vide. Les formulaires ne sont montés qu'une fois leurs options connues. Un parcours qui appelle toujours `selectOptions()` ne verra jamais ce défaut.
+- `created` et `updated` ne sont plus implicites depuis PocketBase 0.23 : toute collection qui doit être triée par ordre d'insertion doit les déclarer explicitement.
+
 ## Contraintes d'outillage
 
 - **TypeScript est figé en 6.0.3**, alors que 7.0.2 (réécriture Go) est le `latest`. Raison : typescript-eslint 8.67 déclare `typescript: >=4.8.4 <6.1.0` et ne supporte pas encore TS 7. Monter TS 7 signifierait perdre le lint type-aware. À réévaluer quand typescript-eslint suivra.
