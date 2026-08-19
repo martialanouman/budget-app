@@ -1,15 +1,13 @@
-import { zodResolver } from '@hookform/resolvers/zod'
-import { formatAmount, parseAmount, toMoney } from '@budget/domain'
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
+import { formatAmount, toMoney } from '@budget/domain'
+import { useEffect, useState } from 'react'
 import { useAccounts } from '@/accounts/accounts-api.ts'
 import { useCategories } from '@/categories/categories-api.ts'
 import { AppShell } from '@/components/app-shell'
-import { FormError, SubmitButton } from '@/components/form-feedback'
+import { FormError } from '@/components/form-feedback'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
-import { TRANSACTION_TYPES, TRANSACTION_TYPE_LABELS, type Transaction } from '@/lib/collections'
+import { type Transaction } from '@/lib/collections'
+import { QuickEntryForm } from './quick-entry-form.tsx'
 import {
   type TransactionFilters,
   useDeleteTransaction,
@@ -17,33 +15,21 @@ import {
   useTransactions,
 } from './transactions-api.ts'
 
-const today = () => new Date().toISOString().slice(0, 10)
+const SEARCH_DELAY_MS = 300
 
-const schema = z.object({
-  amount: z.string().transform((value, ctx) => {
-    try {
-      const amount = parseAmount(value)
-
-      if (amount <= 0) throw new Error('not positive')
-
-      return amount
-    } catch {
-      ctx.addIssue({ code: 'custom', message: 'Montant en francs, supérieur à zéro' })
-
-      return z.NEVER
-    }
-  }),
-  type: z.enum(TRANSACTION_TYPES),
-  account: z.string().min(1, 'Compte requis'),
-  category: z.string().min(1, 'Catégorie requise'),
-  date: z.string().min(1, 'Date requise'),
-  note: z.string().max(200, '200 caractères maximum'),
-})
-
-type FormInput = z.input<typeof schema>
+/** A row whose amount is out of range costs only itself, never the page. */
+function signedAmount(entry: Transaction) {
+  try {
+    return formatAmount(toMoney(entry.type === 'revenu' ? entry.amount : -entry.amount))
+  } catch {
+    return '—'
+  }
+}
 
 export function TransactionsPage() {
   const [filters, setFilters] = useState<TransactionFilters>({})
+  const [search, setSearch] = useState('')
+  const [confirming, setConfirming] = useState<string>()
 
   const accounts = useAccounts()
   const categories = useCategories()
@@ -51,85 +37,54 @@ export function TransactionsPage() {
   const recordTransaction = useRecordTransaction()
   const deleteTransaction = useDeleteTransaction()
 
-  const { register, handleSubmit, reset, formState } = useForm<
-    FormInput,
-    unknown,
-    z.infer<typeof schema>
-  >({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      amount: '',
-      type: 'depense',
-      account: '',
-      category: '',
-      date: today(),
-      note: '',
-    },
-  })
+  // Debounced: the search box feeds the query key, so every keystroke would
+  // otherwise be a cache miss that blanks the list and refetches it whole.
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setFilters((current) => ({ ...current, search })),
+      SEARCH_DELAY_MS,
+    )
 
-  const onSubmit = handleSubmit(async (values) => {
-    recordTransaction.reset()
+    return () => clearTimeout(timer)
+  }, [search])
 
-    try {
-      await recordTransaction.mutateAsync(values)
-      reset({ ...values, amount: '', note: '' })
-    } catch {
-      // Surfaced through recordTransaction.isError below.
+  const allAccounts = accounts.data ?? []
+  const allCategories = categories.data ?? []
+
+  // Entry only offers what is still in use; the filters must keep offering
+  // everything, since archiving exists to keep past entries readable.
+  const openAccounts = allAccounts.filter((account) => !account.archived)
+  const activeCategories = allCategories.filter((category) => category.active)
+
+  const ready = accounts.isSuccess && categories.isSuccess
+
+  const remove = (id: string) => {
+    if (confirming === id) {
+      setConfirming(undefined)
+      deleteTransaction.mutate(id)
+
+      return
     }
-  })
 
-  const openAccounts = (accounts.data ?? []).filter((account) => !account.archived)
-  const activeCategories = (categories.data ?? []).filter((category) => category.active)
-
-  const signed = (entry: Transaction) =>
-    formatAmount(toMoney(entry.type === 'revenu' ? entry.amount : -entry.amount))
+    setConfirming(id)
+  }
 
   return (
     <AppShell title="Transactions">
-      <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
-        <h2 className="text-lg font-medium">Saisie rapide</h2>
-        {recordTransaction.isError ? (
-          <FormError message="L'enregistrement a échoué. Vérifiez votre connexion et réessayez." />
-        ) : null}
-        <TextField
-          label="Montant"
-          inputMode="numeric"
-          autoFocus
-          error={formState.errors.amount?.message}
-          {...register('amount')}
+      {ready ? (
+        <QuickEntryForm
+          accounts={openAccounts}
+          categories={activeCategories}
+          failed={recordTransaction.isError}
+          onRecord={(draft) => {
+            recordTransaction.reset()
+
+            return recordTransaction.mutateAsync(draft)
+          }}
         />
-        <SelectField
-          label="Type"
-          options={TRANSACTION_TYPES.map((type) => ({
-            value: type,
-            label: TRANSACTION_TYPE_LABELS[type],
-          }))}
-          {...register('type')}
-        />
-        <SelectField
-          label="Compte"
-          options={openAccounts.map((account) => ({ value: account.id, label: account.name }))}
-          error={formState.errors.account?.message}
-          {...register('account')}
-        />
-        <SelectField
-          label="Catégorie"
-          options={activeCategories.map((category) => ({
-            value: category.id,
-            label: category.name,
-          }))}
-          error={formState.errors.category?.message}
-          {...register('category')}
-        />
-        <TextField
-          label="Date"
-          type="date"
-          error={formState.errors.date?.message}
-          {...register('date')}
-        />
-        <TextField label="Note" error={formState.errors.note?.message} {...register('note')} />
-        <SubmitButton pending={formState.isSubmitting}>Enregistrer</SubmitButton>
-      </form>
+      ) : (
+        <p>Chargement…</p>
+      )}
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Historique</h2>
@@ -139,7 +94,10 @@ export function TransactionsPage() {
             label="Filtrer par compte"
             options={[
               { value: '', label: 'Tous les comptes' },
-              ...openAccounts.map((account) => ({ value: account.id, label: account.name })),
+              ...allAccounts.map((account) => ({
+                value: account.id,
+                label: account.archived ? `${account.name} (archivé)` : account.name,
+              })),
             ]}
             onChange={(event) =>
               setFilters((current) => ({ ...current, account: event.target.value }))
@@ -149,9 +107,9 @@ export function TransactionsPage() {
             label="Filtrer par catégorie"
             options={[
               { value: '', label: 'Toutes les catégories' },
-              ...activeCategories.map((category) => ({
+              ...allCategories.map((category) => ({
                 value: category.id,
-                label: category.name,
+                label: category.active ? category.name : `${category.name} (désactivée)`,
               })),
             ]}
             onChange={(event) =>
@@ -160,9 +118,8 @@ export function TransactionsPage() {
           />
           <TextField
             label="Rechercher dans les notes"
-            onChange={(event) =>
-              setFilters((current) => ({ ...current, search: event.target.value }))
-            }
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
           />
         </div>
 
@@ -192,15 +149,19 @@ export function TransactionsPage() {
                     : 'tabular-nums text-slate-900'
                 }
               >
-                {signed(entry)}
+                {signedAmount(entry)}
               </span>
+              {/* Two steps on purpose: a transaction is hard-deleted, and the
+                  button sits millimetres from the amount on a phone. */}
               <button
                 type="button"
-                onClick={() => deleteTransaction.mutate(entry.id)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+                onClick={() => remove(entry.id)}
+                onBlur={() => setConfirming(undefined)}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 aria-pressed:border-red-600 aria-pressed:text-red-700"
+                aria-pressed={confirming === entry.id}
               >
-                Supprimer {entry.expand?.category?.name ?? 'la transaction'} du{' '}
-                {entry.date.slice(0, 10)}
+                {confirming === entry.id ? 'Confirmer la suppression' : 'Supprimer'}{' '}
+                {entry.expand?.category?.name ?? 'la transaction'} du {entry.date.slice(0, 10)}
               </button>
             </li>
           ))}

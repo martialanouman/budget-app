@@ -22,14 +22,21 @@ export type TransactionDraft = {
   note: string
 }
 
+/** `%` and `_` are LIKE wildcards; pb.filter escapes quotes but leaves these. */
+const literal = (text: string) => text.replace(/([%_\\])/gu, '\\$1')
+
 function toFilter(filters: TransactionFilters) {
   const clauses: string[] = []
 
   if (filters.account) clauses.push(pb.filter('account = {:account}', filters))
   if (filters.category) clauses.push(pb.filter('category = {:category}', filters))
-  if (filters.from) clauses.push(pb.filter('date >= {:from}', filters))
-  if (filters.to) clauses.push(pb.filter('date <= {:to}', filters))
-  if (filters.search) clauses.push(pb.filter('note ~ {:search}', filters))
+  if (filters.from) clauses.push(pb.filter('date >= {:from}', { from: `${filters.from} 00:00:00` }))
+  // Dates are stored as full timestamps, so a date-only upper bound would drop
+  // every entry made after midnight on the closing day.
+  if (filters.to) clauses.push(pb.filter('date <= {:to}', { to: `${filters.to} 23:59:59` }))
+  if (filters.search) {
+    clauses.push(pb.filter('note ~ {:search}', { search: literal(filters.search) }))
+  }
 
   return clauses.join(' && ')
 }
@@ -40,7 +47,9 @@ export function useTransactions(filters: TransactionFilters) {
     queryFn: () =>
       transactions().getFullList<Transaction>({
         filter: toFilter(filters),
-        sort: '-date',
+        // Entries typed the same day share a midnight timestamp, so `-created`
+        // breaks the tie and keeps the newest first.
+        sort: '-date,-created',
         expand: 'account,category',
       }),
   })
