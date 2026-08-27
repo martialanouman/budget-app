@@ -1,4 +1,4 @@
-import { formatAmount, reachedThresholds, toMoney, unspent } from '@budget/domain'
+import { formatAmount, reachedThresholds, remainingToLive, toMoney, unspent } from '@budget/domain'
 import { useState } from 'react'
 import { useCategories } from '@/categories/categories-api.ts'
 import { AppShell } from '@/components/app-shell'
@@ -6,11 +6,14 @@ import { FormError } from '@/components/form-feedback'
 import { TextField } from '@/components/text-field'
 import { type Budget } from '@/lib/collections'
 import { monthOf, todayLocally } from '@/lib/dates.ts'
+import { AlertsPanel } from './alerts-panel.tsx'
+import { useBudgetAlerts, useDismissAlert } from './alerts-api.ts'
 import { CapForm } from './cap-form.tsx'
 import {
   useBudgetSpending,
   useBudgets,
   useDuplicatePreviousMonth,
+  useMonthlySummary,
   useSetCap,
 } from './budgets-api.ts'
 
@@ -63,12 +66,33 @@ export function BudgetsPage() {
   const categories = useCategories()
   const budgets = useBudgets(month)
   const spending = useBudgetSpending(month)
+  const alerts = useBudgetAlerts()
+  const dismissAlert = useDismissAlert()
+  const summary = useMonthlySummary(month)
   const setCap = useSetCap()
   const duplicate = useDuplicatePreviousMonth()
 
   const activeCategories = (categories.data ?? []).filter((category) => category.active)
 
   const spentBy = new Map((spending.data ?? []).map((row) => [row.category, row.spent]))
+
+  // Fixed envelopes are deducted for their unpaid part only: what has already
+  // been paid is counted once, as spending.
+  const unpaidFixedCharges = (budgets.data ?? [])
+    .filter((budget) => budget.expand?.category?.kind === 'fixe')
+    .reduce(
+      (total, budget) =>
+        toMoney(total + unspent(ceilingOf(budget), toMoney(spentBy.get(budget.category) ?? 0))),
+      toMoney(0),
+    )
+
+  const remaining = remainingToLive({
+    income: toMoney(summary.data?.income ?? 0),
+    spent: toMoney(summary.data?.spent ?? 0),
+    unpaidFixedCharges,
+    // Debts arrive at step 6; the term is in the formula, its source is not.
+    debtInstalments: toMoney(0),
+  })
 
   return (
     <AppShell title="Budgets">
@@ -93,6 +117,21 @@ export function BudgetsPage() {
       ) : (
         <p>Chargement…</p>
       )}
+
+      <section className="rounded-md border border-slate-200 bg-white p-3">
+        <h2 className="text-lg font-medium">Reste à vivre</h2>
+        <p className="text-2xl tabular-nums">{formatAmount(remaining)}</p>
+        <p className="text-sm text-slate-600">
+          Revenus du mois, moins les dépenses réalisées et ce qui reste à payer sur les charges
+          fixes.
+        </p>
+      </section>
+
+      <AlertsPanel
+        alerts={alerts.data ?? []}
+        categories={categories.data ?? []}
+        onDismiss={(id) => dismissAlert.mutate(id)}
+      />
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">

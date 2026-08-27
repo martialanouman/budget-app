@@ -18,3 +18,10 @@ export function previousMonth(month: string) {
 
   return index === 1 ? `${year - 1}-12` : `${year}-${String(index - 1).padStart(2, '0')}`
 }
+
+// Intl rather than a date library: the only need is a month name, and the
+// browser already carries the French one. A parser will earn its dependency
+// when something actually has to compute on dates.
+const MONTH_LABEL = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
+
+export const monthLabel = (month: string) => MONTH_LABEL.format(new Date(`${month}-01T00:00:00`))

@@ -3,6 +3,7 @@ import { createSignedInUser, currentUserId } from '../../test/journey-harness.ts
 import { type Category, type Notification } from '@/lib/collections'
 import { monthOf, todayLocally } from '@/lib/dates.ts'
 import { pb } from '@/lib/pocketbase'
+import { splitTransaction } from '@/transactions/splits-api.ts'
 
 const month = () => monthOf(todayLocally())
 
@@ -107,4 +108,24 @@ it('says nothing about income', async () => {
   })
 
   expect(await alerts()).toEqual([])
+})
+
+// A split is written by the server route inside one transaction. Its rows are
+// ordinary spending and must trip the envelope like any other.
+it('alerts on spending typed as a split', async () => {
+  await createSignedInUser('al')
+  const { account, food } = await context(100_000)
+  const categories = await pb.collection('categories').getFullList<Category>()
+
+  await splitTransaction({
+    account,
+    date: todayLocally(),
+    note: 'Courses',
+    parts: [
+      { category: food, amount: 90_000 },
+      { category: categories.find((one) => one.name === 'Transport')!.id, amount: 10_000 },
+    ],
+  })
+
+  expect(await alerts()).toEqual([{ month: month(), category: food, threshold: 80 }])
 })

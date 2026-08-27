@@ -145,3 +145,151 @@ it('leaves an envelope already set for the month alone', async () => {
   await expect.element(screen.getByText(new RegExp(`Reste ${xof('50 000')}`, 'u'))).toBeVisible()
   expect(await pb.collection('budgets').getFullList()).toHaveLength(2)
 })
+
+// BUD-05. The specs subtract fixed charges and realised spending both, which
+// counts a paid fixed charge twice; only what is still unpaid on the fixed
+// envelopes is deducted here.
+it('shows what is left to live on', async () => {
+  await createSignedInUser('bg')
+  await anAccount()
+
+  const account = await pb.collection('accounts').getFullList()
+
+  await pb.collection('transactions').create({
+    user: currentUserId(),
+    account: account[0]!.id,
+    category: '',
+    type: 'revenu',
+    amount: 500_000,
+    date: todayLocally(),
+    note: 'Salaire',
+  })
+
+  await spend(120_000, 'Alimentation')
+  await anEnvelope(monthOf(todayLocally()), 'Logement', 80_000)
+
+  const { screen } = await renderApp('/budgets')
+
+  await expect.element(screen.getByRole('heading', { name: 'Reste à vivre' })).toBeVisible()
+  await expect
+    .element(screen.getByText(new RegExp(`^${xof('300 000')}\\sF\\sCFA$`, 'u')))
+    .toBeVisible()
+
+  // Paying part of the fixed charge moves money from "still to pay" to
+  // "already spent" — the figure must not move.
+  await spend(30_000, 'Logement')
+
+  await screen.getByRole('link', { name: 'Transactions' }).click()
+  await screen.getByRole('link', { name: 'Budgets' }).click()
+
+  await expect
+    .element(screen.getByText(new RegExp(`^${xof('300 000')}\\sF\\sCFA$`, 'u')))
+    .toBeVisible()
+})
+
+// BUD-06: an envelope marked for carry-over hands its leftover to the same
+// category next month. Written as an absolute figure beside the cap, so the
+// user keeps seeing the ceiling they chose.
+it('carries an unspent envelope into the next month', async () => {
+  await createSignedInUser('bg')
+  await anAccount()
+
+  const last = previousMonth(monthOf(todayLocally()))
+  const categories = await pb.collection('categories').getFullList<Category>()
+  const food = categories.find((one) => one.name === 'Alimentation')!.id
+
+  await pb.collection('budgets').create({
+    user: currentUserId(),
+    month: last,
+    category: food,
+    cap_amount: 100_000,
+    carry_over: true,
+    carried_amount: 0,
+  })
+  await spend(70_000, 'Alimentation', `${last}-15`)
+
+  const { screen } = await renderApp('/budgets')
+
+  await screen.getByRole('button', { name: 'Dupliquer le mois précédent' }).click()
+
+  // 100 000 of its own cap, plus the 30 000 left over last month.
+  await expect.element(screen.getByText(new RegExp(`Reste ${xof('130 000')}`, 'u'))).toBeVisible()
+})
+
+// An overspent envelope carries nothing: a debt carried forward would shrink
+// next month's cap without the user ever choosing it.
+it('carries nothing from an envelope that was overspent', async () => {
+  await createSignedInUser('bg')
+  await anAccount()
+
+  const last = previousMonth(monthOf(todayLocally()))
+  const categories = await pb.collection('categories').getFullList<Category>()
+  const food = categories.find((one) => one.name === 'Alimentation')!.id
+
+  await pb.collection('budgets').create({
+    user: currentUserId(),
+    month: last,
+    category: food,
+    cap_amount: 100_000,
+    carry_over: true,
+    carried_amount: 0,
+  })
+  await spend(130_000, 'Alimentation', `${last}-15`)
+
+  const { screen } = await renderApp('/budgets')
+
+  await screen.getByRole('button', { name: 'Dupliquer le mois précédent' }).click()
+
+  await expect.element(screen.getByText(new RegExp(`Reste ${xof('100 000')}`, 'u'))).toBeVisible()
+})
+
+// Without the tick, nothing moves: the report is an option (BUD-06).
+it('carries nothing when the envelope was not marked for it', async () => {
+  await createSignedInUser('bg')
+  await anAccount()
+
+  const last = previousMonth(monthOf(todayLocally()))
+
+  await anEnvelope(last, 'Alimentation', 100_000)
+  await spend(70_000, 'Alimentation', `${last}-15`)
+
+  const { screen } = await renderApp('/budgets')
+
+  await screen.getByRole('button', { name: 'Dupliquer le mois précédent' }).click()
+
+  await expect.element(screen.getByText(new RegExp(`Reste ${xof('100 000')}`, 'u'))).toBeVisible()
+})
+
+// The monthly job, reached through a harness-only route. It re-computes the
+// carry from scratch, which is what makes it safe to run twice — and what
+// repairs an envelope created before the previous month was over.
+it('recomputes a stale carry when the monthly job runs', async () => {
+  await createSignedInUser('bg')
+  await anAccount()
+
+  const last = previousMonth(monthOf(todayLocally()))
+  const categories = await pb.collection('categories').getFullList<Category>()
+  const food = categories.find((one) => one.name === 'Alimentation')!.id
+
+  await pb.collection('budgets').create({
+    user: currentUserId(),
+    month: last,
+    category: food,
+    cap_amount: 100_000,
+    carry_over: true,
+    carried_amount: 0,
+  })
+
+  // Created while last month still looked untouched: it takes the whole cap.
+  await anEnvelope(monthOf(todayLocally()), 'Alimentation', 100_000)
+  await spend(70_000, 'Alimentation', `${last}-15`)
+
+  await pb.send('/api/test/apply-carry-over', {
+    method: 'POST',
+    body: { month: monthOf(todayLocally()) },
+  })
+
+  const { screen } = await renderApp('/budgets')
+
+  await expect.element(screen.getByText(new RegExp(`Reste ${xof('130 000')}`, 'u'))).toBeVisible()
+})

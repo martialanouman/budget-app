@@ -131,3 +131,12 @@ export type Notification = {
   read: boolean
   created: string
 }
+
+/** Read-only view: the month's income and spending, summed in SQLite. */
+export type MonthlySummary = {
+  id: string
+  user: string
+  month: string
+  income: number
+  spent: number
+}

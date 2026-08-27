@@ -51,6 +51,8 @@ export default tseslint.config(
     languageOptions: {
       globals: {
         require: 'readonly',
+        // A hook module, required by handlers rather than loaded by PocketBase.
+        module: 'writable',
         BadRequestError: 'readonly',
         console: 'readonly',
         $app: 'readonly',

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État du dépôt
 
-Étapes 0 à 3 du plan livrées : outillage et CI ; authentification complète (inscription, connexion, réinitialisation vérifiée via Mailpit) ; noyau monétaire XOF partagé et exécuté par le moteur de PocketBase ; comptes, catégories et view des soldes. **Prochaine étape : les transactions** (saisie rapide, virements, transactions scindées), qui remplaceront la requête de `account_balances` par la somme complète.
+Étapes 0 à 5 du plan livrées : outillage et CI ; authentification complète (inscription, connexion, réinitialisation vérifiée via Mailpit) ; noyau monétaire XOF partagé et exécuté par le moteur de PocketBase ; comptes, catégories et soldes calculés ; transactions, virements atomiques et scissions ; budgets mensuels avec seuils, alertes, reports et reste à vivre. **Prochaine étape : les dettes** (échéanciers, remboursements, rappels J-3/J-1/J).
 
 Les deux documents de référence, à lire avant toute décision d'implémentation :
 
@@ -94,7 +94,7 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
 
 - `accounts.initial_balance` est déclaré `onlyInt` : PocketBase refuse un montant fractionnaire en HTTP 400. L'invariant XOF tient jusqu'au stockage, pas seulement dans le domaine. Tout futur champ monétaire doit faire de même.
 - Rien ne se supprime : un compte s'archive (`archived`), une catégorie se désactive (`active`). L'historique des transactions doit rester rattachable.
-- `account_balances` est une view collection. Elle ne renvoie que le solde initial tant que `transactions` n'existe pas ; l'étape 4 remplacera sa requête par la somme complète.
+- `account_balances` est une view collection, qui somme désormais les transactions.
 - Les mutations de comptes invalident aussi `['account-balances']` : le solde est dérivé côté serveur et aucun canal realtime ne le pousse.
 
 ## Transactions, virements et scissions
@@ -110,6 +110,25 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
 - Les routes convertissent toute entrée invalide en 400, y compris les identifiants inconnus : un `findRecordById` non encadré répondait 404 sur un POST, ce qui se lit « cette route n'existe pas ». Le message ne distingue pas l'inconnu de l'étranger, sans quoi il dirait si un identifiant existe.
 - **La suppression d'un compte utilisateur échoue déjà** (HTTP 400, `Failed to delete record`), indépendamment des virements : `transactions.account` est une relation non cascadante et retient le compte. Mesuré au 19/08/2026 ; à traiter avec USR-04 à l'étape 8.
 - `created` et `updated` ne sont plus implicites depuis PocketBase 0.23 : toute collection qui doit être triée par ordre d'insertion doit les déclarer explicitement.
+
+## Budgets, seuils et reports
+
+- **Une enveloppe par catégorie et par mois**, `month` en texte `YYYY-MM`, avec un index unique `(user, month, category)` : une seconde enveloppe couperait le plafond en deux et tous les totaux mentiraient.
+- **`carried_amount` vit à côté de `cap_amount`, jamais dedans.** L'utilisateur doit continuer à voir le plafond qu'il a choisi, et une valeur absolue rend le report rejouable sans se cumuler.
+- Le report a **deux moments**, pas un : le cron du 1er couvre les enveloppes déjà là, et `onRecordAfterCreateSuccess(budgets)` couvre les autres. Sans ce second chemin, un mois dupliqué le 3 ne recevrait jamais le report appliqué le 1er. Les deux appellent `pb_hooks/jobs/carry_over.js` — un module requis par les handlers, pas un hook : PocketBase ne charge que les `*.pb.js`.
+- **L'alerte appartient au seuil, pas à la dépense qui l'a franchi** : la notification est clée par `(month, category, threshold)` et n'est écrite que si cette clé est absente. Sinon chaque dépense au-delà de 80 % sonnerait à nouveau.
+- **Le « reste à vivre » ne suit pas la formule des specs à la lettre.** « Revenus − charges fixes − échéances − dépenses réalisées » compte deux fois une charge fixe déjà payée. Seule la part **non encore payée** des enveloppes fixes est déduite, sinon payer son loyer ferait baisser le reste à vivre deux fois. Le terme « échéances de dettes » vaut zéro jusqu'à l'étape 6.
+- **PocketBase ne sait pas typer un agrégat dans une view** : un `SUM()` non casté revient comme valeur JSON et `getInt()` y lit 0 — mesuré, le hook d'alerte ne se déclenchait jamais. Toute colonne calculée d'une view porte un `CAST(... AS INT)`.
+- **Un champ `json` relu depuis un enregistrement n'est pas un objet JS** : `payload.month` y vaut `undefined`, et un filtre sur un chemin JSON (`payload.month = {:month}`) ne ramène rien. Passer par `JSON.parse(String(...))` et comparer en JavaScript.
+- **Une erreur levée dans `onRecordAfterCreateSuccess` revient au client en HTTP 400 sur l'enregistrement lui-même** — mesuré. Tout hook accessoire (alerte, report) enveloppe donc son corps dans un `try/catch` qui journalise : une notification impossible ne doit jamais coûter à l'utilisateur la saisie qu'il vient de faire.
+
+## Requêtes et cache
+
+- **L'auto-annulation du SDK PocketBase est désactivée** (`pb.autoCancellation(false)`). Le SDK annule toute requête en vol dès qu'une autre part sur le même chemin : une liste à l'écran et la lecture qu'une mutation fait avant d'écrire s'annulaient mutuellement. TanStack Query tient déjà ce rôle.
+- **Une écriture annule les lectures qu'elle invalide** (`useDerivedMutation`, `frontend/src/lib/mutations.ts`). Une lecture encore en vol au moment de l'écriture résout avec des données d'avant, et TanStack Query la réutilise au lieu d'en lancer une seconde : l'invalidation qui suit est satisfaite par une réponse plus ancienne que l'écriture, et la ligne créée reste invisible. Toute nouvelle mutation passe par ce helper.
+- **Les parcours tournent un fichier à la fois** (`fileParallelism: false`). En parallèle ce sont des iframes de même origine, donc un même `localStorage`, et le `LocalAuthStore` de PocketBase suit les connexions faites dans les autres onglets : une connexion d'un fichier atterrissait dans le client d'un autre. Mesuré à un échec sur six ; 8 exécutions vertes en sérialisé, pour une vingtaine de secondes de plus.
+- Le harnais laisse passer la **sortie d'erreur de PocketBase** : un hook qui échoue était indiscernable d'un hook qui ne fait rien.
+- Formatage des dates : `Intl` suffit pour un nom de mois en français (`frontend/src/lib/dates.ts`). `date-fns` n'entrera que le jour où il faudra vraiment calculer sur des dates.
 
 ## Contraintes d'outillage
 
