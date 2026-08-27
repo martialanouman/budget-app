@@ -20,7 +20,10 @@ export function useDerivedMutation<TVariables>(
   return useMutation({
     mutationFn,
     onMutate: () => Promise.all(keys.map((queryKey) => queryClient.cancelQueries({ queryKey }))),
-    onSuccess: () =>
+    // Settled, not succeeded: a cancelled read is left with no data and
+    // nothing pending, so a write that fails would otherwise leave the list on
+    // "Chargement…" until the next navigation.
+    onSettled: () =>
       Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey }))),
   })
 }

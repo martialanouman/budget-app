@@ -14,13 +14,22 @@ import {
   useBudgets,
   useDuplicatePreviousMonth,
   useMonthlySummary,
+  useRemoveCap,
   useSetCap,
 } from './budgets-api.ts'
 
 /** What the user is judged against: their own cap plus anything carried over. */
 const ceilingOf = (budget: Budget) => toMoney(budget.cap_amount + budget.carried_amount)
 
-function Envelope({ budget, spent }: { budget: Budget; spent: number }) {
+function Envelope({
+  budget,
+  spent,
+  onRemove,
+}: {
+  budget: Budget
+  spent: number
+  onRemove: () => void
+}) {
   const cap = ceilingOf(budget)
   const total = toMoney(spent)
   const reached = reachedThresholds(cap, total)
@@ -40,6 +49,16 @@ function Envelope({ budget, spent }: { budget: Budget; spent: number }) {
         <span className="text-sm tabular-nums text-slate-600">
           {`${formatAmount(total)} sur ${formatAmount(cap)}`}
         </span>
+        {/* Named after its own envelope: several buttons on the page would
+            otherwise read alike to a screen reader. */}
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Supprimer l’enveloppe ${budget.expand?.category?.name ?? ''}`}
+          className="rounded-md border border-slate-300 px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+        >
+          Supprimer
+        </button>
       </div>
       <progress
         value={Math.min(total, cap)}
@@ -70,6 +89,7 @@ export function BudgetsPage() {
   const dismissAlert = useDismissAlert()
   const summary = useMonthlySummary(month)
   const setCap = useSetCap()
+  const removeCap = useRemoveCap()
   const duplicate = useDuplicatePreviousMonth()
 
   const activeCategories = (categories.data ?? []).filter((category) => category.active)
@@ -127,11 +147,17 @@ export function BudgetsPage() {
         </p>
       </section>
 
-      <AlertsPanel
-        alerts={alerts.data ?? []}
-        categories={categories.data ?? []}
-        onDismiss={(id) => dismissAlert.mutate(id)}
-      />
+      {/* Gated on the categories: the alerts query is the lighter of the two
+          and often lands first, and the panel would then announce "Catégorie
+          supprimée" — aloud, through the button's label — about a category
+          that is perfectly alive. */}
+      {categories.isSuccess ? (
+        <AlertsPanel
+          alerts={alerts.data ?? []}
+          categories={categories.data}
+          onDismiss={(id) => dismissAlert.mutate(id)}
+        />
+      ) : null}
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
@@ -157,7 +183,12 @@ export function BudgetsPage() {
 
         <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
           {(budgets.data ?? []).map((budget) => (
-            <Envelope key={budget.id} budget={budget} spent={spentBy.get(budget.category) ?? 0} />
+            <Envelope
+              key={budget.id}
+              budget={budget}
+              spent={spentBy.get(budget.category) ?? 0}
+              onRemove={() => removeCap.mutate(budget.id)}
+            />
           ))}
         </ul>
       </section>

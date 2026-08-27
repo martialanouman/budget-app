@@ -126,6 +126,8 @@ export type Notification = {
   id: string
   user: string
   type: NotificationType
+  /** What it is about, as an exact key — `YYYY-MM@categoryId` for a budget. */
+  subject: string
   payload: BudgetAlertPayload
   due_at: string
   read: boolean

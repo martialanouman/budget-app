@@ -293,3 +293,18 @@ it('recomputes a stale carry when the monthly job runs', async () => {
 
   await expect.element(screen.getByText(new RegExp(`Reste ${xof('130 000')}`, 'u'))).toBeVisible()
 })
+
+// An envelope set by mistake had no way out: the rule allowed the deletion,
+// nothing on screen offered it.
+it('removes an envelope set by mistake', async () => {
+  await createSignedInUser('bg')
+  await anAccount()
+  await anEnvelope(monthOf(todayLocally()), 'Alimentation', 100_000)
+
+  const { screen } = await renderApp('/budgets')
+
+  await screen.getByRole('button', { name: 'Supprimer l’enveloppe Alimentation' }).click()
+
+  await expect.element(screen.getByText('Aucune enveloppe pour ce mois.')).toBeVisible()
+  expect(await pb.collection('budgets').getFullList()).toEqual([])
+})

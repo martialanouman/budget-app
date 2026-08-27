@@ -80,13 +80,21 @@ migrate(
       fields: [
         owner,
         { name: 'type', type: 'select', required: true, maxSelect: 1, values: NOTIFICATION_TYPES },
+        // What the notification is about, as an exact key. A json field reads
+        // back as a raw value and a filter on a JSON path matches nothing, so
+        // deduplicating on the payload meant scanning every notification the
+        // user ever received, on the critical path of typing an expense.
+        { name: 'subject', type: 'text', max: 80 },
         { name: 'payload', type: 'json', maxSize: 2000 },
         { name: 'due_at', type: 'date' },
         { name: 'read', type: 'bool' },
         { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
         { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
       ],
-      indexes: ['CREATE INDEX idx_notifications_user_read ON notifications (user, read)'],
+      indexes: [
+        'CREATE INDEX idx_notifications_user_read ON notifications (user, read)',
+        'CREATE INDEX idx_notifications_user_subject ON notifications (user, type, subject)',
+      ],
     })
 
     app.save(notifications)

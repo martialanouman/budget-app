@@ -15,20 +15,20 @@ cronAdd('carry-over-budgets', '0 2 1 * *', () => {
   job.applyCarryOver($app, month)
 })
 
-onRecordAfterCreateSuccess((e) => {
+// Before the write rather than after it: the value is the server's to state,
+// and a client that sent its own — measured stored as 5 000 000 beside a cap
+// of 1 — would otherwise keep it until the cron next ran. Zeroed first, so a
+// failure to compute the carry cannot leave a forged figure standing.
+onRecordCreate((e) => {
+  e.record.set('carried_amount', 0)
+
   try {
     const job = require(`${__hooks}/jobs/carry_over.js`)
-    const carried = job.carriedInto(
-      e.app,
-      e.record.get('user'),
-      e.record.get('category'),
-      e.record.get('month'),
-    )
 
-    if (carried > 0) {
-      e.record.set('carried_amount', carried)
-      e.app.save(e.record)
-    }
+    e.record.set(
+      'carried_amount',
+      job.carriedInto(e.app, e.record.get('user'), e.record.get('category'), e.record.get('month')),
+    )
   } catch (err) {
     e.app.logger().error('Budget carry-over failed', 'error', String(err))
   }

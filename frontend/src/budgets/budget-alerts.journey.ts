@@ -129,3 +129,66 @@ it('alerts on spending typed as a split', async () => {
 
   expect(await alerts()).toEqual([{ month: month(), category: food, threshold: 80 }])
 })
+
+// An entry can be corrected. The alert belongs to the state of the envelope,
+// not to the moment an entry happened to be typed.
+it('raises the alert when an expense is corrected upwards', async () => {
+  await createSignedInUser('al')
+  const { account, food } = await context(100_000)
+
+  const entry = await spend(account, food, 50_000)
+
+  expect(await alerts()).toEqual([])
+
+  await pb.collection('transactions').update(entry.id, { amount: 95_000 })
+
+  expect(await alerts()).toEqual([{ month: month(), category: food, threshold: 80 }])
+})
+
+// Deleting the entry that tripped the threshold takes the alert back with it:
+// leaving it would show a warning about spending that no longer exists, and
+// the per-threshold dedupe would forbid ever raising it again.
+it('takes the alert back when the expense behind it is deleted', async () => {
+  await createSignedInUser('al')
+  const { account, food } = await context(100_000)
+
+  const entry = await spend(account, food, 85_000)
+
+  expect(await alerts()).toHaveLength(1)
+
+  await pb.collection('transactions').delete(entry.id)
+
+  expect(await alerts()).toEqual([])
+})
+
+// A dismissed alert is history: it stays on file even once the spending that
+// justified it is gone.
+it('leaves an alert the user has already dismissed', async () => {
+  await createSignedInUser('al')
+  const { account, food } = await context(100_000)
+
+  const entry = await spend(account, food, 85_000)
+  const [raised] = await pb.collection('notifications').getFullList<Notification>()
+
+  await pb.collection('notifications').update(raised!.id, { read: true })
+  await pb.collection('transactions').delete(entry.id)
+
+  expect(await pb.collection('notifications').getFullList()).toHaveLength(1)
+})
+
+// Moving an expense to another category must clear the envelope it left.
+it('takes the alert back when the expense moves to another category', async () => {
+  await createSignedInUser('al')
+  const { account, food } = await context(100_000)
+  const categories = await pb.collection('categories').getFullList<Category>()
+
+  const entry = await spend(account, food, 85_000)
+
+  expect(await alerts()).toHaveLength(1)
+
+  await pb.collection('transactions').update(entry.id, {
+    category: categories.find((one) => one.name === 'Transport')!.id,
+  })
+
+  expect(await alerts()).toEqual([])
+})
