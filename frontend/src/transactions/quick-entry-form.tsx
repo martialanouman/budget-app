@@ -14,7 +14,7 @@ import {
 import type { TransactionDraft } from './transactions-api.ts'
 
 /** Local calendar day, not the UTC one: an entry made after midnight in UTC+1 belongs to today. */
-function todayLocally() {
+export function todayLocally() {
   const now = new Date()
 
   return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10)
