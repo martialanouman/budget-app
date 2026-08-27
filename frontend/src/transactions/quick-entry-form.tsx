@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { parseAmount } from '@budget/domain'
 import { useForm } from 'react-hook-form'
+import { todayLocally } from '@/lib/dates.ts'
 import { z } from 'zod'
 import { FormError, SubmitButton } from '@/components/form-feedback'
 import { SelectField } from '@/components/select-field'
@@ -14,12 +15,6 @@ import {
 import type { TransactionDraft } from './transactions-api.ts'
 
 /** Local calendar day, not the UTC one: an entry made after midnight in UTC+1 belongs to today. */
-export function todayLocally() {
-  const now = new Date()
-
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10)
-}
-
 const schema = z.object({
   amount: z.string().transform((value, ctx) => {
     try {

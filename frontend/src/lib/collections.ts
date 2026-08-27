@@ -90,3 +90,55 @@ export type AccountBalance = {
   user: string
   balance: number
 }
+
+export type Budget = {
+  id: string
+  user: string
+  month: string
+  category: string
+  cap_amount: number
+  carry_over: boolean
+  carried_amount: number
+  expand?: { category?: Category }
+}
+
+/** Read-only view: what each envelope has consumed, summed in SQLite. */
+export type BudgetSpending = {
+  id: string
+  user: string
+  category: string
+  month: string
+  spent: number
+}
+
+export const NOTIFICATION_TYPES = [
+  'echeance_dette',
+  'recurrente',
+  'depassement_budget',
+  'rappel_saisie',
+] as const
+
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number]
+
+export type BudgetAlertPayload = { month: string; category: string; threshold: number }
+
+export type Notification = {
+  id: string
+  user: string
+  type: NotificationType
+  /** What it is about, as an exact key — `YYYY-MM@categoryId` for a budget. */
+  subject: string
+  payload: BudgetAlertPayload
+  due_at: string
+  read: boolean
+  created: string
+}
+
+/** Read-only view: the month's income and spending, summed in SQLite. */
+export type MonthlySummary = {
+  id: string
+  user: string
+  month: string
+  income: number
+  spent: number
+}

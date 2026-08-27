@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useDerivedMutation } from '@/lib/mutations.ts'
 import { pb } from '@/lib/pocketbase'
 
 export type TransferRequest = {
@@ -19,15 +19,5 @@ export function transfer(request: TransferRequest) {
 }
 
 export function useTransfer() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: transfer,
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['transactions'] }),
-        queryClient.invalidateQueries({ queryKey: ['account-balances'] }),
-      ])
-    },
-  })
+  return useDerivedMutation([['transactions'], ['account-balances']], transfer)
 }

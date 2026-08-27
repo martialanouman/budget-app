@@ -158,7 +158,10 @@ export default async function setup() {
       `--migrationsDir=${join(repoRoot, 'pb_migrations')}`,
       `--hooksDir=${hooksDir}`,
     ],
-    { stdio: 'ignore' },
+    // Standard output is noise, but standard error is not: a hook that fails
+    // to load, or throws at runtime, is only ever reported there. Silencing it
+    // made a broken hook look like a feature that simply did nothing.
+    { stdio: ['ignore', 'ignore', 'inherit'] },
   )
 
   const teardown = async () => {

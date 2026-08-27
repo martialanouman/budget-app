@@ -1,3 +1,10 @@
+export {
+  BUDGET_THRESHOLDS,
+  type BudgetThreshold,
+  reachedThresholds,
+  remainingToLive,
+  unspent,
+} from './budget.ts'
 // Entry point bundled for PocketBase hooks. It runs under goja, which accepts
 // most of ES2015 but has no Intl, no fetch and no timers. Anything added here
 // must survive that — re-exporting ./format.ts would crash the hooks at load.

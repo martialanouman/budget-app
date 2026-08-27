@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useDerivedMutation } from '@/lib/mutations.ts'
 import { pb } from '@/lib/pocketbase'
 
 export type SplitRequest = {
@@ -17,15 +17,5 @@ export function splitTransaction(request: SplitRequest) {
 }
 
 export function useSplitTransaction() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: splitTransaction,
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['transactions'] }),
-        queryClient.invalidateQueries({ queryKey: ['account-balances'] }),
-      ])
-    },
-  })
+  return useDerivedMutation([['transactions'], ['account-balances']], splitTransaction)
 }

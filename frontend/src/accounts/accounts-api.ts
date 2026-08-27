@@ -1,6 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { toMoney } from '@budget/domain'
 import { type Account, type AccountBalance, type AccountType } from '@/lib/collections'
+import { useDerivedMutation } from '@/lib/mutations.ts'
 import { pb } from '@/lib/pocketbase'
 
 const accounts = () => pb.collection('accounts')
@@ -40,19 +41,8 @@ export function useAccountBalances() {
 
 // Every mutation invalidates the balances too: they are derived server-side and
 // have no realtime channel to push the change back.
-function useAccountMutation<TVariables>(mutationFn: (variables: TVariables) => Promise<unknown>) {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn,
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['accounts'] }),
-        queryClient.invalidateQueries({ queryKey: ['account-balances'] }),
-      ])
-    },
-  })
-}
+const useAccountMutation = <TVariables>(mutationFn: (variables: TVariables) => Promise<unknown>) =>
+  useDerivedMutation<TVariables>([['accounts'], ['account-balances']], mutationFn)
 
 export function useCreateAccount() {
   return useAccountMutation((draft: AccountDraft) =>
