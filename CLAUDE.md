@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État du dépôt
 
-Étapes 0 à 5 du plan livrées : outillage et CI ; authentification complète (inscription, connexion, réinitialisation vérifiée via Mailpit) ; noyau monétaire XOF partagé et exécuté par le moteur de PocketBase ; comptes, catégories et soldes calculés ; transactions, virements atomiques et scissions ; budgets mensuels avec seuils, alertes, reports et reste à vivre. **Prochaine étape : les dettes** (échéanciers, remboursements, rappels J-3/J-1/J).
+Étapes 0 à 6 du plan livrées : outillage et CI ; authentification complète (inscription, connexion, réinitialisation vérifiée via Mailpit) ; noyau monétaire XOF partagé et exécuté par le moteur de PocketBase ; comptes, catégories et soldes calculés ; transactions, virements atomiques et scissions ; budgets mensuels avec seuils, alertes, reports et reste à vivre ; dettes avec échéancier, capital rejoué depuis l'historique et rappels J-3/J-1/J. **Prochaine étape : le tableau de bord** (assemblage des vues, centre de notifications, PWA).
 
 Les deux documents de référence, à lire avant toute décision d'implémentation :
 
@@ -86,6 +86,8 @@ Le bundle est en `platform: 'neutral'`, et ce n'est pas indifférent : sous `'no
 
 L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit lui-même** à chaque exécution (`buildDomain()` depuis `@budget/domain/build`) : s'en remettre à un hook `pretest` ne couvrait que `pnpm test`, et laissait `pnpm test:journeys` valider un bundle périmé en toute discrétion.
 
+**La surface de `server.ts` est vérifiée par un test.** Les hooks appellent ce bundle depuis goja, sans types : une fonction absente du point d'entrée n'est une erreur de compilation nulle part, c'est un HTTP 400 sur ce que l'utilisateur était en train de faire. Mesuré une fois — un remboursement refusé parce que `splitPayment` n'avait jamais été exporté, pendant que tous les tests du domaine restaient verts en important le module directement.
+
 **La marque `Money` disparaît à la compilation.** Les hooks appellent ce code depuis goja, sans types : toute fonction publique du domaine doit revalider ses entrées plutôt que se fier à sa signature.
 
 **Chaque handler de hook est sérialisé et exécuté comme un programme isolé.** Il ne voit _rien_ de la portée du fichier : une `const` déclarée au-dessus de `onRecordAfterCreateSuccess(...)` y sera `undefined`, et l'erreur ne se manifeste qu'à l'exécution du hook, pas au démarrage. Les constantes vont donc dans le handler, et le code partagé passe par un `require()` **à l'intérieur** du handler.
@@ -123,6 +125,16 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
 - **PocketBase ne sait pas typer un agrégat dans une view** : un `SUM()` non casté revient comme valeur JSON et `getInt()` y lit 0 — mesuré, le hook d'alerte ne se déclenchait jamais. Toute colonne calculée d'une view porte un `CAST(... AS INT)`.
 - **Un champ `json` relu depuis un enregistrement n'est pas un objet JS** : `payload.month` y vaut `undefined`, et un filtre sur un chemin JSON (`payload.month = {:month}`) ne ramène rien. Passer par `JSON.parse(String(...))` et comparer en JavaScript.
 - **Une erreur levée dans `onRecordAfterCreateSuccess` revient au client en HTTP 400 sur l'enregistrement lui-même** — mesuré. Tout hook accessoire (alerte, report) enveloppe donc son corps dans un `try/catch` qui journalise : une notification impossible ne doit jamais coûter à l'utilisateur la saisie qu'il vient de faire.
+
+## Dettes et échéanciers
+
+- **La mensualité est une donnée, pas un résultat** (`DET-01`) : l'utilisateur dit ce qu'il paie chaque mois, donc le nombre d'échéances tombe des termes, et la dernière est la petite — jamais la grosse. Réclamer plus que ce qui reste dû prendrait un argent que l'emprunteur ne doit pas.
+- **La propriété tenue par les tests n'est pas le détail des échéances mais leur somme** : les parts de capital rendent exactement ce qui a été emprunté, quel que soit l'arrondi mensuel, y compris sur une centaine d'échéances.
+- **Un taux n'est pas un montant.** `interest_rate` est le seul nombre décimal du schéma : 7,5 % est banal. Chaque franc qu'il produit est arrondi à l'entier immédiatement.
+- **`debts.remaining_amount` est stocké, contre la règle du projet sur les cumuls dérivés.** L'exception est bornée et tient à une condition : ce champ n'est **jamais ajusté**, il est **rejoué** depuis l'historique complet des remboursements à chaque écriture (`pb_hooks/jobs/debt_balance.js`). Décrémenter puis ré-incrémenter serait le choix évident et le mauvais : corriger un remboursement ancien change ce que tous les suivants ont remboursé, leurs intérêts ayant été calculés sur un capital qui vient de bouger. Vérifié discriminant : remplacer le rejeu par un cumul rend le test de suppression rouge.
+- Les hooks de remboursement tournent **dans** l'écriture (`onRecordCreate`, pas `AfterCreateSuccess`) : un rejeu qui échoue doit emporter l'écriture, et la ventilation appartient à la réponse rendue au client.
+- Les rappels d'échéance sont clés par `(date, dette, décalage)` dans le `subject` : c'est ce qui rend le cron quotidien rejouable après une panne sans sonner deux fois.
+- **Les notifications d'échéance n'ont pas encore d'écran.** Le cron les produit, le panneau des budgets ne montre que les dépassements. Le centre de notifications est prévu à l'étape 7.
 
 ## Requêtes et cache
 
