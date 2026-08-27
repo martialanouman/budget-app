@@ -1,4 +1,4 @@
-import { formatAmount, reachedThresholds, remainingToLive, toMoney, unspent } from '@budget/domain'
+import { formatAmount, reachedThresholds, toMoney, unspent } from '@budget/domain'
 import { useState } from 'react'
 import { useCategories } from '@/categories/categories-api.ts'
 import { AppShell } from '@/components/app-shell'
@@ -6,9 +6,10 @@ import { FormError } from '@/components/form-feedback'
 import { TextField } from '@/components/text-field'
 import { type Budget } from '@/lib/collections'
 import { monthOf, todayLocally } from '@/lib/dates.ts'
-import { AlertsPanel } from './alerts-panel.tsx'
+import { NotificationCentre } from '@/home/notification-centre.tsx'
 import { useBudgetAlerts, useDismissAlert } from './alerts-api.ts'
 import { CapForm } from './cap-form.tsx'
+import { ceilingOf, remainingThisMonth, spentByCategory } from './month-figures.ts'
 import { useMonthlySummary } from '@/lib/monthly-summary.ts'
 import {
   useBudgetSpending,
@@ -17,9 +18,6 @@ import {
   useRemoveCap,
   useSetCap,
 } from './budgets-api.ts'
-
-/** What the user is judged against: their own cap plus anything carried over. */
-const ceilingOf = (budget: Budget) => toMoney(budget.cap_amount + budget.carried_amount)
 
 function Envelope({
   budget,
@@ -94,24 +92,13 @@ export function BudgetsPage() {
 
   const activeCategories = (categories.data ?? []).filter((category) => category.active)
 
-  const spentBy = new Map((spending.data ?? []).map((row) => [row.category, row.spent]))
+  const spentBy = spentByCategory(spending.data ?? [])
 
-  // Fixed envelopes are deducted for their unpaid part only: what has already
-  // been paid is counted once, as spending.
-  const unpaidFixedCharges = (budgets.data ?? [])
-    .filter((budget) => budget.expand?.category?.kind === 'fixe')
-    .reduce(
-      (total, budget) =>
-        toMoney(total + unspent(ceilingOf(budget), toMoney(spentBy.get(budget.category) ?? 0))),
-      toMoney(0),
-    )
-
-  const remaining = remainingToLive({
-    income: toMoney(summary.data?.income ?? 0),
-    spent: toMoney(summary.data?.spent ?? 0),
-    unpaidFixedCharges,
-    // Debts arrive at step 6; the term is in the formula, its source is not.
-    debtInstalments: toMoney(0),
+  const remaining = remainingThisMonth({
+    income: summary.data?.income ?? 0,
+    spent: summary.data?.spent ?? 0,
+    budgets: budgets.data ?? [],
+    spending: spending.data ?? [],
   })
 
   return (
@@ -151,13 +138,12 @@ export function BudgetsPage() {
           and often lands first, and the panel would then announce "Catégorie
           supprimée" — aloud, through the button's label — about a category
           that is perfectly alive. */}
-      {categories.isSuccess ? (
-        <AlertsPanel
-          alerts={alerts.data ?? []}
-          categories={categories.data}
-          onDismiss={(id) => dismissAlert.mutate(id)}
-        />
-      ) : null}
+      <NotificationCentre
+        notifications={alerts.data ?? []}
+        categories={categories.data ?? []}
+        ready={categories.isSuccess}
+        onDismiss={(id) => dismissAlert.mutate(id)}
+      />
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">

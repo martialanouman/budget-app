@@ -2,10 +2,45 @@ import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { playwright } from '@vitest/browser-playwright'
+import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    // Installable, and nothing more: the shell is precached so the app opens
+    // from the home screen without a network round trip, but no data is cached
+    // — a budget shown from a stale cache would be worse than no budget at
+    // all. Offline is a v2 subject (specs §2.3).
+    VitePWA({
+      registerType: 'autoUpdate',
+      workbox: { globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'] },
+      manifest: {
+        name: 'Budget',
+        short_name: 'Budget',
+        description: 'Suivi de budget personnel en francs CFA',
+        lang: 'fr',
+        start_url: '/',
+        display: 'standalone',
+        background_color: '#f8fafc',
+        theme_color: '#0f172a',
+        icons: [
+          { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
+          {
+            src: 'pwa-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+      },
+      // The service worker must not exist during the journeys: it would serve
+      // one test's build to the next and there is nothing to gain from it.
+      disable: process.env['VITEST'] === 'true',
+    }),
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
