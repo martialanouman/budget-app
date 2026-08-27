@@ -22,7 +22,8 @@
     "format:write": "prettier --write .",
     "test": "vitest run",
     "test:domain": "vitest run --project domain",
-    "test:journeys": "vitest run --project journeys"
+    "test:journeys": "vitest run --project journeys",
+    "icons:build": "node frontend/scripts/make-icons.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
