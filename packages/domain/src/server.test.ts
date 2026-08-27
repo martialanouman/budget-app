@@ -23,6 +23,8 @@ describe('Given the entry point bundled for PocketBase', () => {
     'amortisationSchedule',
     'instalmentDueDate',
     'splitPayment',
+    'nextDueDate',
+    'daysUntil',
   ])('exposes %s to the hooks', (name) => {
     expect(typeof server[name as keyof typeof server]).toBe('function')
   })

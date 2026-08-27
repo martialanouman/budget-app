@@ -11,6 +11,8 @@ import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { AccountsPage } from '@/accounts/accounts-page.tsx'
 import { BudgetsPage } from '@/budgets/budgets-page.tsx'
+import { DebtDetailPage } from '@/debts/debt-detail-page.tsx'
+import { DebtsPage } from '@/debts/debts-page.tsx'
 import { ForgotPasswordPage } from '@/auth/forgot-password-page.tsx'
 import { ResetPasswordPage } from '@/auth/reset-password-page.tsx'
 import { SignInPage } from '@/auth/sign-in-page.tsx'
@@ -99,6 +101,22 @@ const budgetsRoute = createRoute({
   component: BudgetsPage,
 })
 
+const debtsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/debts',
+  component: DebtsPage,
+})
+
+const debtDetailRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/debts/$debtId',
+  component: function DebtDetail() {
+    const { debtId } = debtDetailRoute.useParams()
+
+    return <DebtDetailPage debtId={debtId} />
+  },
+})
+
 const categoriesRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/categories',
@@ -120,6 +138,8 @@ const routeTree = rootRoute.addChildren([
     homeRoute,
     transactionsRoute,
     budgetsRoute,
+    debtsRoute,
+    debtDetailRoute,
     accountsRoute,
     categoriesRoute,
   ]),

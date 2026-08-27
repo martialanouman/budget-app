@@ -1,0 +1,58 @@
+// DET-04 / NOT-01: an instalment is announced three days before, the day
+// before, and on the day itself.
+//
+// Keyed by (due date, debt, offset) in the notification's `subject`, so the
+// job can run every morning — and be re-run after an outage — without ringing
+// twice for the same instalment. That is the only thing making a daily cron
+// safe to retry.
+//
+// Both directions are announced. A date on which someone owes the user money
+// is exactly when to ask for it (DET-02).
+const OFFSETS = [3, 1, 0]
+
+function remind(app, today) {
+  const domain = require(`${__hooks}/lib/domain.cjs`)
+  const debts = app.findRecordsByFilter('debts', "status = 'active'", '', 0, 0, {})
+  const collection = app.findCollectionByNameOrId('notifications')
+
+  for (let i = 0; i < debts.length; i++) {
+    const debt = debts[i]
+    const due = domain.nextDueDate(today, debt.getInt('due_day'))
+    const offset = domain.daysUntil(today, due)
+
+    if (OFFSETS.indexOf(offset) === -1) continue
+
+    const subject = `${due}@${debt.id}@${offset}`
+
+    const already = app.findRecordsByFilter(
+      'notifications',
+      "user = {:user} && type = 'echeance_dette' && subject = {:subject}",
+      '',
+      1,
+      0,
+      { user: debt.get('user'), subject: subject },
+    )
+
+    if (already.length > 0) continue
+
+    const reminder = new Record(collection)
+
+    reminder.set('user', debt.get('user'))
+    reminder.set('type', 'echeance_dette')
+    reminder.set('subject', subject)
+    reminder.set('due_at', due)
+    reminder.set('payload', {
+      debt: debt.id,
+      creditor: debt.get('creditor'),
+      direction: debt.get('direction'),
+      dueDate: due,
+      daysAhead: offset,
+      amount: debt.getInt('monthly_payment'),
+    })
+    reminder.set('read', false)
+
+    app.save(reminder)
+  }
+}
+
+module.exports = { remind: remind }

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { InvalidAmountError, toMoney } from './money.ts'
-import { amortisationSchedule, instalmentDueDate, splitPayment } from './debt.ts'
+import {
+  amortisationSchedule,
+  daysUntil,
+  instalmentDueDate,
+  nextDueDate,
+  splitPayment,
+} from './debt.ts'
 
 const xof = toMoney
 
@@ -175,5 +181,43 @@ describe('Given a repayment to break down', () => {
 
   it('refuses a negative payment', () => {
     expect(() => splitPayment(xof(100_000), xof(-1), 0)).toThrow(InvalidAmountError)
+  })
+})
+
+describe('Given a due day and today’s date', () => {
+  it('points at this month while the day is still to come', () => {
+    expect(nextDueDate('2026-08-19', 25)).toBe('2026-08-25')
+  })
+
+  // On the day itself the instalment is still due: it has not been missed yet.
+  it('points at today when the day has arrived', () => {
+    expect(nextDueDate('2026-08-25', 25)).toBe('2026-08-25')
+  })
+
+  it('moves to next month once the day has passed', () => {
+    expect(nextDueDate('2026-08-26', 25)).toBe('2026-09-25')
+    expect(nextDueDate('2026-12-31', 5)).toBe('2027-01-05')
+  })
+
+  it('falls on the last day of a month too short for it', () => {
+    expect(nextDueDate('2026-02-01', 31)).toBe('2026-02-28')
+  })
+})
+
+describe('Given two dates', () => {
+  it('counts the days between them', () => {
+    expect(daysUntil('2026-08-19', '2026-08-22')).toBe(3)
+    expect(daysUntil('2026-08-19', '2026-08-19')).toBe(0)
+  })
+
+  it('counts across a month and a year boundary', () => {
+    expect(daysUntil('2026-08-30', '2026-09-02')).toBe(3)
+    expect(daysUntil('2026-12-31', '2027-01-01')).toBe(1)
+  })
+
+  // Deliberate: a due date already behind is not "minus three days away", it
+  // is missed, and the caller must be able to tell the two apart.
+  it('goes negative for a date already behind', () => {
+    expect(daysUntil('2026-08-19', '2026-08-16')).toBe(-3)
   })
 })

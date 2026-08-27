@@ -135,3 +135,44 @@ export function instalmentDueDate(startDate: string, dueDay: number, index: numb
 
   return `${dueYear}-${String(dueMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
+
+const lastDayOf = (year: number, month: number) =>
+  month === 2 && isLeapYear(year) ? 29 : (DAYS_IN_MONTH[month - 1] as number)
+
+/**
+ * The next time an instalment falls, counting from `today` inclusive: on the
+ * day itself the instalment is still due, not missed. A due day the month does
+ * not have falls on its last day.
+ */
+export function nextDueDate(today: string, dueDay: number): string {
+  const [year, month, day] = today.split('-').map(Number) as [number, number, number]
+  const onThisMonth = Math.min(Math.max(dueDay, 1), lastDayOf(year, month))
+
+  if (onThisMonth >= day) {
+    return `${year}-${String(month).padStart(2, '0')}-${String(onThisMonth).padStart(2, '0')}`
+  }
+
+  const absolute = year * 12 + month
+  const nextYear = Math.floor(absolute / 12)
+  const nextMonth = (absolute % 12) + 1
+  const onNextMonth = Math.min(Math.max(dueDay, 1), lastDayOf(nextYear, nextMonth))
+
+  return `${nextYear}-${String(nextMonth).padStart(2, '0')}-${String(onNextMonth).padStart(2, '0')}`
+}
+
+/**
+ * Whole days from `from` to `to`, negative once the date is behind — a missed
+ * instalment must not read as one three days away.
+ *
+ * Built on Date.UTC so no timezone can shift a day: these are calendar dates,
+ * not moments.
+ */
+export function daysUntil(from: string, to: string): number {
+  const asUtc = (date: string) => {
+    const [year, month, day] = date.split('-').map(Number) as [number, number, number]
+
+    return Date.UTC(year, month - 1, day)
+  }
+
+  return Math.round((asUtc(to) - asUtc(from)) / 86_400_000)
+}
