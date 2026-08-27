@@ -1,4 +1,11 @@
 export {
+  type Instalment,
+  type Terms,
+  amortisationSchedule,
+  instalmentDueDate,
+  splitPayment,
+} from './debt.ts'
+export {
   BUDGET_THRESHOLDS,
   type BudgetThreshold,
   reachedThresholds,

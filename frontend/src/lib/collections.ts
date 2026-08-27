@@ -142,3 +142,61 @@ export type MonthlySummary = {
   income: number
   spent: number
 }
+
+export const DEBT_KINDS = [
+  'pret_bancaire',
+  'credit_conso',
+  'familiale',
+  'tontine',
+  'decouvert',
+  'autre',
+] as const
+
+export type DebtKind = (typeof DEBT_KINDS)[number]
+
+export const DEBT_KIND_LABELS: Record<DebtKind, string> = {
+  pret_bancaire: 'Prêt bancaire',
+  credit_conso: 'Crédit à la consommation',
+  familiale: 'Dette familiale ou amicale',
+  tontine: 'Tontine',
+  decouvert: 'Découvert',
+  autre: 'Autre',
+}
+
+/** DET-02: the module tracks what the user owes and what is owed to them. */
+export const DEBT_DIRECTIONS = ['je_dois', 'on_me_doit'] as const
+
+export type DebtDirection = (typeof DEBT_DIRECTIONS)[number]
+
+export const DEBT_DIRECTION_LABELS: Record<DebtDirection, string> = {
+  je_dois: 'Je dois',
+  on_me_doit: 'On me doit',
+}
+
+export type Debt = {
+  id: string
+  user: string
+  creditor: string
+  kind: DebtKind
+  direction: DebtDirection
+  initial_amount: number
+  /** Written by the server, replayed from the payments — never adjusted. */
+  remaining_amount: number
+  interest_rate: number
+  monthly_payment: number
+  due_day: number
+  start_date: string
+  status: 'active' | 'soldee'
+}
+
+export type DebtPayment = {
+  id: string
+  user: string
+  debt: string
+  transaction: string
+  amount: number
+  /** Server-owned: the split depends on what was owed when it landed. */
+  principal_part: number
+  interest_part: number
+  date: string
+}
