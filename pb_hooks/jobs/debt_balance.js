@@ -15,7 +15,17 @@ function recompute(app, debtId) {
   if (!debtId) return
 
   const domain = require(`${__hooks}/lib/domain.cjs`)
-  const debt = app.findRecordById('debts', debtId)
+
+  // The debt may already be gone: deleting one cascades to its repayments,
+  // and each of those fires this replay. Measured — a debt carrying a single
+  // repayment could not be deleted at all, and account deletion broke with it.
+  let debt
+
+  try {
+    debt = app.findRecordById('debts', debtId)
+  } catch {
+    return
+  }
   const rate = debt.get('interest_rate') || 0
 
   // Ordered by the day the money moved, then by insertion: two repayments on
@@ -37,11 +47,16 @@ function recompute(app, debtId) {
 
     owed = owed - split.principal
 
-    // Saved only when it actually moved: the update hook fires on every save,
-    // and an unconditional write would replay itself for ever.
+    // Re-read before comparing, and saved only when it actually moved. The
+    // save fires the update hook, which replays the whole history again; the
+    // loop out here would otherwise keep comparing against copies fetched
+    // before that nested pass and save every one of them in turn. Measured at
+    // 366 ms for thirty repayments, growing roughly with the cube.
+    const fresh = app.findRecordById('debt_payments', payment.id)
+
     if (
-      payment.getInt('principal_part') !== split.principal ||
-      payment.getInt('interest_part') !== split.interest
+      fresh.getInt('principal_part') !== split.principal ||
+      fresh.getInt('interest_part') !== split.interest
     ) {
       payment.set('principal_part', split.principal)
       payment.set('interest_part', split.interest)

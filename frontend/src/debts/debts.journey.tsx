@@ -134,3 +134,31 @@ it('shows the schedule of instalments to come', async () => {
   await expect.element(screen.getByRole('heading', { name: 'Échéancier' })).toBeVisible()
   await expect.element(screen.getByText(new RegExp(nextMonthOn(5), 'u'))).toBeVisible()
 })
+
+// `remaining_amount || initial_amount` tested a falsy value rather than an
+// absent one, and zero is falsy: a debt repaid to the last franc went back to
+// displaying what had been borrowed, with a full schedule to come.
+it('shows nothing left on a debt that has been repaid', async () => {
+  await createSignedInUser('dt')
+  const debt = await aDebt({ initial_amount: 50_000, interest_rate: 0, monthly_payment: 50_000 })
+
+  await pb.collection('debt_payments').create({
+    user: currentUserId(),
+    debt: debt.id,
+    amount: 50_000,
+    date: '2026-02-05',
+  })
+
+  const { screen } = await renderApp('/debts')
+
+  await expect.element(screen.getByText(/soldée/u)).toBeVisible()
+  // Scoped to the row: the total shows zero too, for the different reason
+  // that a settled debt no longer weighs on anything.
+  await expect.element(screen.getByRole('listitem').getByText(xof('0 F CFA'))).toBeVisible()
+
+  await screen.getByRole('link', { name: /Banque Atlantique/u }).click()
+
+  await expect
+    .element(screen.getByText('Aucune échéance à venir : la dette est soldée.'))
+    .toBeVisible()
+})

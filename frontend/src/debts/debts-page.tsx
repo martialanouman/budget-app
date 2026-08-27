@@ -26,7 +26,11 @@ function DebtRow({ debt }: { debt: Debt }) {
       </p>
       <p className="tabular-nums">{formatAmount(owedOn(debt))}</p>
       <p className="text-sm text-slate-600">
-        {end ? `Fin estimée le ${end}` : 'La mensualité ne couvre pas les intérêts'}
+        {end
+          ? `Fin estimée le ${end}`
+          : owedOn(debt) <= 0
+            ? 'Soldée'
+            : 'La mensualité ne couvre pas les intérêts'}
       </p>
     </li>
   )
@@ -38,7 +42,7 @@ export function DebtsPage() {
   const createDebt = useCreateDebt()
 
   const all = debts.data ?? []
-  const share = shareOfIncome(all, income.data ?? 0)
+  const share = shareOfIncome(all, income.income)
 
   return (
     <AppShell title="Dettes">

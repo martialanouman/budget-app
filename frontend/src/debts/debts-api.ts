@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { type Debt, type DebtPayment, type MonthlySummary } from '@/lib/collections'
+import { type Debt, type DebtPayment } from '@/lib/collections'
+import { useMonthlySummary } from '@/lib/monthly-summary.ts'
 import { useDerivedMutation } from '@/lib/mutations.ts'
 import { pb } from '@/lib/pocketbase'
 
@@ -45,18 +46,16 @@ export function useDebtPayments(debtId: string) {
   })
 }
 
-/** DET-05 needs the month's income to state what share the debts take. */
+/**
+ * DET-05 needs the month's income to state what share the debts take. It reads
+ * the same view as the budgets screen and deliberately shares its cache entry:
+ * the two used to hold the same key for different shapes, so arriving from one
+ * screen made the other read an object as a number.
+ */
 export function useMonthlyIncome(month: string) {
-  return useQuery({
-    queryKey: ['monthly-summary', month],
-    queryFn: async () => {
-      const rows = await pb.collection('monthly_summary').getFullList<MonthlySummary>({
-        filter: pb.filter('month = {:month}', { month }),
-      })
+  const summary = useMonthlySummary(month)
 
-      return rows[0]?.income ?? 0
-    },
-  })
+  return { ...summary, income: summary.data?.income ?? 0 }
 }
 
 export function useCreateDebt() {

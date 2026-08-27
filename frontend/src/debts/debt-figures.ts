@@ -2,8 +2,12 @@ import { amortisationSchedule, instalmentDueDate, toMoney } from '@budget/domain
 import { type Debt } from '@/lib/collections'
 import { todayLocally } from '@/lib/dates.ts'
 
-/** What is left to repay on a debt, falling back to what was borrowed. */
-export const owedOn = (debt: Debt) => toMoney(debt.remaining_amount || debt.initial_amount)
+/**
+ * What is left to repay. Zero is an answer, not a missing value: testing the
+ * figure for truthiness sent a debt repaid to the last franc back to
+ * displaying what had been borrowed, with a full schedule still to come.
+ */
+export const owedOn = (debt: Debt) => toMoney(debt.remaining_amount ?? debt.initial_amount)
 
 /**
  * DET-05. Counted from what is still owed rather than from what was borrowed:
@@ -15,6 +19,8 @@ export const owedOn = (debt: Debt) => toMoney(debt.remaining_amount || debt.init
  * lie the borrower could act on.
  */
 export function estimatedEnd(debt: Debt): string | undefined {
+  if (owedOn(debt) <= 0) return undefined
+
   try {
     const schedule = amortisationSchedule({
       principal: owedOn(debt),
@@ -29,6 +35,8 @@ export function estimatedEnd(debt: Debt): string | undefined {
 }
 
 export function scheduleOf(debt: Debt) {
+  if (owedOn(debt) <= 0) return []
+
   try {
     return amortisationSchedule({
       principal: owedOn(debt),

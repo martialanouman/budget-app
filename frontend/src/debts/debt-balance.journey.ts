@@ -141,3 +141,49 @@ it('never records a repayment against another owner’s debt', async () => {
     pb.collection('debt_payments').update(payment.id, { debt: theirs.id }),
   ).rejects.toThrow()
 })
+
+// The replay reloads the debt to know its rate. When the deletion comes from a
+// cascade, that debt is already gone — and a debt carrying the least repayment
+// became impossible to delete, which is also how account deletion broke.
+it('deletes a debt together with its repayments', async () => {
+  await createSignedInUser('db')
+  const debt = await aDebt()
+
+  await aPayment(debt.id, 90_000, '2026-02-05')
+
+  await pb.collection('debts').delete(debt.id)
+
+  expect(await pb.collection('debts').getFullList()).toEqual([])
+  expect(await pb.collection('debt_payments').getFullList()).toEqual([])
+})
+
+// `remaining_amount` and `status` are the server's to write. A client that can
+// declare itself settled silences its own reminders and falsifies the total.
+it('ignores a capital or a status stated by the client', async () => {
+  await createSignedInUser('db')
+  const debt = await aDebt()
+
+  const forged = await pb
+    .collection('debts')
+    .update<Debt>(debt.id, { status: 'soldee', remaining_amount: 1 })
+
+  expect(forged.remaining_amount).toBe(1_000_000)
+  expect(forged.status).toBe('active')
+})
+
+// Changing the terms changes what every repayment repaid: nothing replayed
+// when the debt itself was edited, so the capital stayed stale until the next
+// repayment happened to be written.
+it('replays the history when the terms of the debt change', async () => {
+  await createSignedInUser('db')
+  const debt = await aDebt()
+
+  await aPayment(debt.id, 90_000, '2026-02-05')
+
+  expect(await remainingOf(debt.id)).toBe(920_000)
+
+  const updated = await pb.collection('debts').update<Debt>(debt.id, { interest_rate: 0 })
+
+  // Without interest the whole 90 000 came off the capital.
+  expect(updated.remaining_amount).toBe(910_000)
+})

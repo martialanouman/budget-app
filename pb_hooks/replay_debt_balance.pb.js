@@ -47,3 +47,34 @@ onRecordDelete((e) => {
 
   require(`${__hooks}/jobs/debt_balance.js`).recompute(e.app, debt)
 }, 'debt_payments')
+
+// The terms are the other half of the replay. Changing a rate or the amount
+// borrowed changes what every repayment repaid, and nothing recomputed it: the
+// capital stayed stale until the next repayment happened to be written.
+//
+// The replay is authoritative rather than defensive: whatever the client
+// stated for `remaining_amount` or `status` — measured accepted from a PATCH,
+// which let a debt declare itself settled and silence its own reminders — is
+// overwritten by what the history says. Restoring the previous value instead
+// would undo the replay's own write and loop for ever; that was measured too.
+onRecordUpdate((e) => {
+  e.next()
+
+  const job = require(`${__hooks}/jobs/debt_balance.js`)
+
+  job.recompute(e.app, e.record.id)
+
+  const replayed = e.app.findRecordById('debts', e.record.id)
+
+  e.record.set('remaining_amount', replayed.getInt('remaining_amount'))
+  e.record.set('status', replayed.get('status'))
+}, 'debts')
+
+// A new debt owes what was borrowed. Nothing has been repaid yet, so there is
+// no history to replay and no figure for the client to state.
+onRecordCreate((e) => {
+  e.record.set('remaining_amount', e.record.getInt('initial_amount'))
+  e.record.set('status', 'active')
+
+  e.next()
+}, 'debts')

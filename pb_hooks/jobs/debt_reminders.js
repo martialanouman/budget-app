@@ -22,6 +22,18 @@ function remind(app, today) {
 
     if (OFFSETS.indexOf(offset) === -1) continue
 
+    // The schedule on screen places the first instalment in the month after
+    // the debt starts. Counting from the due day alone made a debt opened
+    // today announce an instalment the app itself said was a month away — the
+    // two readings of the same calendar contradicted each other.
+    const firstDue = domain.instalmentDueDate(
+      debt.get('start_date').string().substring(0, 10),
+      debt.getInt('due_day'),
+      0,
+    )
+
+    if (due < firstDue) continue
+
     const subject = `${due}@${debt.id}@${offset}`
 
     const already = app.findRecordsByFilter(

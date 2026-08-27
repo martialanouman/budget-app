@@ -61,10 +61,18 @@ it('never reminds twice for the same instalment', async () => {
   expect(await reminders()).toHaveLength(1)
 })
 
-// A settled debt has no instalment left to announce.
+// A settled debt has no instalment left to announce. Settled the way a debt
+// actually is — by repaying it — since the status is the server's to write.
 it('says nothing about a settled debt', async () => {
   await createSignedInUser('rm')
-  await aDebt(11, { status: 'soldee' })
+  const debt = await aDebt(11, { initial_amount: 50_000, monthly_payment: 50_000 })
+
+  await pb.collection('debt_payments').create({
+    user: currentUserId(),
+    debt: debt.id,
+    amount: 50_000,
+    date: '2026-02-05',
+  })
 
   await runFor('2026-08-11')
 
@@ -91,4 +99,25 @@ it('never reminds one owner about another’s debt', async () => {
   await runFor('2026-08-11')
 
   expect(await reminders()).toEqual([])
+})
+
+// The schedule on screen places the first instalment in the month after the
+// debt starts. The reminders counted from the due day alone, so a debt opened
+// today announced an instalment the app itself said was a month away.
+it('never announces an instalment before the debt has started', async () => {
+  await createSignedInUser('rm')
+  await aDebt(14, { start_date: '2026-08-20' })
+
+  await runFor('2026-08-11')
+
+  expect(await reminders()).toEqual([])
+})
+
+it('announces the first instalment of the month after the start', async () => {
+  await createSignedInUser('rm')
+  const debt = await aDebt(14, { start_date: '2026-08-01' })
+
+  await runFor('2026-09-11')
+
+  expect(await reminders()).toEqual([`2026-09-14@${debt.id}@3`])
 })

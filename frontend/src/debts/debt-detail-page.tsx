@@ -41,7 +41,11 @@ export function DebtDetailPage({ debtId }: { debtId: string }) {
         <p className="text-sm text-slate-600">
           Mensualité {formatAmount(toMoney(debt.data.monthly_payment))} le {debt.data.due_day} du
           mois
-          {end ? ` · fin estimée le ${end}` : ' · la mensualité ne couvre pas les intérêts'}
+          {end
+            ? ` · fin estimée le ${end}`
+            : owedOn(debt.data) <= 0
+              ? ' · soldée'
+              : ' · la mensualité ne couvre pas les intérêts'}
         </p>
       </section>
 
@@ -57,7 +61,11 @@ export function DebtDetailPage({ debtId }: { debtId: string }) {
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Échéancier</h2>
         {schedule.length === 0 ? (
-          <p>Aucune échéance : la mensualité ne couvre pas les intérêts.</p>
+          <p>
+            {owedOn(debt.data) <= 0
+              ? 'Aucune échéance à venir : la dette est soldée.'
+              : 'Aucune échéance : la mensualité ne couvre pas les intérêts.'}
+          </p>
         ) : null}
         <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
           {schedule.map((instalment) => (
