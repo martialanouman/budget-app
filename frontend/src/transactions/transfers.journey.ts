@@ -90,3 +90,55 @@ it.each([0, -500])('refuses the amount %i', async (amount) => {
 
   expect(await pb.collection('transactions').getFullList()).toEqual([])
 })
+
+// A transfer is one operation, and stays one after it is written: deleting a
+// single leg would credit or debit an account out of nowhere. Creation was
+// already atomic — this is the same invariant, held over time.
+it('takes both legs away when one of them is deleted', async () => {
+  await createSignedInUser('tf')
+  const from = await anAccount('Compte courant', 150_000)
+  const to = await anAccount('Épargne', 20_000)
+
+  await transfer({ from: from.id, to: to.id, amount: 30_000, date: '2026-08-19' })
+
+  const [leg] = await pb.collection('transactions').getFullList<Transaction>()
+  await pb.collection('transactions').delete(leg!.id)
+
+  expect(await pb.collection('transactions').getFullList()).toEqual([])
+
+  const after = await balances()
+
+  expect(after[from.id]).toBe(150_000)
+  expect(after[to.id]).toBe(20_000)
+})
+
+it('refuses to edit one leg on its own', async () => {
+  await createSignedInUser('tf')
+  const from = await anAccount('Compte courant', 150_000)
+  const to = await anAccount('Épargne', 20_000)
+
+  await transfer({ from: from.id, to: to.id, amount: 30_000, date: '2026-08-19' })
+
+  const [leg] = await pb.collection('transactions').getFullList<Transaction>()
+
+  await expect(pb.collection('transactions').update(leg!.id, { type: 'revenu' })).rejects.toThrow()
+
+  expect((await balances())[from.id]! + (await balances())[to.id]!).toBe(170_000)
+})
+
+// Every other invalid input to this route answers 400; an unknown id fell
+// through the record lookups as an unhandled 500.
+it('answers 400 for an account that does not exist', async () => {
+  await createSignedInUser('tf')
+  const from = await anAccount('Compte courant', 150_000)
+
+  const failure = await transfer({
+    from: from.id,
+    to: 'nosuchaccountid',
+    amount: 5_000,
+    date: '2026-08-19',
+  }).catch((error: { status: number }) => error)
+
+  expect(failure).toMatchObject({ status: 400 })
+  expect(await pb.collection('transactions').getFullList()).toEqual([])
+})

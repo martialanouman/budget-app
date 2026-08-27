@@ -76,3 +76,53 @@ it('hides the transfer form when there is only one account', async () => {
     .element(screen.getByRole('heading', { name: 'Virement entre comptes' }))
     .not.toBeInTheDocument()
 })
+
+// The two legs read identically to a screen reader: same wording, same date,
+// nothing to tell the debit from the credit before pressing.
+it('names each leg’s delete button after its own account', async () => {
+  await createSignedInUser('tfui')
+  await twoAccounts()
+
+  const { screen } = await renderApp('/transactions')
+
+  await screen.getByLabelText('Montant à transférer').fill('30 000')
+  await screen.getByLabelText('Depuis le compte').selectOptions('Compte courant')
+  await screen.getByLabelText('Vers le compte').selectOptions('Épargne')
+  await screen.getByRole('button', { name: 'Transférer' }).click()
+
+  await expect
+    .element(
+      screen.getByRole('button', { name: /^Supprimer Virement sortant sur Compte courant/u }),
+    )
+    .toBeVisible()
+  await expect
+    .element(screen.getByRole('button', { name: /^Supprimer Virement entrant sur Épargne/u }))
+    .toBeVisible()
+})
+
+// The fallback label used to read the absence of a category as proof of a
+// transfer, so an income typed without one was announced as "Virement".
+it('does not call an uncategorised income a transfer', async () => {
+  await createSignedInUser('tfui')
+  const account = await pb.collection('accounts').create({
+    user: currentUserId(),
+    name: 'Compte courant',
+    type: 'banque',
+    initial_balance: 10_000,
+  })
+
+  await pb.collection('transactions').create({
+    user: currentUserId(),
+    account: account.id,
+    category: '',
+    type: 'revenu',
+    amount: 5_000,
+    date: '2026-08-19',
+    note: '',
+  })
+
+  const { screen } = await renderApp('/transactions')
+
+  await expect.element(screen.getByText('Sans catégorie')).toBeVisible()
+  await expect.element(screen.getByText('Virement', { exact: true })).not.toBeInTheDocument()
+})

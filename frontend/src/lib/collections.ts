@@ -36,31 +36,42 @@ export type Category = {
   active: boolean
 }
 
+/** What the entry form offers; a transfer is written by its own server route. */
 export const TRANSACTION_TYPES = ['depense', 'revenu'] as const
 /** Transfers are recorded as two rows; the direction gives the balance its sign. */
 export const TRANSFER_TYPES = ['virement_sortant', 'virement_entrant'] as const
 export type TransactionType = (typeof TRANSACTION_TYPES)[number]
+export type TransferType = (typeof TRANSFER_TYPES)[number]
+export type EntryType = TransactionType | TransferType
 
 export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   depense: 'Dépense',
   revenu: 'Revenu',
 }
 
-export const ALL_TYPE_LABELS: Record<string, string> = {
+export const ENTRY_TYPE_LABELS: Record<EntryType, string> = {
   ...TRANSACTION_TYPE_LABELS,
   virement_sortant: 'Virement sortant',
   virement_entrant: 'Virement entrant',
 }
 
-/** Transfers move money between the owner's own accounts, so they are not spending. */
-export const isSpending = (type: string) => type === 'depense'
+const CREDIT_TYPES: readonly string[] = ['revenu', 'virement_entrant']
+
+/**
+ * Types that add to a balance; everything else subtracts. The same rule is
+ * written once more in SQL, inside the account_balances view — SQLite cannot
+ * call this — so any change here has to be carried there too.
+ */
+export const isCredit = (type: string) => CREDIT_TYPES.includes(type)
+
+export const isTransfer = (type: string) => (TRANSFER_TYPES as readonly string[]).includes(type)
 
 export type Transaction = {
   id: string
   user: string
   account: string
   category: string
-  type: TransactionType
+  type: EntryType
   /** Always positive; `type` carries the direction. */
   amount: number
   date: string

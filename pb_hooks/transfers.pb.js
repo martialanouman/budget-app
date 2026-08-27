@@ -32,12 +32,27 @@ routerAdd(
       throw new BadRequestError('A transfer needs a date.')
     }
 
-    const source = e.app.findRecordById('accounts', body.from)
-    const destination = e.app.findRecordById('accounts', body.to)
+    // One message for an unknown id and for someone else's account: an
+    // unhandled lookup answered 404, which reads as "no such route", and
+    // telling the two apart would say whether an id exists.
+    const ownedAccount = (id) => {
+      let account
 
-    if (source.get('user') !== owner || destination.get('user') !== owner) {
-      throw new BadRequestError('Both accounts must belong to you.')
+      try {
+        account = e.app.findRecordById('accounts', id)
+      } catch {
+        throw new BadRequestError('Both accounts must belong to you.')
+      }
+
+      if (account.get('user') !== owner) {
+        throw new BadRequestError('Both accounts must belong to you.')
+      }
+
+      return account
     }
+
+    ownedAccount(body.from)
+    ownedAccount(body.to)
 
     const group = $security.randomString(15)
     const collection = e.app.findCollectionByNameOrId('transactions')

@@ -13,7 +13,7 @@ export type SplitRequest = {
  * would show an amount that never matches what was actually spent.
  */
 export function splitTransaction(request: SplitRequest) {
-  return pb.send('/api/splits', { method: 'POST', body: request })
+  return pb.send<{ split_group: string }>('/api/splits', { method: 'POST', body: request })
 }
 
 export function useSplitTransaction() {

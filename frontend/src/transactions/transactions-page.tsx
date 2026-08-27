@@ -6,7 +6,7 @@ import { AppShell } from '@/components/app-shell'
 import { FormError } from '@/components/form-feedback'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
-import { ALL_TYPE_LABELS, type Transaction } from '@/lib/collections'
+import { ENTRY_TYPE_LABELS, type Transaction, isCredit, isTransfer } from '@/lib/collections'
 import { QuickEntryForm, todayLocally } from './quick-entry-form.tsx'
 import { TransferForm } from './transfer-form.tsx'
 import { useTransfer } from './transfers-api.ts'
@@ -19,17 +19,18 @@ import {
 
 const SEARCH_DELAY_MS = 300
 
-/** Types that add to a balance; everything else subtracts. */
-const CREDITS = new Set(['revenu', 'virement_entrant'])
-
 /** A row whose amount is out of range costs only itself, never the page. */
 function signedAmount(entry: Transaction) {
   try {
-    return formatAmount(toMoney(CREDITS.has(entry.type) ? entry.amount : -entry.amount))
+    return formatAmount(toMoney(isCredit(entry.type) ? entry.amount : -entry.amount))
   } catch {
     return '—'
   }
 }
+
+/** Only a transfer is a transfer: an income typed without a category is not. */
+const titleOf = (entry: Transaction) =>
+  entry.expand?.category?.name ?? (isTransfer(entry.type) ? 'Virement' : 'Sans catégorie')
 
 export function TransactionsPage() {
   const [filters, setFilters] = useState<TransactionFilters>({})
@@ -153,16 +154,16 @@ export function TransactionsPage() {
           {(entries.data ?? []).map((entry) => (
             <li key={entry.id} className="flex items-center gap-3 p-3">
               <span className="flex-1">
-                <span className="font-medium">{entry.expand?.category?.name ?? 'Virement'}</span>
+                <span className="font-medium">{titleOf(entry)}</span>
                 <span className="block text-sm text-slate-600">
-                  {ALL_TYPE_LABELS[entry.type] ?? entry.type} · {entry.date.slice(0, 10)} ·{' '}
+                  {ENTRY_TYPE_LABELS[entry.type]} · {entry.date.slice(0, 10)} ·{' '}
                   {entry.expand?.account?.name}
                   {entry.note ? ` · ${entry.note}` : ''}
                 </span>
               </span>
               <span
                 className={
-                  entry.type === 'revenu'
+                  isCredit(entry.type)
                     ? 'tabular-nums text-emerald-700'
                     : 'tabular-nums text-slate-900'
                 }
@@ -179,7 +180,8 @@ export function TransactionsPage() {
                 aria-pressed={confirming === entry.id}
               >
                 {confirming === entry.id ? 'Confirmer la suppression' : 'Supprimer'}{' '}
-                {entry.expand?.category?.name ?? 'la transaction'} du {entry.date.slice(0, 10)}
+                {entry.expand?.category?.name ?? ENTRY_TYPE_LABELS[entry.type]} sur{' '}
+                {entry.expand?.account?.name} du {entry.date.slice(0, 10)}
               </button>
             </li>
           ))}

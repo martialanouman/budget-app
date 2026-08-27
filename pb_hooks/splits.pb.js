@@ -12,7 +12,13 @@ routerAdd(
     const domain = require(`${__hooks}/lib/domain.cjs`)
     const body = e.requestInfo().body
     const owner = e.auth.id
-    const parts = body.parts || []
+    const parts = body.parts
+
+    // Measured before the length: a plain object has no length, slipped past
+    // the check and only failed later, deep inside the loop.
+    if (!parts || typeof parts !== 'object' || typeof parts.length !== 'number') {
+      throw new BadRequestError('A split needs a list of parts.')
+    }
 
     if (parts.length < 2) {
       throw new BadRequestError('A split needs at least two parts.')
@@ -22,11 +28,26 @@ routerAdd(
       throw new BadRequestError('A split needs an account and a date.')
     }
 
-    const account = e.app.findRecordById('accounts', body.account)
+    // An unhandled lookup answered 404 on a POST, which reads as "no such
+    // route"; and one message for both cases keeps an unknown id from being
+    // distinguishable from someone else's.
+    const owned = (collection, id, message) => {
+      let record
 
-    if (account.get('user') !== owner) {
-      throw new BadRequestError('The account must belong to you.')
+      try {
+        record = e.app.findRecordById(collection, id)
+      } catch {
+        throw new BadRequestError(message)
+      }
+
+      if (record.get('user') !== owner) {
+        throw new BadRequestError(message)
+      }
+
+      return record
     }
+
+    owned('accounts', body.account, 'The account must belong to you.')
 
     const amounts = []
 
@@ -42,11 +63,11 @@ routerAdd(
         throw new BadRequestError('Every part of a split must be positive.')
       }
 
-      const category = e.app.findRecordById('categories', part.category)
-
-      if (category.get('user') !== owner) {
-        throw new BadRequestError('Every category must belong to you.')
+      if (!part.category) {
+        throw new BadRequestError('Every part of a split needs a category.')
       }
+
+      owned('categories', part.category, 'Every category must belong to you.')
 
       amounts.push({ category: part.category, amount })
     }

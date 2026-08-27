@@ -15,7 +15,7 @@ export type TransferRequest = {
  * would otherwise leave a debit with no matching credit.
  */
 export function transfer(request: TransferRequest) {
-  return pb.send('/api/transfers', { method: 'POST', body: request })
+  return pb.send<{ transfer_group: string }>('/api/transfers', { method: 'POST', body: request })
 }
 
 export function useTransfer() {
