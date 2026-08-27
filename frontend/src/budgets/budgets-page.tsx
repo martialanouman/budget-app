@@ -9,11 +9,11 @@ import { monthOf, todayLocally } from '@/lib/dates.ts'
 import { AlertsPanel } from './alerts-panel.tsx'
 import { useBudgetAlerts, useDismissAlert } from './alerts-api.ts'
 import { CapForm } from './cap-form.tsx'
+import { useMonthlySummary } from '@/lib/monthly-summary.ts'
 import {
   useBudgetSpending,
   useBudgets,
   useDuplicatePreviousMonth,
-  useMonthlySummary,
   useRemoveCap,
   useSetCap,
 } from './budgets-api.ts'

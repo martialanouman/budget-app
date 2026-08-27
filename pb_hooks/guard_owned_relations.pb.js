@@ -45,3 +45,16 @@ function assertOwnedCategory(e) {
 
 onRecordCreate(assertOwnedCategory, 'budgets')
 onRecordUpdate(assertOwnedCategory, 'budgets')
+
+function assertOwnedDebt(e) {
+  const debt = e.app.findRecordById('debts', e.record.get('debt'))
+
+  if (debt.get('user') !== e.record.get('user')) {
+    throw new BadRequestError('The debt must belong to the payment owner.')
+  }
+
+  e.next()
+}
+
+onRecordCreate(assertOwnedDebt, 'debt_payments')
+onRecordUpdate(assertOwnedDebt, 'debt_payments')

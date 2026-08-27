@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { type Budget, type BudgetSpending, type MonthlySummary } from '@/lib/collections'
+import { type Budget, type BudgetSpending } from '@/lib/collections'
 import { previousMonth } from '@/lib/dates.ts'
 import { useDerivedMutation } from '@/lib/mutations.ts'
 import { pb } from '@/lib/pocketbase'
@@ -22,19 +22,6 @@ export function useBudgets(month: string) {
         expand: 'category',
         sort: 'category.name',
       }),
-  })
-}
-
-export function useMonthlySummary(month: string) {
-  return useQuery({
-    queryKey: ['monthly-summary', month],
-    queryFn: async () => {
-      const rows = await pb.collection('monthly_summary').getFullList<MonthlySummary>({
-        filter: pb.filter('month = {:month}', { month }),
-      })
-
-      return rows[0] ?? { income: 0, spent: 0 }
-    },
   })
 }
 
