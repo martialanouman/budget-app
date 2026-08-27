@@ -1,6 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { type Money } from '@budget/domain'
 import { type Transaction, type TransactionType } from '@/lib/collections'
+import { useDerivedMutation } from '@/lib/mutations.ts'
 import { pb } from '@/lib/pocketbase'
 
 const transactions = () => pb.collection('transactions')
@@ -57,21 +58,9 @@ export function useTransactions(filters: TransactionFilters) {
 
 // Balances are derived server-side with no realtime channel, so every write
 // has to invalidate them explicitly alongside the list.
-function useTransactionMutation<TVariables>(
+const useTransactionMutation = <TVariables>(
   mutationFn: (variables: TVariables) => Promise<unknown>,
-) {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn,
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['transactions'] }),
-        queryClient.invalidateQueries({ queryKey: ['account-balances'] }),
-      ])
-    },
-  })
-}
+) => useDerivedMutation<TVariables>([['transactions'], ['account-balances']], mutationFn)
 
 export function useRecordTransaction() {
   return useTransactionMutation((draft: TransactionDraft) =>

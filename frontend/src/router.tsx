@@ -10,6 +10,7 @@ import {
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { AccountsPage } from '@/accounts/accounts-page.tsx'
+import { BudgetsPage } from '@/budgets/budgets-page.tsx'
 import { ForgotPasswordPage } from '@/auth/forgot-password-page.tsx'
 import { ResetPasswordPage } from '@/auth/reset-password-page.tsx'
 import { SignInPage } from '@/auth/sign-in-page.tsx'
@@ -92,6 +93,12 @@ const accountsRoute = createRoute({
   component: AccountsPage,
 })
 
+const budgetsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/budgets',
+  component: BudgetsPage,
+})
+
 const categoriesRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/categories',
@@ -109,7 +116,13 @@ const routeTree = rootRoute.addChildren([
   signUpRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
-  protectedRoute.addChildren([homeRoute, transactionsRoute, accountsRoute, categoriesRoute]),
+  protectedRoute.addChildren([
+    homeRoute,
+    transactionsRoute,
+    budgetsRoute,
+    accountsRoute,
+    categoriesRoute,
+  ]),
 ])
 
 export function createAppRouter(history?: RouterHistory) {

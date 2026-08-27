@@ -90,3 +90,23 @@ export type AccountBalance = {
   user: string
   balance: number
 }
+
+export type Budget = {
+  id: string
+  user: string
+  month: string
+  category: string
+  cap_amount: number
+  carry_over: boolean
+  carried_amount: number
+  expand?: { category?: Category }
+}
+
+/** Read-only view: what each envelope has consumed, summed in SQLite. */
+export type BudgetSpending = {
+  id: string
+  user: string
+  category: string
+  month: string
+  spent: number
+}
