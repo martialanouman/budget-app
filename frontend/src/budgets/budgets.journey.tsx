@@ -1,7 +1,7 @@
 import { beforeEach, expect, it } from 'vitest'
 import { createSignedInUser, currentUserId, renderApp } from '../../test/journey-harness.tsx'
 import { type Category } from '@/lib/collections'
-import { todayLocally } from '@/lib/dates.ts'
+import { monthOf, previousMonth, todayLocally } from '@/lib/dates.ts'
 import { pb } from '@/lib/pocketbase'
 
 const xof = (amount: string) => amount.replace(/ /gu, '\\s')
@@ -100,4 +100,48 @@ it('counts only the month on screen', async () => {
   await screen.getByRole('button', { name: 'Définir le plafond' }).click()
 
   await expect.element(screen.getByText(new RegExp(`Reste ${xof('70 000')}`, 'u'))).toBeVisible()
+})
+
+const anEnvelope = async (month: string, categoryName: string, cap: number) => {
+  const categories = await pb.collection('categories').getFullList<Category>()
+
+  return pb.collection('budgets').create({
+    user: currentUserId(),
+    month,
+    category: categories.find((one) => one.name === categoryName)!.id,
+    cap_amount: cap,
+    carry_over: false,
+    carried_amount: 0,
+  })
+}
+
+// BUD-02: a month starts from the previous one in a click.
+it('fills the month from the previous one', async () => {
+  await createSignedInUser('bg')
+  await anAccount()
+  await anEnvelope(previousMonth(monthOf(todayLocally())), 'Alimentation', 120_000)
+
+  const { screen } = await renderApp('/budgets')
+
+  await expect.element(screen.getByText('Aucune enveloppe pour ce mois.')).toBeVisible()
+  await screen.getByRole('button', { name: 'Dupliquer le mois précédent' }).click()
+
+  await expect.element(screen.getByRole('heading', { name: 'Alimentation' })).toBeVisible()
+  await expect.element(screen.getByText(new RegExp(`Reste ${xof('120 000')}`, 'u'))).toBeVisible()
+})
+
+// The click is meant to fill an empty month. Overwriting a cap someone has
+// just adjusted would silently undo their work.
+it('leaves an envelope already set for the month alone', async () => {
+  await createSignedInUser('bg')
+  await anAccount()
+  await anEnvelope(previousMonth(monthOf(todayLocally())), 'Alimentation', 120_000)
+  await anEnvelope(monthOf(todayLocally()), 'Alimentation', 50_000)
+
+  const { screen } = await renderApp('/budgets')
+
+  await screen.getByRole('button', { name: 'Dupliquer le mois précédent' }).click()
+
+  await expect.element(screen.getByText(new RegExp(`Reste ${xof('50 000')}`, 'u'))).toBeVisible()
+  expect(await pb.collection('budgets').getFullList()).toHaveLength(2)
 })

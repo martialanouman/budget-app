@@ -110,3 +110,24 @@ export type BudgetSpending = {
   month: string
   spent: number
 }
+
+export const NOTIFICATION_TYPES = [
+  'echeance_dette',
+  'recurrente',
+  'depassement_budget',
+  'rappel_saisie',
+] as const
+
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number]
+
+export type BudgetAlertPayload = { month: string; category: string; threshold: number }
+
+export type Notification = {
+  id: string
+  user: string
+  type: NotificationType
+  payload: BudgetAlertPayload
+  due_at: string
+  read: boolean
+  created: string
+}

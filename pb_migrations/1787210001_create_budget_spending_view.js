@@ -15,7 +15,7 @@ const SPENT_BY_CATEGORY = `
     transactions.user AS user,
     transactions.category AS category,
     substr(transactions.date, 1, 7) AS month,
-    SUM(transactions.amount) AS spent
+    CAST(SUM(transactions.amount) AS INT) AS spent
   FROM transactions
   WHERE transactions.type = 'depense' AND transactions.category != ''
   GROUP BY transactions.user, transactions.category, substr(transactions.date, 1, 7)
