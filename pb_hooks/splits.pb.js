@@ -24,6 +24,12 @@ routerAdd(
       throw new BadRequestError('A split needs at least two parts.')
     }
 
+    // Each part is one row written inside a single transaction; nothing else
+    // bounds how many a client may ask for.
+    if (parts.length > 50) {
+      throw new BadRequestError('A split cannot hold more than 50 parts.')
+    }
+
     if (!body.account || !body.date) {
       throw new BadRequestError('A split needs an account and a date.')
     }

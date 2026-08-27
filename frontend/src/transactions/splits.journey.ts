@@ -149,3 +149,18 @@ it('answers 400 when a part names no category', async () => {
   expect(failure).toMatchObject({ status: 400 })
   expect(await pb.collection('transactions').getFullList()).toEqual([])
 })
+
+it('refuses a split with more parts than a purchase can have', async () => {
+  await createSignedInUser('sp')
+  const { account, food } = await context()
+
+  const failure = await splitTransaction({
+    account,
+    date: '2026-08-19',
+    note: '',
+    parts: Array.from({ length: 51 }, () => ({ category: food, amount: 1_000 })),
+  }).catch((error: { status: number }) => error)
+
+  expect(failure).toMatchObject({ status: 400 })
+  expect(await pb.collection('transactions').getFullList()).toEqual([])
+})
