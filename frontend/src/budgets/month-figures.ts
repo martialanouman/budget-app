@@ -1,5 +1,6 @@
 import { remainingToLive, toMoney, unspent } from '@budget/domain'
-import { type Budget, type BudgetSpending } from '@/lib/collections'
+import { unpaidInstalments } from '@/debts/debt-figures.ts'
+import { type Budget, type BudgetSpending, type Debt, type DebtPayment } from '@/lib/collections'
 
 /** The effective ceiling of an envelope: its own cap plus anything carried in. */
 export const ceilingOf = (budget: Budget) => toMoney(budget.cap_amount + budget.carried_amount)
@@ -33,12 +34,13 @@ export function remainingThisMonth(month: {
   spent: number
   budgets: Budget[]
   spending: BudgetSpending[]
+  debts: Debt[]
+  payments: DebtPayment[]
 }) {
   return remainingToLive({
     income: toMoney(month.income),
     spent: toMoney(month.spent),
     unpaidFixedCharges: unpaidFixedCharges(month.budgets, month.spending),
-    // Debt instalments join at the dashboard, where the debts are loaded.
-    debtInstalments: toMoney(0),
+    debtInstalments: unpaidInstalments(month.debts, month.payments),
   })
 }

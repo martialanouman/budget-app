@@ -17,8 +17,9 @@ export function useBudgetAlerts() {
   })
 }
 
+/** The same row backs the dashboard's centre: both listings have to be told. */
 export function useDismissAlert() {
-  return useDerivedMutation([['budget-alerts']], (id: string) =>
+  return useDerivedMutation([['budget-alerts'], ['notifications']], (id: string) =>
     notifications().update(id, { read: true }),
   )
 }

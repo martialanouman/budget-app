@@ -19,9 +19,26 @@ export function previousMonth(month: string) {
   return index === 1 ? `${year - 1}-12` : `${year}-${String(index - 1).padStart(2, '0')}`
 }
 
+/** The month after `YYYY-MM`, rolling the year over in December. */
+export function nextMonth(month: string) {
+  const [year, index] = month.split('-').map(Number) as [number, number]
+
+  return index === 12 ? `${year + 1}-01` : `${year}-${String(index + 1).padStart(2, '0')}`
+}
+
 // Intl rather than a date library: the only need is a month name, and the
 // browser already carries the French one. A parser will earn its dependency
 // when something actually has to compute on dates.
 const MONTH_LABEL = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
 
 export const monthLabel = (month: string) => MONTH_LABEL.format(new Date(`${month}-01T00:00:00`))
+
+const DAY_LABEL = new Intl.DateTimeFormat('fr-FR', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+})
+
+/** A calendar day as a French reader writes it, never as the API stores it. */
+export const dayLabel = (date: string) =>
+  DAY_LABEL.format(new Date(`${date.slice(0, 10)}T00:00:00`))

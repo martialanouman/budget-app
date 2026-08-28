@@ -15,9 +15,12 @@ const TOP = 5
 export function SpendingBreakdown({
   spending,
   categories,
+  ready,
 }: {
   spending: BudgetSpending[]
   categories: Category[]
+  /** "No spending" is a claim, and it needs the figures to be in first. */
+  ready: boolean
 }) {
   const ranked = [...spending].sort((a, b) => b.spent - a.spent).slice(0, TOP)
   const largest = ranked[0]?.spent ?? 0
@@ -29,7 +32,7 @@ export function SpendingBreakdown({
     <section className="space-y-3">
       <h2 className="text-lg font-medium">Où part l’argent ce mois-ci</h2>
 
-      {ranked.length === 0 ? <p>Aucune dépense ce mois-ci.</p> : null}
+      {ready && ranked.length === 0 ? <p>Aucune dépense ce mois-ci.</p> : null}
 
       <ul className="space-y-2">
         {ranked.map((row) => (

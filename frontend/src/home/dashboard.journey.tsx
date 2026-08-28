@@ -129,3 +129,136 @@ it('announces the instalments coming up', async () => {
   await expect.element(screen.getByRole('heading', { name: 'Prochaines échéances' })).toBeVisible()
   await expect.element(screen.getByText(/Banque Atlantique/u)).toBeVisible()
 })
+
+// BUD-05 counts the debt instalments, and the dashboard is where the debts are
+// loaded: the figure that decides a spend must not ignore what is already
+// promised to a lender.
+it('holds back the instalments still to pay this month', async () => {
+  await createSignedInUser('db')
+  const account = await anAccount(0)
+
+  await pb.collection('transactions').create({
+    user: currentUserId(),
+    account: account.id,
+    category: await categoryNamed('Autre'),
+    type: 'revenu',
+    amount: 500_000,
+    date: todayLocally(),
+    note: '',
+  })
+
+  await pb.collection('debts').create<Debt>({
+    user: currentUserId(),
+    creditor: 'Banque Atlantique',
+    kind: 'pret_bancaire',
+    direction: 'je_dois',
+    initial_amount: 900_000,
+    interest_rate: 0,
+    monthly_payment: 90_000,
+    due_day: 5,
+    start_date: '2026-01-10',
+    status: 'active',
+  })
+
+  const { screen } = await renderApp('/')
+
+  // 500 000 earned, nothing spent, 90 000 owed to the lender this month.
+  await expect.element(screen.getByText(xof('410 000'))).toBeVisible()
+})
+
+// DET-02 on the dashboard: money owed to the user falls due too, and reading
+// it as one more thing to pay is the opposite of the truth.
+it('tells an instalment to pay apart from one to receive', async () => {
+  await createSignedInUser('db')
+  await anAccount(0)
+  await pb.collection('debts').create<Debt>({
+    user: currentUserId(),
+    creditor: 'Kouassi',
+    kind: 'familiale',
+    direction: 'on_me_doit',
+    initial_amount: 200_000,
+    interest_rate: 0,
+    monthly_payment: 20_000,
+    due_day: 5,
+    start_date: '2026-01-10',
+    status: 'active',
+  })
+
+  const { screen } = await renderApp('/')
+
+  await expect.element(screen.getByText(/À recevoir le/u)).toBeVisible()
+})
+
+// The reminder was written on the morning the cron ran and carries the day
+// count of that morning. Read back three days later it claimed the instalment
+// was still three days away, on the very day it fell.
+it('counts the days to an instalment from today, not from the day it was announced', async () => {
+  await createSignedInUser('db')
+  await anAccount(0)
+
+  const today = todayLocally()
+  const dueDay = Number(today.slice(8, 10))
+
+  await pb.collection('debts').create<Debt>({
+    user: currentUserId(),
+    creditor: 'Banque Atlantique',
+    kind: 'pret_bancaire',
+    direction: 'je_dois',
+    initial_amount: 900_000,
+    interest_rate: 0,
+    monthly_payment: 90_000,
+    due_day: dueDay,
+    start_date: '2026-01-10',
+    status: 'active',
+  })
+
+  const announcedOn = new Date(`${today}T00:00:00`)
+  announcedOn.setDate(announcedOn.getDate() - 3)
+
+  await pb.send('/api/test/remind-debt-dues', {
+    method: 'POST',
+    body: { today: announcedOn.toISOString().slice(0, 10) },
+  })
+
+  const { screen } = await renderApp('/')
+
+  await expect
+    .element(screen.getByRole('button', { name: /Marquer comme lue.+aujourd'hui/u }))
+    .toBeVisible()
+})
+
+// The accounts screen already holds this policy: a figure that could not be
+// read is shown as missing. A confident zero on the very numbers a spend is
+// decided on would be worse than an admission.
+it('admits it could not read a figure rather than showing a zero', async () => {
+  await createSignedInUser('db')
+  await anAccount(600_000)
+
+  // A session the server has revoked still looks valid to the guard: the token
+  // carries its own expiry, and nothing else. This is the shape of an expired
+  // or rotated session, not an invented one.
+  pb.authStore.save(`${pb.authStore.token}x`, pb.authStore.record)
+
+  const { screen } = await renderApp('/')
+
+  await expect.element(screen.getByText('—').first()).toBeVisible()
+  await expect.element(screen.getByText(xof('600 000'))).not.toBeInTheDocument()
+  // The defect this holds: not a missing figure, but a confident zero.
+  await expect.element(screen.getByText(/^0\sF\sCFA$/u)).not.toBeInTheDocument()
+})
+
+// CPT-04: an archived account can no longer be spent from nor transferred to,
+// so counting it in the headline would announce money this screen cannot
+// reach.
+it('leaves an archived account out of the headline total', async () => {
+  await createSignedInUser('db')
+  await anAccount(600_000)
+  const closed = await anAccount(250_000)
+
+  await pb.collection('accounts').update(closed.id, { archived: true })
+
+  const { screen } = await renderApp('/')
+
+  await expect.element(screen.getByText(xof('600 000'))).toBeVisible()
+  await expect.element(screen.getByText(xof('850 000'))).not.toBeInTheDocument()
+})

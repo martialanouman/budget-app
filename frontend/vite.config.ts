@@ -15,7 +15,14 @@ export default defineConfig({
     // all. Offline is a v2 subject (specs §2.3).
     VitePWA({
       registerType: 'autoUpdate',
-      workbox: { globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'] },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'],
+        // PocketBase serves the SPA, its REST API and its admin console on one
+        // origin. Without these exclusions the navigation fallback answers
+        // /_/ with the precached shell, and the admin console becomes
+        // unreachable from any browser that has opened the app once.
+        navigateFallbackDenylist: [/^\/api\//u, /^\/_\//u],
+      },
       manifest: {
         name: 'Budget',
         short_name: 'Budget',

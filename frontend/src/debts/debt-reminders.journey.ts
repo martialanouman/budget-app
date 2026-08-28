@@ -22,13 +22,13 @@ const aDebt = (dueDay: number, fields: Record<string, unknown> = {}) =>
 const runFor = (today: string) =>
   pb.send('/api/test/remind-debt-dues', { method: 'POST', body: { today } })
 
-const reminders = async () => {
-  const rows = await pb.collection('notifications').getFullList<Notification>({
-    filter: "type = 'echeance_dette'",
-  })
+const reminders = async (filter = "type = 'echeance_dette'") => {
+  const rows = await pb.collection('notifications').getFullList<Notification>({ filter })
 
   return rows.map((row) => row.subject).sort()
 }
+
+const unread = () => reminders("type = 'echeance_dette' && read = false")
 
 beforeEach(() => {
   pb.authStore.clear()
@@ -120,4 +120,19 @@ it('announces the first instalment of the month after the start', async () => {
   await runFor('2026-09-11')
 
   expect(await reminders()).toEqual([`2026-09-14@${debt.id}@3`])
+})
+
+// Three offsets for one instalment used to stack three cards on the day it
+// fell, each still claiming the number of days it was written with. The nearer
+// reminder is the only one worth reading; the earlier ones stay as history.
+it('lets the nearer reminder retire the earlier one', async () => {
+  await createSignedInUser('rm')
+  const debt = await aDebt(14)
+
+  await runFor('2026-08-11')
+  await runFor('2026-08-13')
+  await runFor('2026-08-14')
+
+  expect(await unread()).toEqual([`2026-08-14@${debt.id}@0`])
+  expect(await reminders()).toHaveLength(3)
 })

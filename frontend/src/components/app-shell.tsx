@@ -19,7 +19,10 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
   return (
     <div className="min-h-dvh bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
-        <nav aria-label="Navigation principale" className="mx-auto flex max-w-3xl gap-4 p-4">
+        <nav
+          aria-label="Navigation principale"
+          className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-4 gap-y-2 p-4"
+        >
           {NAV.map((item) => (
             <Link
               key={item.to}

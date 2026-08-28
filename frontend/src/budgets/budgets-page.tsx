@@ -6,6 +6,7 @@ import { FormError } from '@/components/form-feedback'
 import { TextField } from '@/components/text-field'
 import { type Budget } from '@/lib/collections'
 import { monthOf, todayLocally } from '@/lib/dates.ts'
+import { useDebts, useMonthPayments } from '@/debts/debts-api.ts'
 import { NotificationCentre } from '@/home/notification-centre.tsx'
 import { useBudgetAlerts, useDismissAlert } from './alerts-api.ts'
 import { CapForm } from './cap-form.tsx'
@@ -86,6 +87,8 @@ export function BudgetsPage() {
   const alerts = useBudgetAlerts()
   const dismissAlert = useDismissAlert()
   const summary = useMonthlySummary(month)
+  const debts = useDebts()
+  const payments = useMonthPayments(month)
   const setCap = useSetCap()
   const removeCap = useRemoveCap()
   const duplicate = useDuplicatePreviousMonth()
@@ -99,6 +102,8 @@ export function BudgetsPage() {
     spent: summary.data?.spent ?? 0,
     budgets: budgets.data ?? [],
     spending: spending.data ?? [],
+    debts: debts.data ?? [],
+    payments: payments.data ?? [],
   })
 
   return (
@@ -140,8 +145,8 @@ export function BudgetsPage() {
           that is perfectly alive. */}
       <NotificationCentre
         notifications={alerts.data ?? []}
-        categories={categories.data ?? []}
-        ready={categories.isSuccess}
+        categories={categories.data}
+        ready={alerts.isSuccess}
         onDismiss={(id) => dismissAlert.mutate(id)}
       />
 

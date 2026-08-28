@@ -1,6 +1,9 @@
+import { formatAmount, toMoney } from '@budget/domain'
 import { beforeEach, expect, it } from 'vitest'
 import { createSignedInUser, currentUserId, renderApp } from '../../test/journey-harness.tsx'
 import { pb } from '@/lib/pocketbase'
+
+const INITIAL_BALANCE = 500_000
 
 beforeEach(() => {
   pb.authStore.clear()
@@ -18,24 +21,30 @@ it('answers within two seconds on three years of entries', async () => {
     user: currentUserId(),
     name: 'Compte courant',
     type: 'banque',
-    initial_balance: 500_000,
+    initial_balance: INITIAL_BALANCE,
   })
 
-  await pb.send('/api/test/seed-transactions', {
+  const { net } = await pb.send<{ net: number }>('/api/test/seed-transactions', {
     method: 'POST',
     body: { account: account.id, count: 5_000 },
   })
+
+  const expected = formatAmount(toMoney(INITIAL_BALANCE + net))
 
   const startedAt = performance.now()
 
   const { screen } = await renderApp('/')
 
-  // Waiting on figures, not on headings: the headings are static text and are
-  // on screen before a single query has answered. A first attempt asserted
+  // Waiting on a figure, not on a heading: the headings are static text and
+  // are on screen before a single query has answered. A first attempt asserted
   // those and measured 23 ms of nothing.
-  await expect.element(screen.getByText('Alimentation')).toBeVisible()
+  //
+  // The figure is the one the seed reports back, so nothing here rests on
+  // which category reached the top five.
+  await expect
+    .element(screen.getByText(new RegExp(`^${expected.replace(/\s/gu, '\\s')}$`, 'u')))
+    .toBeVisible()
   await expect.element(screen.getByText('Aucune dépense ce mois-ci.')).not.toBeInTheDocument()
-  await expect.element(screen.getByText(/^Solde total$/u)).toBeVisible()
 
   const elapsed = performance.now() - startedAt
 
