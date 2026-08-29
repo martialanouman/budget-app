@@ -13,7 +13,7 @@ Application hébergée classique en deux blocs :
 
 ```
 ┌─────────────────────┐         HTTPS          ┌──────────────────────────┐
-│  Client web (SPA)   │ ◄────────────────────► │  Serveur (VPS/Fly.io)    │
+│  Client web (SPA)   │ ◄────────────────────► │  Serveur (VPS Hetzner)   │
 │  React + TypeScript │   API REST + Realtime  │  PocketBase (Go)         │
 │  installable en PWA │                        │  ├─ Auth (e-mail/mdp)    │
 └─────────────────────┘                        │  ├─ API REST générée     │
@@ -24,7 +24,7 @@ Application hébergée classique en deux blocs :
 
 - **Frontend** : Single Page Application servie en statique, installable comme PWA (icône écran d'accueil, démarrage rapide). Pas de mode hors ligne en v1.
 - **Backend** : **PocketBase**, un binaire unique qui fournit la base SQLite, l'authentification, l'API REST/Realtime et une interface d'administration. Le code backend spécifique (échéanciers, simulateurs) s'écrit en hooks JavaScript PocketBase ou côté client.
-- **Sauvegarde** : **Litestream** réplique en continu le fichier SQLite vers un stockage objet (Backblaze B2 ou S3). Perte maximale en cas de crash : quelques secondes.
+- **Sauvegarde** : **Litestream** réplique en continu le fichier SQLite vers un stockage objet S3 (Hetzner Object Storage). Perte maximale en cas de crash : quelques secondes.
 
 ## 2. Stack détaillée
 
@@ -51,9 +51,11 @@ Application hébergée classique en deux blocs :
 | Serveur | PocketBase | 0.39.3 | Auth, API, admin, hooks |
 | Base de données | SQLite (intégrée à PocketBase) | — | Toutes les données applicatives |
 | Logique métier | Hooks PocketBase (JS) | — | Génération d'échéanciers, recalculs, envoi d'e-mails |
-| E-mails | SMTP (Brevo ou Resend, offre gratuite) | — | Réinitialisation mot de passe, rappels, alertes |
+| E-mails | SMTP Resend (offre gratuite), port 587 | — | Réinitialisation mot de passe, rappels, alertes |
 | Tâches planifiées | Cron PocketBase (`cronAdd`) | — | Rappels J-3/J-1, génération des transactions récurrentes, clôture mensuelle |
-| Sauvegarde | Litestream | 0.5.12 | Réplication continue du fichier SQLite vers B2/S3 |
+| Sauvegarde | Litestream | 0.5.16 | Réplication continue du fichier SQLite vers un stockage objet S3 |
+
+> **Note SMTP.** Les cinq ports de Resend ne se valent pas : 465 et 2465, en TLS implicite, expirent sans répondre ; 25, 587 et 2587, en STARTTLS, fonctionnent. Mesuré depuis deux réseaux le 29/08/2026. Un délai d'attente ne ressemble à rien jusqu'à ce que le mail n'arrive jamais.
 
 > **Notes de version.** PocketBase est en pré-1.0 : figer la version en production et lire les notes de migration avant chaque montée. Litestream 0.5 utilise le nouveau format LTX (suivre la documentation 0.5+, pas les anciens tutoriels 0.3). Tailwind 4 se configure en CSS (plus de `tailwind.config.js`) — les versions récentes de shadcn/ui le supportent nativement.
 
@@ -61,13 +63,17 @@ Application hébergée classique en deux blocs :
 
 | Sujet | Choix |
 |-------|-------|
-| Serveur | Fly.io (machine 256 Mo + volume persistant 1 Go) ou VPS (Hetzner/Contabo ~5 €/mois) |
+| Serveur | VPS Hetzner (CX22, 2 vCPU / 4 Go), Dokploy en déploiement Docker Compose |
 | Frontend | Servi par PocketBase lui-même (dossier `pb_public`) → un seul déploiement, pas de CORS |
-| HTTPS | Automatique (Fly.io) ou Caddy (VPS) |
-| Sauvegarde | Litestream → Backblaze B2 (10 Go gratuits) + snapshot quotidien |
+| HTTPS | Traefik, fourni par Dokploy (certificat Let's Encrypt) |
+| Sauvegarde | Litestream → Hetzner Object Storage, même région que le serveur |
 | Restauration | `litestream restore` : procédure documentée et testée une fois par trimestre |
 | Domaine | Nom de domaine + DNS (Cloudflare) |
 | Supervision | UptimeRobot (gratuit) : alerte si l'app ne répond plus |
+
+> **Le stockage de sauvegarde est chez le même fournisseur que le serveur** (décidé le 29/08/2026, pour garder le trafic de réplication à l'intérieur du datacentre). Litestream couvre donc toujours la perte du disque et de la machine, mais **plus la perte du compte**, qui emporterait les deux ensemble. Couvrir ce cas demanderait une copie périodique chez un autre fournisseur, jamais un second Litestream — deux réplications sur la même base se marchent dessus.
+>
+> **La console d'administration de PocketBase ne doit pas être exposée** : Traefik refuse `/_` et `/api/collections/_superusers/`, et l'on y accède par un tunnel SSH vers la boucle locale du serveur. Bloquer le second chemin autant que le premier n'est pas un détail — la console est une page, ce point d'authentification est la porte. *Écrit et vérifié contre un Traefik réel, pas encore déployé au 29/08/2026.*
 
 ## 3. Schéma de la base (collections PocketBase)
 
@@ -119,7 +125,7 @@ Les simulateurs (remboursement anticipé, boule de neige vs avalanche) sont du *
 | Sujet | Choix |
 |-------|-------|
 | Code | Monorepo Git (GitHub) : `/frontend` + `/pb_hooks` + `/deploy` |
-| CI/CD | GitHub Actions : build du frontend → copie dans `pb_public` → déploiement Fly.io (`fly deploy`) |
+| CI/CD | GitHub Actions vérifie (lint, types, tests) ; Dokploy construit l'image sur le serveur et déploie |
 | Environnements | `dev` (PocketBase local, données de test) et `prod` |
 | Migrations | Migrations PocketBase versionnées dans Git (`pb_migrations`) |
 | Tests | Vitest (logique métier front : simulateurs, calculs de budget) + tests manuels de parcours |
@@ -128,11 +134,11 @@ Les simulateurs (remboursement anticipé, boule de neige vs avalanche) sont du *
 
 | Poste | Coût |
 |-------|------|
-| Serveur (Fly.io ou VPS) | ~5 € |
-| Sauvegarde (Backblaze B2) | 0 € (< 10 Go) |
-| E-mails (Brevo/Resend, offre gratuite) | 0 € |
+| Serveur (VPS Hetzner CX22) | ~5 € |
+| Sauvegarde (Hetzner Object Storage) | ~1 € |
+| E-mails (Resend, offre gratuite) | 0 € |
 | Nom de domaine | ~1 €/mois (12 €/an) |
-| **Total** | **~6 €/mois** |
+| **Total** | **~7 €/mois** |
 
 ## 8. Risques et parades
 
