@@ -18,6 +18,7 @@ import { ResetPasswordPage } from '@/auth/reset-password-page.tsx'
 import { SignInPage } from '@/auth/sign-in-page.tsx'
 import { SignUpPage } from '@/auth/sign-up-page.tsx'
 import { CategoriesPage } from '@/categories/categories-page.tsx'
+import { ProfilePage } from '@/profile/profile-page.tsx'
 import { NotFoundPage } from '@/components/not-found-page'
 import { TransactionsPage } from '@/transactions/transactions-page.tsx'
 import { HomePage } from '@/home/home-page.tsx'
@@ -123,6 +124,12 @@ const categoriesRoute = createRoute({
   component: CategoriesPage,
 })
 
+const profileRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/profile',
+  component: ProfilePage,
+})
+
 const transactionsRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/transactions',
@@ -137,6 +144,7 @@ const routeTree = rootRoute.addChildren([
   protectedRoute.addChildren([
     homeRoute,
     transactionsRoute,
+    profileRoute,
     budgetsRoute,
     debtsRoute,
     debtDetailRoute,

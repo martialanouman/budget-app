@@ -10,6 +10,7 @@ const NAV = [
   { to: '/debts', label: 'Dettes' },
   { to: '/accounts', label: 'Comptes' },
   { to: '/categories', label: 'Catégories' },
+  { to: '/profile', label: 'Mon compte' },
 ] as const
 
 export function AppShell({ title, children }: { title: string; children: ReactNode }) {
