@@ -42,8 +42,27 @@ onRecordUpdate((e) => {
 
 onRecordDelete((e) => {
   const debt = e.record.get('debt')
+  const owner = e.record.get('user')
 
   e.next()
+
+  // The owner may be going too. Closing an account cascades to the debts and
+  // to their repayments, and each of those deletions lands here; replaying then
+  // saves a debt whose `user` relation points at a row that is already gone,
+  // PocketBase refuses the write, and the whole closure is refused with it —
+  // `validation_missing_rel_records` on a field nobody touched. Measured
+  // 29/08/2026: a repayment was the one thing that made an account unclosable
+  // (USR-04).
+  //
+  // The check sits here rather than in recompute() so only deletions pay for
+  // it; a cascade is the only way the owner can be missing.
+  // Counted rather than caught. An unqualified catch would swallow a transient
+  // query failure as though the owner had gone, skipping the replay while the
+  // delete succeeded — precisely the silent drift this module exists to
+  // prevent, and the opposite of the rule the create and update hooks follow.
+  if (e.app.findRecordsByFilter('users', 'id = {:id}', '', 1, 0, { id: owner }).length === 0) {
+    return
+  }
 
   require(`${__hooks}/jobs/debt_balance.js`).recompute(e.app, debt)
 }, 'debt_payments')
