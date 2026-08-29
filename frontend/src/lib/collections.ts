@@ -122,13 +122,26 @@ export type NotificationType = (typeof NOTIFICATION_TYPES)[number]
 
 export type BudgetAlertPayload = { month: string; category: string; threshold: number }
 
-export type Notification = {
+export type DebtDuePayload = {
+  debt: string
+  creditor: string
+  direction: DebtDirection
+  dueDate: string
+  daysAhead: number
+  amount: number
+}
+
+/** The payload's shape follows the type; nothing else reads it. */
+export type Notification =
+  | (NotificationBase & { type: 'depassement_budget'; payload: BudgetAlertPayload })
+  | (NotificationBase & { type: 'echeance_dette'; payload: DebtDuePayload })
+  | (NotificationBase & { type: 'recurrente' | 'rappel_saisie'; payload: unknown })
+
+type NotificationBase = {
   id: string
   user: string
-  type: NotificationType
   /** What it is about, as an exact key — `YYYY-MM@categoryId` for a budget. */
   subject: string
-  payload: BudgetAlertPayload
   due_at: string
   read: boolean
   created: string

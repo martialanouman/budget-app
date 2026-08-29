@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État du dépôt
 
-Étapes 0 à 6 du plan livrées : outillage et CI ; authentification complète (inscription, connexion, réinitialisation vérifiée via Mailpit) ; noyau monétaire XOF partagé et exécuté par le moteur de PocketBase ; comptes, catégories et soldes calculés ; transactions, virements atomiques et scissions ; budgets mensuels avec seuils, alertes, reports et reste à vivre ; dettes avec échéancier, capital rejoué depuis l'historique et rappels J-3/J-1/J. **Prochaine étape : le tableau de bord** (assemblage des vues, centre de notifications, PWA).
+Étapes 0 à 7 du plan livrées : outillage et CI ; authentification complète (inscription, connexion, réinitialisation vérifiée via Mailpit) ; noyau monétaire XOF partagé et exécuté par le moteur de PocketBase ; comptes, catégories et soldes calculés ; transactions, virements atomiques et scissions ; budgets mensuels avec seuils, alertes, reports et reste à vivre ; dettes avec échéancier, capital rejoué depuis l'historique et rappels J-3/J-1/J ; tableau de bord, centre de notifications et PWA installable. **Prochaine étape : le déploiement** (Fly.io, Litestream vers B2, SMTP de production).
 
 Les deux documents de référence, à lire avant toute décision d'implémentation :
 
@@ -121,7 +121,7 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
 - **L'alerte est une réconciliation, pas une réaction.** `pb_hooks/jobs/budget_alerts.js` ne demande jamais « que vient-il de se passer » mais « quels seuils cette enveloppe atteint-elle maintenant » : il crée ce qui manque et retire les alertes non lues qui ne se justifient plus. Branché sur la création, la mise à jour **et** la suppression d'une transaction — la seule création laissait une dépense corrigée à la hausse sans alerte, et laissait pour toujours l'alerte d'une dépense supprimée, la déduplication interdisant de la reproduire. Une alerte déjà écartée par l'utilisateur reste : c'est de l'historique.
 - Une notification porte un **`subject` textuel indexé** (`YYYY-MM@categoryId`). Dédupliquer sur le `payload` obligeait à relire toutes les notifications de l'utilisateur à chaque saisie, un filtre sur un chemin JSON ne ramenant rien.
 - **`carried_amount` est écrit par le serveur, dans `onRecordCreate`, après avoir été remis à zéro.** Il était réglable par le client : un plafond de 1 franc avec un report de 5 000 000 était accepté tel quel, et l'enveloppe ne déclenchait plus jamais de seuil.
-- **Le « reste à vivre » ne suit pas la formule des specs à la lettre.** « Revenus − charges fixes − échéances − dépenses réalisées » compte deux fois une charge fixe déjà payée. Seule la part **non encore payée** des enveloppes fixes est déduite, sinon payer son loyer ferait baisser le reste à vivre deux fois. Le terme « échéances de dettes » vaut zéro jusqu'à l'étape 6.
+- **Le « reste à vivre » ne suit pas la formule des specs à la lettre.** « Revenus − charges fixes − échéances − dépenses réalisées » compte deux fois une charge fixe déjà payée. Seule la part **non encore payée** des enveloppes fixes est déduite, sinon payer son loyer ferait baisser le reste à vivre deux fois. **Les échéances de dettes suivent exactement la même règle** (`unpaidInstalment`) : la mensualité moins ce qui a déjà été remboursé ce mois-ci, plafonnée à ce qui reste dû, et rien pour l'argent qu'on doit à l'utilisateur. Le terme est resté à zéro entre les étapes 5 et 7 — un commentaire annonçait qu'il rejoindrait le calcul au tableau de bord, où il n'a rejoint personne, et une mensualité de 90 000 F CFA était affichée comme disponible.
 - **PocketBase ne sait pas typer un agrégat dans une view** : un `SUM()` non casté revient comme valeur JSON et `getInt()` y lit 0 — mesuré, le hook d'alerte ne se déclenchait jamais. Toute colonne calculée d'une view porte un `CAST(... AS INT)`.
 - **Un champ `json` relu depuis un enregistrement n'est pas un objet JS** : `payload.month` y vaut `undefined`, et un filtre sur un chemin JSON (`payload.month = {:month}`) ne ramène rien. Passer par `JSON.parse(String(...))` et comparer en JavaScript.
 - **Une erreur levée dans `onRecordAfterCreateSuccess` revient au client en HTTP 400 sur l'enregistrement lui-même** — mesuré. Tout hook accessoire (alerte, report) enveloppe donc son corps dans un `try/catch` qui journalise : une notification impossible ne doit jamais coûter à l'utilisateur la saisie qu'il vient de faire.
@@ -140,8 +140,31 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
 - Un rappel ne précède jamais la première échéance de l'échéancier affiché : les deux lectures du même calendrier se contredisaient pour une dette ouverte le jour même.
 - **Les notifications d'échéance n'ont pas encore d'écran.** Le cron les produit, le panneau des budgets ne montre que les dépassements. Le centre de notifications est prévu à l'étape 7.
 
+## Tableau de bord et PWA
+
+- **La répartition des dépenses est une liste de barres classées, pas un camembert.** Un camembert demande de comparer des angles — la comparaison la plus difficile qui soit —, exige de toute façon une alternative textuelle pour WCAG, et coûte une dépendance de graphiques. Les courbes sur douze mois de `RAP-02` sont hors périmètre v1 ; c'est là qu'une librairie de graphiques gagnera sa place, pas ici.
+- **Les figures du mois vivent dans `frontend/src/budgets/month-figures.ts`**, partagées par l'écran des budgets et le tableau de bord : les deux ne peuvent pas se contredire sur le même mois.
+- **Une seule formulation par notification** (`frontend/src/home/notification-centre.tsx`), quel que soit l'écran qui l'affiche.
+- **Les icônes de lancement sont dessinées par `frontend/scripts/make-icons.mjs`**, pas déposées en binaire opaque : `pnpm icons:build` les régénère, et la source des pixels est lisible.
+- Le service worker est **désactivé pendant les parcours** (`disable: process.env.VITEST === 'true'`) : il servirait le build d'un test au suivant.
+- **Aucun chiffre n'est affiché avant d'avoir été lu.** Les trois totaux du tableau de bord valent `—` tant que leurs requêtes n'ont pas abouti, et `budgeted === 0` ne devient « Aucune enveloppe définie » qu'une fois les enveloppes chargées. La première version affichait un `0` assuré pendant le chargement comme après un échec — sur les nombres mêmes qui décident d'une dépense. Le parcours tient la propriété par la négative : jamais de « 0 F CFA » quand la session est refusée.
+- **Le solde total ne compte que les comptes ouverts** (`CPT-04`) : un compte archivé ne peut plus ni être débité ni recevoir de virement. Et un solde que le client n'a pas su relire rend le total inconnu, jamais nul — l'absorber en zéro le sous-estimerait en silence.
+- **Le service worker n'attrape ni `/api/` ni `/_/`** (`navigateFallbackDenylist`). PocketBase sert la SPA, son API et sa console d'administration sur une seule origine : sans ces exclusions, le premier navigateur ayant ouvert l'application reçoit la coquille précachée à la place de la console. Vérifié dans le `sw.js` généré, pas dans la configuration.
+- **Une notification se formule à la lecture, pas à l'écriture.** Le rappel est écrit le matin où le cron passe ; relu deux jours plus tard, il annonçait toujours « dans 3 jours ». Le compte à rebours se recalcule depuis `dueDate` à l'affichage, et `wordingOf` prend un `today` pour que le parcours puisse le fixer.
+- **Le rappel le plus proche retire le précédent.** Les trois décalages J-3/J-1/J empilaient trois cartes le jour de l'échéance. Le cron marque comme lus les rappels non lus de décalage supérieur pour la même paire (date, dette) : la carte restante est la seule à jour, les autres restent en historique.
+- **`wordingOf` rend `undefined` plutôt qu'un libellé creux**, et le centre écarte alors la ligne : une carte disant « Notification » n'apprend rien et demande quand même à être écartée. C'est aussi ce qui permet aux rappels d'échéance de s'afficher quand les catégories, elles, n'ont pas pu être lues — seules les alertes de budget en dépendent.
+- **L'installabilité réelle ne peut pas être vérifiée avant le déploiement** : un service worker exige HTTPS. Ce qui est vérifié ici, c'est que le manifeste, le worker et les icônes sont servis avec les bons types. Le test sur appareil appartient à l'étape 8.
+
+## Performance et accessibilité, mesurées
+
+- **Le tableau de bord répond en 74 ms sur 5 000 entrées réparties sur trois ans**, contre les 2 s que le plan exige (`frontend/src/home/dashboard-load.journey.tsx`). La marge est ce qui dit que l'agrégation est restée dans SQLite ; le jour où un total se calcule côté client, ce test rougit.
+- **Une mesure qui n'attend pas les bonnes choses ne mesure rien** : la première version attendait des titres statiques, présents avant la moindre requête, et annonçait 23 ms. Une assertion de performance doit porter sur une valeur, jamais sur un libellé.
+- **L'audit WCAG AA est exécuté, pas inspecté** (`axe-core`, sur le tableau de bord et le formulaire de saisie). Vérifié discriminant sur une image sans alternative textuelle. **Vérifié non discriminant sur le contraste** : axe range le contraste en « incomplet » quand il ne peut pas résoudre le fond avec certitude, donc un paragraphe volontairement illisible n'a pas été signalé.
+- **Le contraste n'est donc couvert par aucun test.** Les rapports mesurés à la main le 27/08/2026 — slate-600 sur slate-50 à 7,2:1, amber-700 à 4,6:1, red-700 à 5,9:1, contre les 4,5:1 exigés — valent pour la palette de ce jour-là et rien de plus : une couleur ajoutée ou modifiée doit être remesurée à la main, la CI ne le fera pas.
+
 ## Requêtes et cache
 
+- **Un 4xx n'est jamais réessayé** (`createQueryClient`). Une lecture refusée répond pareil à la dixième tentative : les trois essais par défaut ne faisaient que retarder de sept secondes l'aveu que le chiffre n'a pas pu être lu. Les pannes réseau et serveur gardent leurs essais.
 - **L'auto-annulation du SDK PocketBase est désactivée** (`pb.autoCancellation(false)`). Le SDK annule toute requête en vol dès qu'une autre part sur le même chemin : une liste à l'écran et la lecture qu'une mutation fait avant d'écrire s'annulaient mutuellement. TanStack Query tient déjà ce rôle.
 - **L'invalidation a lieu dans `onSettled`, pas `onSuccess`** : une lecture annulée reste sans données et sans requête en cours, donc une écriture en échec laisserait la liste sur « Chargement… » jusqu'à la navigation suivante.
 - **Une écriture annule les lectures qu'elle invalide** (`useDerivedMutation`, `frontend/src/lib/mutations.ts`). Une lecture encore en vol au moment de l'écriture résout avec des données d'avant, et TanStack Query la réutilise au lieu d'en lancer une seconde : l'invalidation qui suit est satisfaite par une réponse plus ancienne que l'écriture, et la ligne créée reste invisible. Toute nouvelle mutation passe par ce helper.
@@ -184,6 +207,7 @@ pnpm pb:dev             # démarre PocketBase sur 127.0.0.1:8090
 pnpm mailpit:dev        # boîte SMTP locale : SMTP 1025, interface 8025
 pnpm dev                # serveur de développement Vite
 pnpm domain:build       # bundle du domaine vers pb_hooks/lib/domain.cjs
+pnpm icons:build        # régénère les icônes PWA depuis leur script
 pnpm build              # domaine puis frontend vers pb_public/
 pnpm typecheck          # tsc --noEmit sur chaque paquet, en parallèle
 pnpm lint               # ESLint, avec règles type-aware

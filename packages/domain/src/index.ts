@@ -6,6 +6,7 @@ export {
   instalmentDueDate,
   nextDueDate,
   splitPayment,
+  unpaidInstalment,
 } from './debt.ts'
 export {
   BUDGET_THRESHOLDS,

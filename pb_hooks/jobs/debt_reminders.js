@@ -64,6 +64,27 @@ function remind(app, today) {
     reminder.set('read', false)
 
     app.save(reminder)
+
+    // The same instalment is announced three times. Once the nearer reminder
+    // exists the earlier ones are stale — they still carry the day count they
+    // were written with — so they stop asking to be read, and stay as history.
+    for (let j = 0; j < OFFSETS.length; j++) {
+      if (OFFSETS[j] <= offset) continue
+
+      const stale = app.findRecordsByFilter(
+        'notifications',
+        "user = {:user} && type = 'echeance_dette' && subject = {:subject} && read = false",
+        '',
+        1,
+        0,
+        { user: debt.get('user'), subject: `${due}@${debt.id}@${OFFSETS[j]}` },
+      )
+
+      if (stale.length === 0) continue
+
+      stale[0].set('read', true)
+      app.save(stale[0])
+    }
   }
 }
 

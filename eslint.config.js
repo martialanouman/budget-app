@@ -33,7 +33,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.config.{js,ts}', 'packages/domain/build.js'],
+    files: ['**/*.config.{js,ts}', 'packages/domain/build.js', 'frontend/scripts/*.mjs'],
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: {
       globals: globals.node,

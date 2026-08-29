@@ -1,12 +1,164 @@
+import { formatAmount, toMoney } from '@budget/domain'
+import { Link } from '@tanstack/react-router'
+import { useAccountBalances, useAccounts } from '@/accounts/accounts-api.ts'
+import { useBudgetSpending, useBudgets } from '@/budgets/budgets-api.ts'
+import { ceilingOf, remainingThisMonth } from '@/budgets/month-figures.ts'
+import { useCategories } from '@/categories/categories-api.ts'
 import { AppShell } from '@/components/app-shell'
-import { useAuth } from '@/auth/auth.ts'
+import { useDebts, useMonthPayments } from '@/debts/debts-api.ts'
+import { dayLabel, monthOf, todayLocally } from '@/lib/dates.ts'
+import { useMonthlySummary } from '@/lib/monthly-summary.ts'
+import { NotificationCentre } from './notification-centre.tsx'
+import { SpendingBreakdown } from './spending-breakdown.tsx'
+import { useDismissNotification, useNotifications } from './dashboard-api.ts'
+import { upcomingDues } from './upcoming-dues.ts'
+
+/**
+ * A figure that could not be read is missing, not zero. The accounts screen
+ * already holds that policy — a stale or invented figure is worse than an
+ * admission — and it matters most here, on the numbers a spend is decided on.
+ */
+const UNKNOWN = '—'
+
+const Figure = ({
+  label,
+  value,
+  note,
+}: {
+  label: string
+  value: string | undefined
+  note?: string | undefined
+}) => (
+  <section className="rounded-md border border-slate-200 bg-white p-3">
+    <h2 className="text-lg font-medium">{label}</h2>
+    <p className="text-2xl tabular-nums">{value ?? UNKNOWN}</p>
+    {note ? <p className="text-sm text-slate-600">{note}</p> : null}
+  </section>
+)
 
 export function HomePage() {
-  const { email } = useAuth()
+  const month = monthOf(todayLocally())
+
+  const accounts = useAccounts()
+  const balances = useAccountBalances()
+  const summary = useMonthlySummary(month)
+  const budgets = useBudgets(month)
+  const spending = useBudgetSpending(month)
+  const categories = useCategories()
+  const debts = useDebts()
+  const payments = useMonthPayments(month)
+  const notifications = useNotifications()
+  const dismiss = useDismissNotification()
+
+  /**
+   * Only the accounts still in use. An archived one can no longer be spent
+   * from nor transferred to, so counting it would announce money the user
+   * cannot reach from this screen.
+   */
+  function totalBalance() {
+    if (!accounts.isSuccess || !balances.isSuccess) return undefined
+
+    const open = new Set(accounts.data.filter((account) => !account.archived).map((one) => one.id))
+    let total = 0
+
+    for (const row of balances.data) {
+      if (!open.has(row.id)) continue
+      // A balance the client could not make sense of leaves the total
+      // unknown: absorbing it as zero would understate it silently.
+      if (row.balance === undefined) return undefined
+
+      total += row.balance
+    }
+
+    return formatAmount(toMoney(total))
+  }
+
+  const budgeted = toMoney((budgets.data ?? []).reduce((sum, budget) => sum + ceilingOf(budget), 0))
+
+  const monthlySpending =
+    summary.isSuccess && budgets.isSuccess
+      ? `${formatAmount(toMoney(summary.data.spent))} sur ${formatAmount(budgeted)}`
+      : undefined
+
+  const remaining =
+    summary.isSuccess &&
+    budgets.isSuccess &&
+    spending.isSuccess &&
+    debts.isSuccess &&
+    payments.isSuccess
+      ? formatAmount(
+          remainingThisMonth({
+            income: summary.data.income,
+            spent: summary.data.spent,
+            budgets: budgets.data,
+            spending: spending.data,
+            debts: debts.data,
+            payments: payments.data,
+          }),
+        )
+      : undefined
+
+  const dues = upcomingDues(debts.data ?? []).slice(0, 3)
 
   return (
-    <AppShell title="Budget">
-      <p className="text-slate-700">Connecté en tant que {email}</p>
+    <AppShell title="Où j’en suis">
+      <Figure label="Solde total" value={totalBalance()} />
+
+      <Figure
+        label="Dépenses du mois"
+        value={monthlySpending}
+        note={
+          budgets.isSuccess && budgeted === 0 ? 'Aucune enveloppe définie pour ce mois' : undefined
+        }
+      />
+
+      <Figure
+        label="Reste à vivre"
+        value={remaining}
+        note="Revenus du mois, moins les dépenses réalisées, ce qui reste à payer sur les charges fixes et les échéances de dettes."
+      />
+
+      <NotificationCentre
+        notifications={notifications.data ?? []}
+        categories={categories.data}
+        ready={notifications.isSuccess}
+        onDismiss={(id) => dismiss.mutate(id)}
+      />
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">Prochaines échéances</h2>
+
+        {debts.isSuccess && dues.length === 0 ? <p>Aucune échéance à venir.</p> : null}
+
+        <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+          {dues.map(({ debt, date, inDays }) => (
+            <li key={debt.id} className="flex items-center justify-between gap-3 p-3">
+              <span>
+                <Link
+                  to="/debts/$debtId"
+                  params={{ debtId: debt.id }}
+                  className="font-medium underline-offset-4 hover:underline"
+                >
+                  {debt.creditor}
+                </Link>
+                <span className="block text-sm text-slate-600">
+                  {/* DET-02: money owed to the user falls due too, and reading
+                      it as one more thing to pay is the opposite of the truth. */}
+                  {debt.direction === 'je_dois' ? 'À payer' : 'À recevoir'} le {dayLabel(date)} ·{' '}
+                  {inDays === 0 ? 'aujourd’hui' : `dans ${inDays} jour${inDays > 1 ? 's' : ''}`}
+                </span>
+              </span>
+              <span className="tabular-nums">{formatAmount(toMoney(debt.monthly_payment))}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <SpendingBreakdown
+        spending={spending.data ?? []}
+        categories={categories.data ?? []}
+        ready={spending.isSuccess}
+      />
     </AppShell>
   )
 }

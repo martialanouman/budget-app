@@ -176,3 +176,23 @@ export function daysUntil(from: string, to: string): number {
 
   return Math.round((asUtc(to) - asUtc(from)) / 86_400_000)
 }
+
+/**
+ * What an instalment still claims from the month's money (BUD-05).
+ *
+ * Only the unpaid part, for the same reason the fixed envelopes deduct only
+ * theirs: a repayment already made is counted once, as spending, and deducting
+ * the instalment whole as well would make paying it lower the figure twice.
+ *
+ * Never more than is still owed — the last instalment is the short one here as
+ * it is in the schedule.
+ */
+export function unpaidInstalment(
+  monthlyPayment: Money,
+  remaining: Money,
+  paidThisMonth: Money,
+): Money {
+  const claimed = Math.min(toMoney(monthlyPayment), Math.max(toMoney(remaining), 0))
+
+  return toMoney(Math.max(claimed - toMoney(paidThisMonth), 0))
+}

@@ -1,5 +1,5 @@
-import { amortisationSchedule, instalmentDueDate, toMoney } from '@budget/domain'
-import { type Debt } from '@/lib/collections'
+import { amortisationSchedule, instalmentDueDate, toMoney, unpaidInstalment } from '@budget/domain'
+import { type Debt, type DebtPayment } from '@/lib/collections'
 import { todayLocally } from '@/lib/dates.ts'
 
 /**
@@ -69,4 +69,32 @@ export function shareOfIncome(all: Debt[], income: number): number | undefined {
   if (income <= 0) return undefined
 
   return Math.round((monthlyCommitment(all) * 100) / income)
+}
+
+/**
+ * What the debts still claim from this month's money (BUD-05). Money owed to
+ * the user claims nothing: it is not a charge, and the same rule already
+ * decides the total owed and the monthly commitment.
+ */
+export function unpaidInstalments(all: Debt[], paidThisMonth: DebtPayment[]) {
+  const paid = new Map<string, number>()
+
+  for (const payment of paidThisMonth) {
+    paid.set(payment.debt, (paid.get(payment.debt) ?? 0) + payment.amount)
+  }
+
+  return toMoney(
+    all
+      .filter(isOwedByUser)
+      .reduce(
+        (sum, debt) =>
+          sum +
+          unpaidInstalment(
+            toMoney(debt.monthly_payment),
+            owedOn(debt),
+            toMoney(paid.get(debt.id) ?? 0),
+          ),
+        0,
+      ),
+  )
 }

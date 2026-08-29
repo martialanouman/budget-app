@@ -6,6 +6,7 @@ import {
   instalmentDueDate,
   nextDueDate,
   splitPayment,
+  unpaidInstalment,
 } from './debt.ts'
 
 const xof = toMoney
@@ -219,5 +220,33 @@ describe('Given two dates', () => {
   // is missed, and the caller must be able to tell the two apart.
   it('goes negative for a date already behind', () => {
     expect(daysUntil('2026-08-19', '2026-08-16')).toBe(-3)
+  })
+})
+
+describe('Given a debt whose instalment falls this month', () => {
+  it('still claims the whole instalment while nothing has been repaid', () => {
+    expect(unpaidInstalment(xof(90_000), xof(900_000), xof(0))).toBe(90_000)
+  })
+
+  // Symmetrical to the fixed envelopes: what has already been repaid is
+  // counted once, as spending. Deducting the instalment whole as well would
+  // make paying it lower the figure twice.
+  it('claims only what is left of it once part has been repaid', () => {
+    expect(unpaidInstalment(xof(90_000), xof(900_000), xof(50_000))).toBe(40_000)
+  })
+
+  it('claims nothing once the instalment has been paid, or overpaid', () => {
+    expect(unpaidInstalment(xof(90_000), xof(900_000), xof(90_000))).toBe(0)
+    expect(unpaidInstalment(xof(90_000), xof(900_000), xof(120_000))).toBe(0)
+  })
+
+  // The last instalment is the short one, here as in the schedule: asking for
+  // more than is owed would take money the borrower does not owe.
+  it('never claims more than is still owed', () => {
+    expect(unpaidInstalment(xof(90_000), xof(30_000), xof(0))).toBe(30_000)
+  })
+
+  it('claims nothing from a debt already settled', () => {
+    expect(unpaidInstalment(xof(90_000), xof(0), xof(0))).toBe(0)
   })
 })

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { type Debt, type DebtPayment } from '@/lib/collections'
+import { nextMonth } from '@/lib/dates.ts'
 import { useMonthlySummary } from '@/lib/monthly-summary.ts'
 import { useDerivedMutation } from '@/lib/mutations.ts'
 import { pb } from '@/lib/pocketbase'
@@ -42,6 +43,23 @@ export function useDebtPayments(debtId: string) {
       payments().getFullList<DebtPayment>({
         filter: pb.filter('debt = {:debt}', { debt: debtId }),
         sort: '-date,-created',
+      }),
+  })
+}
+
+/**
+ * What has already been repaid inside a budget month. BUD-05 deducts only the
+ * unpaid part of an instalment, so it has to know what the month has seen.
+ */
+export function useMonthPayments(month: string) {
+  return useQuery({
+    queryKey: ['debt-payments', 'month', month],
+    queryFn: () =>
+      payments().getFullList<DebtPayment>({
+        filter: pb.filter('date >= {:from} && date < {:to}', {
+          from: `${month}-01`,
+          to: `${nextMonth(month)}-01`,
+        }),
       }),
   })
 }
