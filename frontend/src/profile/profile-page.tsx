@@ -16,9 +16,13 @@ export function ProfilePage() {
   const navigate = useNavigate()
   const [confirmation, setConfirmation] = useState('')
 
-  // Typing the address is what separates a deliberate closure from a slip. The
-  // comparison is exact: an approximate match would defeat the point of asking.
-  const confirmed = confirmation === email
+  // Typing the address is what separates a deliberate closure from a slip, and
+  // that is all it has to do. The comparison forgives case and surrounding
+  // space: PocketBase authenticates case-insensitively but stores the case the
+  // owner registered with, so an exact match would lock somebody who signed up
+  // as Jean.Dupont@… out of ever closing their own account.
+  const normalise = (value: string) => value.trim().toLowerCase()
+  const confirmed = confirmation !== '' && normalise(confirmation) === normalise(email ?? '')
 
   const close = async () => {
     try {
@@ -31,8 +35,6 @@ export function ProfilePage() {
 
   return (
     <AppShell title="Mon compte">
-      <p className="text-sm text-slate-600">Connecté en tant que {email}</p>
-
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Mes données</h2>
         <p className="text-sm text-slate-600">

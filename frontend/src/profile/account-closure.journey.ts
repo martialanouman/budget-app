@@ -47,6 +47,37 @@ const aFurnishedAccount = async () => {
     date: '2026-02-05',
   })
 
+  // The two shapes that carry delete-time hooks of their own, and the reason
+  // this fixture is worth widening: a transfer's legs fall as a pair from
+  // inside the delete hook, while the cascade is walking its own list of rows
+  // to delete. USR-04 was blocked twice already by a hook meeting a cascade —
+  // first the account relation, then a single debt repayment — and neither was
+  // visible until the fixture reached it.
+  const savings = await pb.collection('accounts').create({
+    user: owner,
+    name: 'Épargne',
+    type: 'epargne',
+    initial_balance: 100_000,
+  })
+
+  await pb.send('/api/transfers', {
+    method: 'POST',
+    body: { from: account.id, to: savings.id, amount: 30_000, date: '2026-08-21 09:00:00' },
+  })
+
+  await pb.send('/api/splits', {
+    method: 'POST',
+    body: {
+      account: account.id,
+      date: '2026-08-22 09:00:00',
+      note: 'Courses',
+      parts: [
+        { category: category.id, amount: 7_000 },
+        { category: category.id, amount: 3_000 },
+      ],
+    },
+  })
+
   return owner
 }
 

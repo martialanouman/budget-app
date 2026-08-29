@@ -56,9 +56,11 @@ onRecordDelete((e) => {
   //
   // The check sits here rather than in recompute() so only deletions pay for
   // it; a cascade is the only way the owner can be missing.
-  try {
-    e.app.findRecordById('users', owner)
-  } catch {
+  // Counted rather than caught. An unqualified catch would swallow a transient
+  // query failure as though the owner had gone, skipping the replay while the
+  // delete succeeded — precisely the silent drift this module exists to
+  // prevent, and the opposite of the rule the create and update hooks follow.
+  if (e.app.findRecordsByFilter('users', 'id = {:id}', '', 1, 0, { id: owner }).length === 0) {
     return
   }
 

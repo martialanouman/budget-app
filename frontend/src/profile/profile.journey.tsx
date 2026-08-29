@@ -34,6 +34,14 @@ it('keeps the closing button out of reach until the address is written', async (
 
   await screen.getByLabelText('Confirmez avec votre adresse e-mail').fill(email)
   await expect.element(close).toBeEnabled()
+
+  // PocketBase authenticates case-insensitively but stores the case the owner
+  // registered with. An exact comparison would lock somebody who signed up as
+  // Jean.Dupont@… out of ever closing their own account.
+  await screen
+    .getByLabelText('Confirmez avec votre adresse e-mail')
+    .fill(` ${email.toUpperCase()} `)
+  await expect.element(close).toBeEnabled()
 })
 
 it('closes the account for good', async () => {
