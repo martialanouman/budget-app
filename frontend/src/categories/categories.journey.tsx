@@ -1,9 +1,12 @@
 import { beforeEach, expect, it } from 'vitest'
-import { createSignedInUser, renderApp } from '../../test/journey-harness.tsx'
+import { createSignedInUser, currentUserId, renderApp } from '../../test/journey-harness.tsx'
 import { type Category } from '@/lib/collections'
 import { pb } from '@/lib/pocketbase'
 
 const listCategories = () => pb.collection('categories').getFullList<Category>()
+
+const idOf = async (name: string) =>
+  (await listCategories()).find((category) => category.name === name)!.id
 
 beforeEach(() => {
   pb.authStore.clear()
@@ -103,4 +106,97 @@ it('never exposes another owner’s categories', async () => {
 
   const overlap = theirs.filter((category) => mine.some((own) => own.id === category.id))
   expect(overlap).toEqual([])
+})
+
+// The rule of the project is that nothing is deleted, so history stays
+// attachable. A category nothing points at has no history to protect, and
+// deactivating it only keeps it on screen for ever.
+it('deletes a category nothing points at', async () => {
+  await createSignedInUser('cats')
+  const { screen } = await renderApp('/categories')
+
+  await screen.getByLabelText('Nom').fill('Créée par erreur')
+  await screen.getByRole('button', { name: 'Créer la catégorie' }).click()
+  await expect
+    .element(screen.getByRole('button', { name: 'Supprimer Créée par erreur' }))
+    .toBeVisible()
+
+  await screen.getByRole('button', { name: 'Supprimer Créée par erreur' }).click()
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Désactiver Créée par erreur' }))
+    .not.toBeInTheDocument()
+  expect((await listCategories()).map((category) => category.name)).not.toContain(
+    'Créée par erreur',
+  )
+})
+
+// Offering a button that will fail teaches the obstacle at the costliest
+// moment. The row says what holds the category instead, and deactivation stays
+// available.
+it('says what holds a category rather than offering to delete it', async () => {
+  await createSignedInUser('cats')
+  const account = await pb.collection('accounts').create({
+    user: currentUserId(),
+    name: 'Compte courant',
+    type: 'banque',
+    initial_balance: 100_000,
+  })
+  await pb.collection('transactions').create({
+    user: currentUserId(),
+    account: account.id,
+    category: await idOf('Alimentation'),
+    type: 'depense',
+    amount: 5_000,
+    date: '2026-08-12 10:00:00',
+  })
+
+  const { screen } = await renderApp('/categories')
+
+  await expect.element(screen.getByText('Non supprimable — 1 transaction')).toBeVisible()
+  await expect
+    .element(screen.getByRole('button', { name: 'Supprimer Alimentation' }))
+    .not.toBeInTheDocument()
+  await expect
+    .element(screen.getByRole('button', { name: 'Désactiver Alimentation' }))
+    .toBeVisible()
+})
+
+// An envelope is what makes this worth guarding: budgets.category cascades, so
+// a delete that got through would take the caps of every past month with it.
+it('counts an envelope as something that holds a category', async () => {
+  await createSignedInUser('cats')
+  await pb.collection('budgets').create({
+    user: currentUserId(),
+    category: await idOf('Loisirs'),
+    month: '2026-08',
+    cap_amount: 40_000,
+  })
+
+  const { screen } = await renderApp('/categories')
+
+  await expect.element(screen.getByText('Non supprimable — 1 enveloppe')).toBeVisible()
+  await expect
+    .element(screen.getByRole('button', { name: 'Supprimer Loisirs' }))
+    .not.toBeInTheDocument()
+})
+
+it('counts a sub-category as something that holds its parent', async () => {
+  await createSignedInUser('cats')
+  await pb.collection('categories').create({
+    user: currentUserId(),
+    name: 'Concert',
+    kind: 'variable',
+    parent: await idOf('Loisirs'),
+    active: true,
+  })
+
+  const { screen } = await renderApp('/categories')
+
+  await expect.element(screen.getByText('Non supprimable — 1 sous-catégorie')).toBeVisible()
+  await expect
+    .element(screen.getByRole('button', { name: 'Supprimer Loisirs' }))
+    .not.toBeInTheDocument()
+  // The child itself is held by nothing.
+  await expect.element(screen.getByRole('button', { name: 'Supprimer Concert' })).toBeVisible()
 })

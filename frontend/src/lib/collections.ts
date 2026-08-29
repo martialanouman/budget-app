@@ -36,6 +36,19 @@ export type Category = {
   active: boolean
 }
 
+/**
+ * One row per category, counted by SQLite in the `category_usage` view. What
+ * holds a category is asked of the database, never by pulling the thousands of
+ * entries behind it into the browser. `id` is the category's own id.
+ */
+export type CategoryUsage = {
+  id: string
+  user: string
+  transaction_count: number
+  budget_count: number
+  child_count: number
+}
+
 /** What the entry form offers; a transfer is written by its own server route. */
 export const TRANSACTION_TYPES = ['depense', 'revenu'] as const
 /** Transfers are recorded as two rows; the direction gives the balance its sign. */

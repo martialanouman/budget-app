@@ -6,7 +6,16 @@ import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   {
-    ignores: ['pb_public/**', '**/dist/**', '**/__screenshots__/**', 'pb_hooks/lib/**'],
+    // pb_data holds the local database and the types.d.ts PocketBase writes
+    // beside it: generated, gitignored, and enough to fail the lint for
+    // anyone who has run `pnpm pb:dev`.
+    ignores: [
+      'pb_public/**',
+      '**/dist/**',
+      '**/__screenshots__/**',
+      'pb_hooks/lib/**',
+      'pb_data/**',
+    ],
   },
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
@@ -78,6 +87,7 @@ export default tseslint.config(
         onRecordCreateRequest: 'readonly',
         onRecordUpdate: 'readonly',
         onRecordDelete: 'readonly',
+        onRecordDeleteRequest: 'readonly',
         onRecordAfterCreateSuccess: 'readonly',
         onRecordAfterUpdateSuccess: 'readonly',
         onRecordAfterDeleteSuccess: 'readonly',

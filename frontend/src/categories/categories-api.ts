@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { type Category, type CategoryKind } from '@/lib/collections'
+import { useQuery } from '@tanstack/react-query'
+import { type Category, type CategoryKind, type CategoryUsage } from '@/lib/collections'
+import { useDerivedMutation } from '@/lib/mutations.ts'
 import { pb } from '@/lib/pocketbase'
 
 const categories = () => pb.collection('categories')
@@ -17,14 +18,19 @@ export function useCategories() {
   })
 }
 
-function useCategoryMutation<TVariables>(mutationFn: (variables: TVariables) => Promise<unknown>) {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
+/**
+ * What holds each category, counted server-side. Deriving it in the browser
+ * would mean reading every transaction the account has ever recorded.
+ */
+export function useCategoryUsage() {
+  return useQuery({
+    queryKey: ['category-usage'],
+    queryFn: () => pb.collection('category_usage').getFullList<CategoryUsage>(),
   })
 }
+
+const useCategoryMutation = <TVariables>(mutationFn: (variables: TVariables) => Promise<unknown>) =>
+  useDerivedMutation<TVariables>([['categories'], ['category-usage']], mutationFn)
 
 export function useCreateCategory() {
   return useCategoryMutation((draft: CategoryDraft) =>
@@ -49,4 +55,11 @@ export function useRenameCategory() {
   return useCategoryMutation(({ id, name }: { id: string; name: string }) =>
     categories().update(id, { name }),
   )
+}
+
+// Only a category nothing points at; the server refuses the rest, and the page
+// does not offer the button. Deactivation stays the answer for everything with
+// history behind it.
+export function useDeleteCategory() {
+  return useCategoryMutation((id: string) => categories().delete(id))
 }
