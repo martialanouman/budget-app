@@ -28,6 +28,20 @@ onBootstrap((e) => {
 
   const senderAddress = $os.getenv('SMTP_SENDER_ADDRESS')
   if (senderAddress) {
+    // Checked here so the failure names the variable. PocketBase validates it
+    // too, but its message — "meta: (senderAddress: must be a valid email
+    // address.)" — says nothing about where the value came from, and this hook
+    // is fatal by design: the operator reads that line inside a restart loop.
+    // Measured on the first production deploy, 29/08/2026.
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(senderAddress)) {
+      throw new Error(
+        'SMTP_SENDER_ADDRESS is not an email address: "' +
+          senderAddress +
+          '". It must be a full address on a domain verified with the mail provider, ' +
+          'such as budget@example.com. The display name belongs in SMTP_SENDER_NAME.',
+      )
+    }
+
     settings.meta.senderAddress = senderAddress
   }
 

@@ -52,7 +52,12 @@ Resend un simple redémarrage au lieu d'un nouveau fichier de migration.
 
 Le hook n'est **pas défensif** : s'il ne peut pas écrire les réglages, le conteneur ne
 démarre pas. Une production qui démarre avec la récupération de compte silencieusement
-cassée est pire qu'un conteneur que Dokploy affiche en échec.
+cassée est pire qu'un conteneur que Dokploy affiche en échec. La contrepartie est réelle et
+a été mesurée le 29/08/2026 : une adresse d'expéditeur mal formée a mis l'application en
+**boucle de redémarrage**. Le hook valide donc `SMTP_SENDER_ADDRESS` lui-même et nomme la
+variable dans son erreur — la validation de PocketBase, elle, dit seulement
+`meta: (senderAddress: must be a valid email address.)`, ce qui n'aide pas quand on lit
+cette ligne défiler à l'infini.
 
 Sans `APP_URL` ni `SMTP_HOST`, le hook ne fait rien du tout — c'est ce qui laisse le
 développement local et les parcours de test configurer PocketBase vers Mailpit.
