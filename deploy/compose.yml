@@ -15,7 +15,8 @@ services:
       - '8090'
     environment:
       # The password-reset template builds its link from {APP_URL}. Left unset,
-      # the mail sends users to localhost.
+      # the mail sends users to localhost. APP_DOMAIN is the same host without
+      # the scheme, because Traefik matches on the bare Host header.
       APP_URL: ${APP_URL}
 
       SMTP_HOST: ${SMTP_HOST}
@@ -37,6 +38,34 @@ services:
       # deploy rather than the first — the kind of defect that only appears once
       # there is something to lose.
       - pb_data:/pb/pb_data
+
+    # Both of these are required, and neither is optional scenery. A Compose
+    # deployment does not get Traefik labels injected the way Dokploy's
+    # "Application" type does: the router is declared here, and the container
+    # has to sit on Traefik's own network for it to be reachable at all.
+    # Without them Traefik answers every request with its default 404 — measured
+    # on the first deploy, where the domain resolved, TLS terminated, and
+    # nothing was routed.
+    networks:
+      - dokploy-network
+
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.budget-app.rule=Host(`${APP_DOMAIN}`)'
+      - 'traefik.http.routers.budget-app.entrypoints=web'
+      # No HTTP-to-HTTPS middleware here on purpose. Naming one that does not
+      # exist puts the router in error and drops plain HTTP to a 404 — which
+      # breaks the ACME challenge and, behind a proxy that talks to the origin
+      # in the clear, breaks the site. The redirect belongs to whatever sits in
+      # front, or to Traefik's global configuration.
+      - 'traefik.http.routers.budget-app-secure.rule=Host(`${APP_DOMAIN}`)'
+      - 'traefik.http.routers.budget-app-secure.entrypoints=websecure'
+      - 'traefik.http.routers.budget-app-secure.tls.certResolver=letsencrypt'
+      - 'traefik.http.services.budget-app.loadbalancer.server.port=8090'
+
+networks:
+  dokploy-network:
+    external: true
 
 volumes:
   pb_data:

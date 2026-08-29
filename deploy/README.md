@@ -31,18 +31,19 @@ pas au premier — donc le jour où il y a quelque chose à perdre.
 À renseigner dans le panneau d'environnement de Dokploy. **Aucune ne va dans le dépôt :
 il est public.**
 
-| Variable                       | Rôle                                                                                                                                                                 |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `APP_URL`                      | `https://<domaine>`. Le modèle d'e-mail construit son lien de réinitialisation depuis `{APP_URL}` : non renseignée, le mail envoie les utilisateurs sur `localhost`. |
-| `SMTP_HOST`                    | `smtp.resend.com`                                                                                                                                                    |
-| `SMTP_PORT`                    | `465` (TLS implicite) ou `587` (STARTTLS)                                                                                                                            |
-| `SMTP_USERNAME`                | `resend`, littéralement — ce n'est pas votre identifiant de compte                                                                                                   |
-| `SMTP_PASSWORD`                | la clé d'API Resend (`re_…`)                                                                                                                                         |
-| `SMTP_SENDER_ADDRESS`          | une adresse **sur un domaine vérifié chez Resend**                                                                                                                   |
-| `SMTP_SENDER_NAME`             | le nom affiché de l'expéditeur                                                                                                                                       |
-| `LITESTREAM_REPLICA_URL`       | `s3://<bucket>/<préfixe>?endpoint=https://fsn1.your-objectstorage.com&region=fsn1` — régions disponibles : `fsn1`, `nbg1`, `hel1`                                    |
-| `LITESTREAM_ACCESS_KEY_ID`     | clé d'accès S3 Hetzner                                                                                                                                               |
-| `LITESTREAM_SECRET_ACCESS_KEY` | secret associé                                                                                                                                                       |
+| Variable                       | Rôle                                                                                                                                                                                                                                                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `APP_DOMAIN`                   | le domaine **nu**, sans schéma : `budget.exemple.com`. C'est sur lui que Traefik associe le `Host`, et c'est ce qui alimente la règle `Host(...)` du routeur.                                                                                                                                                |
+| `APP_URL`                      | `https://<domaine>`, **avec** le schéma. Le modèle d'e-mail construit son lien de réinitialisation depuis `{APP_URL}` : non renseignée, le mail envoie les utilisateurs sur `localhost`.                                                                                                                     |
+| `SMTP_HOST`                    | `smtp.resend.com`                                                                                                                                                                                                                                                                                            |
+| `SMTP_PORT`                    | **`587`**. Resend en propose cinq — 25, 465, 587, 2465, 2587 — mais **465 et 2465 sont en TLS implicite et expirent sans répondre**, mesuré depuis deux réseaux le 29/08/2026. Les trois autres négocient en STARTTLS et fonctionnent. Le hook règle `tls` d'après le port, il n'y a rien d'autre à changer. |
+| `SMTP_USERNAME`                | `resend`, littéralement — ce n'est pas votre identifiant de compte                                                                                                                                                                                                                                           |
+| `SMTP_PASSWORD`                | la clé d'API Resend (`re_…`)                                                                                                                                                                                                                                                                                 |
+| `SMTP_SENDER_ADDRESS`          | une adresse **sur un domaine vérifié chez Resend**                                                                                                                                                                                                                                                           |
+| `SMTP_SENDER_NAME`             | le nom affiché de l'expéditeur                                                                                                                                                                                                                                                                               |
+| `LITESTREAM_REPLICA_URL`       | `s3://<bucket>/<préfixe>?endpoint=https://fsn1.your-objectstorage.com&region=fsn1` — régions disponibles : `fsn1`, `nbg1`, `hel1`                                                                                                                                                                            |
+| `LITESTREAM_ACCESS_KEY_ID`     | clé d'accès S3 Hetzner                                                                                                                                                                                                                                                                                       |
+| `LITESTREAM_SECRET_ACCESS_KEY` | secret associé                                                                                                                                                                                                                                                                                               |
 
 Ces réglages sont appliqués par `pb_hooks/apply_env_settings.pb.js` **à chaque démarrage**,
 et non par une migration. Raison : PocketBase garde le SMTP en base, pas dans ses options
@@ -51,10 +52,34 @@ Resend un simple redémarrage au lieu d'un nouveau fichier de migration.
 
 Le hook n'est **pas défensif** : s'il ne peut pas écrire les réglages, le conteneur ne
 démarre pas. Une production qui démarre avec la récupération de compte silencieusement
-cassée est pire qu'un conteneur que Dokploy affiche en échec.
+cassée est pire qu'un conteneur que Dokploy affiche en échec. La contrepartie est réelle et
+a été mesurée le 29/08/2026 : une adresse d'expéditeur mal formée a mis l'application en
+**boucle de redémarrage**. Le hook valide donc `SMTP_SENDER_ADDRESS` lui-même et nomme la
+variable dans son erreur — la validation de PocketBase, elle, dit seulement
+`meta: (senderAddress: must be a valid email address.)`, ce qui n'aide pas quand on lit
+cette ligne défiler à l'infini.
 
 Sans `APP_URL` ni `SMTP_HOST`, le hook ne fait rien du tout — c'est ce qui laisse le
 développement local et les parcours de test configurer PocketBase vers Mailpit.
+
+## Le routage n'est pas automatique
+
+**Un déploiement de type Compose ne reçoit pas les étiquettes Traefik que Dokploy injecte
+pour son type « Application ».** Le routeur est déclaré dans `deploy/compose.yml`, et le
+conteneur doit rejoindre le réseau externe `dokploy-network` pour être joignable du tout.
+
+Mesuré au premier déploiement réel, le 29/08/2026 : sans les deux, le domaine résolvait, le
+TLS se terminait, et **chaque requête recevait le 404 par défaut de Traefik** — 19 octets de
+`text/plain`, qu'on distingue de celui de PocketBase, lequel répond du JSON. Un 502 aurait
+signifié un conteneur mort ; un 404 signifie qu'aucune route n'existe.
+
+Renseigner le domaine dans l'interface de Dokploy ne suffit donc pas : c'est `APP_DOMAIN`
+qui alimente la règle `Host(...)`.
+
+Aucun middleware n'est nommé dans les étiquettes. En référencer un qui n'existe pas met le
+routeur en erreur et fait retomber le HTTP en 404 — ce qui casse le défi ACME et, derrière
+un proxy qui parle en clair à l'origine, casse le site. La redirection vers HTTPS appartient
+à ce qui est devant, ou à la configuration globale de Traefik.
 
 ## Restauration
 

@@ -191,6 +191,8 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
 - **Déploiement de type « Docker Compose », jamais « Application ».** Dokploy fait tourner
   Docker Swarm, dont l'ordonnanceur raisonne en répliques ; SQLite n'admet qu'un écrivain.
   Compose tient le mono-instance par construction, pas par convention.
+- **Un déploiement Compose chez Dokploy ne reçoit aucune étiquette Traefik automatiquement**, contrairement au type « Application » : le routeur se déclare dans `deploy/compose.yml`, et le conteneur doit rejoindre le réseau externe `dokploy-network`. Sans les deux, le domaine résout, le TLS se termine, et **tout renvoie le 404 par défaut de Traefik** — 19 octets de `text/plain`, à ne pas confondre avec celui de PocketBase, qui répond du JSON. Un 502 dirait « conteneur mort », un 404 dit « aucune route ». Mesuré au premier déploiement réel, le 29/08/2026. `APP_DOMAIN` porte le domaine nu, `APP_URL` le même avec son schéma.
+- **Aucun middleware Traefik n'est nommé dans les étiquettes.** Référencer un middleware inexistant met le routeur en erreur et fait retomber le HTTP en 404 — ce qui casse le défi ACME et, derrière un proxy qui parle en clair à l'origine, casse le site.
 - **Le volume est nommé, pas monté depuis un chemin hôte.** Dokploy efface les bind mounts
   en chemin absolu à chaque déploiement — la base disparaîtrait au _second_ déploiement,
   donc le jour où il y a quelque chose à perdre.
@@ -205,6 +207,8 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
   `litestream restore -if-db-not-exists -if-replica-exists` avant de servir : une machine
   qui démarre sur un volume vide se restaure seule, et le chemin est donc exercé à chaque
   déploiement neuf plutôt qu'une fois par trimestre.
+- **Le SMTP de Resend passe par le port 587, pas 465.** Mesuré le 29/08/2026 depuis deux réseaux : les deux ports en TLS implicite (465, 2465) **expirent sans répondre**, les trois en STARTTLS (25, 587, 2587) répondent. Le symptôme en production était `dial tcp …:465: connect: connection timed out` — un délai d'attente, donc rien qui ressemble à une erreur, et un mail qui n'arrive jamais. `SMTP_PORT` vaut 587 par défaut dans le hook, qui en déduit `tls`.
+- **Attribuer une panne réseau au bon coupable demande de la mesurer des deux côtés.** J'avais annoncé un blocage SMTP sortant de Hetzner avec assurance ; le port 465 s'est révélé muet depuis ma machine aussi, sur un réseau où même le port 25 passe. La cause n'était pas l'hébergeur. Un `connection timed out` ne dit pas _qui_ filtre.
 - **Le bucket est chez Hetzner, donc chez le même fournisseur que le serveur** (décidé le
   29/08/2026, pour garder la réplication à l'intérieur du datacentre). La conséquence est
   à connaître : Litestream couvre toujours la perte du disque et de la machine, mais plus
