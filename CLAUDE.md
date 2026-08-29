@@ -19,7 +19,7 @@ Deux blocs, **un seul déploiement** :
 
 - **Frontend** : SPA React 19 + TypeScript, build Vite, installable en PWA. Servie en statique par PocketBase depuis `pb_public/` — donc **pas de CORS et pas de serveur frontend séparé**.
 - **Backend** : PocketBase (binaire Go unique) fournissant SQLite, l'auth e-mail/mot de passe, l'API REST/Realtime et l'admin. La logique métier serveur s'écrit en hooks JS dans `pb_hooks/`.
-- **Sauvegarde** : Litestream réplique en continu le fichier SQLite vers Backblaze B2 / S3.
+- **Sauvegarde** : Litestream réplique en continu le fichier SQLite vers Hetzner Object Storage (S3).
 
 Layout du monorepo : `frontend/`, `packages/domain/`, `pb_hooks/` et `pb_migrations/` existent ; `deploy/` porte le mode opératoire, le fichier Compose et l'entrypoint ; le `Dockerfile` est à la racine.
 
@@ -198,6 +198,14 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
   `litestream restore -if-db-not-exists -if-replica-exists` avant de servir : une machine
   qui démarre sur un volume vide se restaure seule, et le chemin est donc exercé à chaque
   déploiement neuf plutôt qu'une fois par trimestre.
+- **Le bucket est chez Hetzner, donc chez le même fournisseur que le serveur** (décidé le
+  29/08/2026, pour garder la réplication à l'intérieur du datacentre). La conséquence est
+  à connaître : Litestream couvre toujours la perte du disque et de la machine, mais plus
+  la perte du **compte**, qui emporterait le serveur et la sauvegarde ensemble. Endpoint
+  `https://<région>.your-objectstorage.com`, régions `fsn1`, `nbg1`, `hel1` — vérifiées
+  joignables le 29/08/2026. Couvrir le cas du compte demanderait une copie périodique
+  ailleurs, jamais un second Litestream : deux réplications sur la même base se marchent
+  dessus.
 - **Litestream 0.5 n'a pas la forme de 0.3**, et les deux différences cassent au premier
   build : la configuration prend un `replica:` **singulier** là où 0.3 prenait un tableau
   `replicas:`, et les artefacts s'appellent `litestream-0.5.16-linux-x86_64.tar.gz` — sans

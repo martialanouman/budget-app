@@ -15,7 +15,7 @@ gitignorés, c'est le `Dockerfile` qui les fabrique.
 | Image       | `Dockerfile` à la racine — build multi-étages, binaires épinglés par `.pocketbase-version` et `.litestream-version` |
 | Déploiement | `deploy/compose.yml`, en type **Docker Compose** dans Dokploy                                                       |
 | Données     | volume nommé `pb_data`, monté sur `/pb/pb_data`                                                                     |
-| Réplication | Litestream vers Backblaze B2, en continu                                                                            |
+| Réplication | Litestream vers Hetzner Object Storage, en continu                                                                  |
 
 **Le type de déploiement n'est pas indifférent.** Dokploy fait tourner Docker Swarm, dont
 l'ordonnanceur raisonne en répliques. SQLite n'admet qu'un seul écrivain : le type
@@ -40,8 +40,8 @@ il est public.**
 | `SMTP_PASSWORD`                | la clé d'API Resend (`re_…`)                                                                                                                                         |
 | `SMTP_SENDER_ADDRESS`          | une adresse **sur un domaine vérifié chez Resend**                                                                                                                   |
 | `SMTP_SENDER_NAME`             | le nom affiché de l'expéditeur                                                                                                                                       |
-| `LITESTREAM_REPLICA_URL`       | `s3://<bucket>/<préfixe>?endpoint=<endpoint B2>&region=<région B2>`                                                                                                  |
-| `LITESTREAM_ACCESS_KEY_ID`     | clé d'application B2                                                                                                                                                 |
+| `LITESTREAM_REPLICA_URL`       | `s3://<bucket>/<préfixe>?endpoint=https://fsn1.your-objectstorage.com&region=fsn1` — régions disponibles : `fsn1`, `nbg1`, `hel1`                                    |
+| `LITESTREAM_ACCESS_KEY_ID`     | clé d'accès S3 Hetzner                                                                                                                                               |
 | `LITESTREAM_SECRET_ACCESS_KEY` | secret associé                                                                                                                                                       |
 
 Ces réglages sont appliqués par `pb_hooks/apply_env_settings.pb.js` **à chaque démarrage**,
@@ -60,7 +60,7 @@ développement local et les parcours de test configurer PocketBase vers Mailpit.
 
 **La restauration est le chemin de démarrage ordinaire, pas une procédure spéciale.**
 `deploy/entrypoint.sh` lance `litestream restore -if-db-not-exists -if-replica-exists`
-avant de servir : une machine qui démarre sur un volume vide va rechercher la base sur B2.
+avant de servir : une machine qui démarre sur un volume vide va rechercher la base sur le bucket.
 Elle est donc exercée à chaque redéploiement sur volume neuf, et pas seulement le jour où
 elle sert.
 
@@ -79,11 +79,23 @@ Pour remonter à un instant précis, ajouter `-timestamp 2026-08-29T06:00:00Z`.
 ### Dernier exercice de restauration
 
 > **Jamais exécuté.** La procédure ci-dessus est écrite mais **n'a pas encore tourné contre
-> un vrai bucket B2** : les accès n'existent pas au 29/08/2026. Tant que cette ligne n'est
+> un vrai bucket** : les accès n'existent pas au 29/08/2026. Tant que cette ligne n'est
 > pas datée, la sauvegarde de ce projet n'existe pas. C'est un critère de la DoD de
 > l'étape 8, pas une formalité.
 
 À rejouer **une fois par trimestre**, et à redater ici à chaque fois.
+
+## Ce que cette sauvegarde ne couvre pas
+
+Le bucket est chez **le même fournisseur que le serveur**, choisi ainsi le 29/08/2026 pour
+garder le trafic de réplication à l'intérieur du datacentre. Litestream protège donc
+toujours de la perte du disque et de la machine — l'object storage est un service distinct
+et répliqué — mais **plus de la perte du compte** : une suspension Hetzner emporterait le
+serveur et la sauvegarde ensemble.
+
+La parade, si le cas doit être couvert, est une copie mensuelle du dernier instantané chez
+un autre fournisseur. Ce n'est pas un second Litestream : deux réplications concurrentes
+sur la même base se marchent dessus.
 
 ## Notes d'exploitation
 
