@@ -81,6 +81,43 @@ routeur en erreur et fait retomber le HTTP en 404 — ce qui casse le défi ACME
 un proxy qui parle en clair à l'origine, casse le site. La redirection vers HTTPS appartient
 à ce qui est devant, ou à la configuration globale de Traefik.
 
+## La console d'administration
+
+`/_/` est servie sur la même origine que l'application. Deux protections, qui ne couvrent
+pas la même chose — et c'est la distinction qui compte.
+
+**Cloudflare Access, devant `/_/`.** À configurer dans le tableau de bord Zero Trust, hors
+de ce dépôt :
+
+1. _Zero Trust → Access → Applications → Add an application → Self-hosted_
+2. Domaine `budget.manouman.com`, chemin `/_/*`
+3. Politique : _Allow_, critère _Emails_, votre adresse
+4. Laisser le reste du site hors application — l'API doit rester publique, la SPA
+   l'utilise.
+
+Vous y accédez ensuite par la même URL, avec une authentification par e-mail au niveau du
+CDN, avant même que la requête n'atteigne le serveur.
+
+**Ce que cela ne protège pas, et c'est le point important.** La console est une _page_ ;
+`/api/collections/_superusers/auth-with-password` est la _porte_. Un attaquant qui connaît
+l'API de PocketBase ne visite jamais la page. Mettre `/_/` derrière Access réduit la
+surface d'attaque de l'interface, pas celle de l'authentification.
+
+**D'où la limitation de débit**, activée par `pb_hooks/apply_env_settings.pb.js` au
+démarrage. PocketBase la livre désactivée ; ses règles par défaut plafonnent
+l'authentification à deux tentatives par trois secondes. Mesuré le 29/08/2026 : à la
+deuxième tentative de mot de passe superadmin, la réponse passe de 400 à **429**.
+
+Le premier superadministrateur se crée en ligne de commande, un volume neuf n'en ayant
+aucun :
+
+```bash
+docker exec -it <conteneur> pocketbase superuser upsert vous@exemple.com '<mot de passe>' --dir=/pb/pb_data
+```
+
+`upsert` réinitialise aussi le mot de passe d'un compte existant. Le mot de passe passe en
+argument, donc dans l'historique du shell.
+
 ## Restauration
 
 **La restauration est le chemin de démarrage ordinaire, pas une procédure spéciale.**

@@ -67,5 +67,14 @@ onBootstrap((e) => {
     settings.smtp.tls = port === 465 || port === 2465
   }
 
+  // Rate limiting ships disabled. Its default rules already throttle auth at
+  // two attempts per three seconds, which is what stands between a superuser
+  // password and an unattended dictionary.
+  //
+  // This matters more than hiding /_/ behind anything: the console is a page,
+  // but /api/collections/_superusers/auth-with-password is the door, and an
+  // attacker who knows the API never visits the page.
+  settings.rateLimits.enabled = true
+
   $app.save(settings)
 })
