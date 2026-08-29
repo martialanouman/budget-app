@@ -11,8 +11,11 @@ services:
       context: ..
       dockerfile: Dockerfile
     restart: unless-stopped
-    expose:
-      - '8090'
+    # Published on the host loopback only, never on the public interface. This
+    # is the far end of `ssh -L 8090:localhost:8090`: it is how the admin
+    # console is reached now that Traefik refuses to route it.
+    ports:
+      - '127.0.0.1:8090:8090'
     environment:
       # The password-reset template builds its link from {APP_URL}. Left unset,
       # the mail sends users to localhost. APP_DOMAIN is the same host without
@@ -49,16 +52,26 @@ services:
     networks:
       - dokploy-network
 
+    # Two paths are deliberately absent from the rule below, which is what
+    # actually removes the admin console from the internet:
+    #
+    #   /_                            the console itself
+    #   /api/collections/_superusers/ the door it knocks on
+    #
+    # Blocking only the first would have hidden the page while leaving the
+    # password endpoint public — the console is a page, that endpoint is the
+    # door, and an attacker who knows the API never visits the page. The SPA
+    # touches neither, so nothing user-facing changes.
     labels:
       - 'traefik.enable=true'
-      - 'traefik.http.routers.budget-app.rule=Host(`${APP_DOMAIN}`)'
+      - 'traefik.http.routers.budget-app.rule=Host(`${APP_DOMAIN}`) && !PathPrefix(`/_`) && !PathPrefix(`/api/collections/_superusers/`)'
       - 'traefik.http.routers.budget-app.entrypoints=web'
       # No HTTP-to-HTTPS middleware here on purpose. Naming one that does not
       # exist puts the router in error and drops plain HTTP to a 404 — which
       # breaks the ACME challenge and, behind a proxy that talks to the origin
       # in the clear, breaks the site. The redirect belongs to whatever sits in
       # front, or to Traefik's global configuration.
-      - 'traefik.http.routers.budget-app-secure.rule=Host(`${APP_DOMAIN}`)'
+      - 'traefik.http.routers.budget-app-secure.rule=Host(`${APP_DOMAIN}`) && !PathPrefix(`/_`) && !PathPrefix(`/api/collections/_superusers/`)'
       - 'traefik.http.routers.budget-app-secure.entrypoints=websecure'
       - 'traefik.http.routers.budget-app-secure.tls.certResolver=letsencrypt'
       - 'traefik.http.services.budget-app.loadbalancer.server.port=8090'
