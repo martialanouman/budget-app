@@ -1,0 +1,42 @@
+# Deployed by Dokploy as a *Docker Compose* application, not as an
+# "Application". Dokploy runs Docker Swarm, whose scheduler thinks in replicas,
+# and SQLite admits exactly one writer: Compose keeps this single-instance by
+# construction rather than by convention.
+#
+# Every value below comes from Dokploy's environment panel. Nothing secret is
+# ever written here — this repository is public.
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - '8090'
+    environment:
+      # The password-reset template builds its link from {APP_URL}. Left unset,
+      # the mail sends users to localhost.
+      APP_URL: ${APP_URL}
+
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_SENDER_ADDRESS: ${SMTP_SENDER_ADDRESS}
+      SMTP_SENDER_NAME: ${SMTP_SENDER_NAME}
+
+      # Litestream reads the two key variables itself; the URL is passed to it
+      # by the entrypoint.
+      LITESTREAM_REPLICA_URL: ${LITESTREAM_REPLICA_URL}
+      LITESTREAM_ACCESS_KEY_ID: ${LITESTREAM_ACCESS_KEY_ID}
+      LITESTREAM_SECRET_ACCESS_KEY: ${LITESTREAM_SECRET_ACCESS_KEY}
+
+    volumes:
+      # A named volume, not a bind mount: Dokploy clears absolute host paths on
+      # every deployment, which would take the database with it on the second
+      # deploy rather than the first — the kind of defect that only appears once
+      # there is something to lose.
+      - pb_data:/pb/pb_data
+
+volumes:
+  pb_data:

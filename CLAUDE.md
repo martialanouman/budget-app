@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État du dépôt
 
-Étapes 0 à 7 du plan livrées : outillage et CI ; authentification complète (inscription, connexion, réinitialisation vérifiée via Mailpit) ; noyau monétaire XOF partagé et exécuté par le moteur de PocketBase ; comptes, catégories et soldes calculés ; transactions, virements atomiques et scissions ; budgets mensuels avec seuils, alertes, reports et reste à vivre ; dettes avec échéancier, capital rejoué depuis l'historique et rappels J-3/J-1/J ; tableau de bord, centre de notifications et PWA installable. **Prochaine étape : le déploiement** (Fly.io, Litestream vers B2, SMTP de production).
+Étapes 0 à 7 du plan livrées : outillage et CI ; authentification complète (inscription, connexion, réinitialisation vérifiée via Mailpit) ; noyau monétaire XOF partagé et exécuté par le moteur de PocketBase ; comptes, catégories et soldes calculés ; transactions, virements atomiques et scissions ; budgets mensuels avec seuils, alertes, reports et reste à vivre ; dettes avec échéancier, capital rejoué depuis l'historique et rappels J-3/J-1/J ; tableau de bord, centre de notifications et PWA installable. **Étape 8 en cours, le déploiement** : image, persistance et SMTP livrés et vérifiés dans un conteneur réel ; la cible est **Dokploy sur Hetzner** et non Fly.io, et le fournisseur d'e-mail est **Resend**. Restent le domaine, l'exercice de restauration, l'export RGPD et la suppression de compte, l'admin protégée et la supervision.
 
 Les deux documents de référence, à lire avant toute décision d'implémentation :
 
@@ -19,9 +19,9 @@ Deux blocs, **un seul déploiement** :
 
 - **Frontend** : SPA React 19 + TypeScript, build Vite, installable en PWA. Servie en statique par PocketBase depuis `pb_public/` — donc **pas de CORS et pas de serveur frontend séparé**.
 - **Backend** : PocketBase (binaire Go unique) fournissant SQLite, l'auth e-mail/mot de passe, l'API REST/Realtime et l'admin. La logique métier serveur s'écrit en hooks JS dans `pb_hooks/`.
-- **Sauvegarde** : Litestream réplique en continu le fichier SQLite vers Backblaze B2 / S3.
+- **Sauvegarde** : Litestream réplique en continu le fichier SQLite vers Hetzner Object Storage (S3).
 
-Layout du monorepo : `frontend/`, `packages/domain/`, `pb_hooks/` et `pb_migrations/` existent ; `deploy/` viendra avec l'étape 8.
+Layout du monorepo : `frontend/`, `packages/domain/`, `pb_hooks/` et `pb_migrations/` existent ; `deploy/` porte le mode opératoire, le fichier Compose et l'entrypoint ; le `Dockerfile` est à la racine.
 
 `packages/domain` étend le layout des specs : il porte les calculs financiers en TypeScript pur, sans dépendance à React ni à PocketBase, pour être partagé entre le frontend et les hooks serveur (compilé en CommonJS vers `pb_hooks/lib/` à partir de l'étape 2). Les hooks se limitent à l'orchestration.
 
@@ -171,6 +171,61 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
 - **Les parcours tournent un fichier à la fois** (`fileParallelism: false`). En parallèle ce sont des iframes de même origine, donc un même `localStorage`, et le `LocalAuthStore` de PocketBase suit les connexions faites dans les autres onglets : une connexion d'un fichier atterrissait dans le client d'un autre. Mesuré à un échec sur six ; 8 exécutions vertes en sérialisé, pour une vingtaine de secondes de plus.
 - Le harnais laisse passer la **sortie d'erreur de PocketBase** : un hook qui échoue était indiscernable d'un hook qui ne fait rien.
 - Formatage des dates : `Intl` suffit pour un nom de mois en français (`frontend/src/lib/dates.ts`). `date-fns` n'entrera que le jour où il faudra vraiment calculer sur des dates.
+
+## Déploiement
+
+- **La cible est Dokploy sur un VPS Hetzner, pas Fly.io.** Les specs techniques (§2.3, §6,
+  §7) nomment encore Fly.io et `fly deploy` : elles sont périmées sur ce point. Raison du
+  changement : un volume Fly est un NVMe local non répliqué, donc la durabilité repose de
+  toute façon entièrement sur Litestream, et la plateforme gérée n'achète rien à une
+  application mono-conteneur qui ne peut pas se répliquer. Le VPS rend surtout l'exercice
+  trimestriel de restauration banal — une commande locale au lieu d'une machine à
+  provisionner.
+- **Déploiement de type « Docker Compose », jamais « Application ».** Dokploy fait tourner
+  Docker Swarm, dont l'ordonnanceur raisonne en répliques ; SQLite n'admet qu'un écrivain.
+  Compose tient le mono-instance par construction, pas par convention.
+- **Le volume est nommé, pas monté depuis un chemin hôte.** Dokploy efface les bind mounts
+  en chemin absolu à chaque déploiement — la base disparaîtrait au _second_ déploiement,
+  donc le jour où il y a quelque chose à perdre.
+- **L'image se construit sur le serveur** (choix assumé plutôt que `ghcr.io`). Le
+  `Dockerfile` doit donc exécuter `pnpm install` puis `pnpm build` : `pb_public/` et
+  `pb_hooks/lib/` sont gitignorés. Contrepartie mesurable : le build est le pic de mémoire
+  de la machine et survient pendant que PocketBase sert — prévoir du swap sur 4 Go.
+- **Litestream lance PocketBase, il ne tourne pas à côté** (`litestream replicate -exec`).
+  Un sidecar peut mourir en silence et laisser la base servir sans réplication : rien n'a
+  l'air anormal jusqu'à la restauration.
+- **La restauration est le chemin de démarrage ordinaire.** L'entrypoint fait
+  `litestream restore -if-db-not-exists -if-replica-exists` avant de servir : une machine
+  qui démarre sur un volume vide se restaure seule, et le chemin est donc exercé à chaque
+  déploiement neuf plutôt qu'une fois par trimestre.
+- **Le bucket est chez Hetzner, donc chez le même fournisseur que le serveur** (décidé le
+  29/08/2026, pour garder la réplication à l'intérieur du datacentre). La conséquence est
+  à connaître : Litestream couvre toujours la perte du disque et de la machine, mais plus
+  la perte du **compte**, qui emporterait le serveur et la sauvegarde ensemble. Endpoint
+  `https://<région>.your-objectstorage.com`, régions `fsn1`, `nbg1`, `hel1` — vérifiées
+  joignables le 29/08/2026. Couvrir le cas du compte demanderait une copie périodique
+  ailleurs, jamais un second Litestream : deux réplications sur la même base se marchent
+  dessus.
+- **Litestream 0.5 n'a pas la forme de 0.3**, et les deux différences cassent au premier
+  build : la configuration prend un `replica:` **singulier** là où 0.3 prenait un tableau
+  `replicas:`, et les artefacts s'appellent `litestream-0.5.16-linux-x86_64.tar.gz` — sans
+  `v` devant la version, et `x86_64` au lieu de `amd64`. Les quatre URL (deux binaires,
+  deux architectures) ont été vérifiées en HTTP 200 le 29/08/2026.
+- **Le SMTP de PocketBase vit en base, pas dans ses options.** Un conteneur qui démarre sur
+  un volume vide sert donc avec le mail désactivé et des liens de réinitialisation pointant
+  sur `localhost`, puisque le modèle construit son lien depuis `{APP_URL}`.
+  `pb_hooks/apply_env_settings.pb.js` rejoue les réglages depuis l'environnement **à chaque
+  démarrage** : c'est ce qui fait de la rotation de la clé Resend un redémarrage et non un
+  nouveau fichier de migration. Le hook n'est **pas défensif** — une production qui démarre
+  avec la récupération de compte silencieusement cassée est pire qu'un conteneur en échec.
+  Sans `APP_URL` ni `SMTP_HOST` il ne fait rien, et c'est ce qui laisse le développement
+  local et les parcours pointer vers Mailpit.
+- **PocketBase sert `manifest.webmanifest` en `text/plain`** : la table MIME de Go ignore
+  cette extension et l'image Alpine n'a pas d'`/etc/mime.types`. Mesuré le 29/08/2026 dans
+  le conteneur réel. Le reste est correct (`sw.js` et les assets en `text/javascript`, le
+  CSS, les PNG). Les navigateurs analysent le manifeste sans exiger son type, donc
+  l'installabilité n'est probablement pas atteinte — mais la vérification de l'étape 7
+  portait sur le serveur de développement, pas sur celui de production.
 
 ## Contraintes d'outillage
 

@@ -1,0 +1,27 @@
+# Build artefacts are produced inside the image, never copied in: a stale local
+# pb_public would otherwise ship instead of the one this build just made.
+pb_public/
+pb_hooks/lib/
+frontend/dist/
+
+node_modules/
+**/node_modules/
+
+# Local runtime state and the developer's own binaries.
+pb_data/
+bin/
+
+.git/
+.github/
+docs/
+coverage/
+__screenshots__/
+.vitest-attachments/
+*.log
+
+# Secrets never enter the build context: the deployed configuration comes from
+# Dokploy's environment. The versioned .env.development and .env.test hold only
+# local URLs and are harmless — Vite does not load them in a production build.
+**/.env
+**/.env.local
+**/.env.production
