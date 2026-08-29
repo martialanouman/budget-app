@@ -78,12 +78,28 @@ Pour remonter à un instant précis, ajouter `-timestamp 2026-08-29T06:00:00Z`.
 
 ### Dernier exercice de restauration
 
-> **Jamais exécuté.** La procédure ci-dessus est écrite mais **n'a pas encore tourné contre
-> un vrai bucket** : les accès n'existent pas au 29/08/2026. Tant que cette ligne n'est
-> pas datée, la sauvegarde de ce projet n'existe pas. C'est un critère de la DoD de
-> l'étape 8, pas une formalité.
+**29/08/2026 — réussi, contre un endpoint S3 local (MinIO), pas encore contre Hetzner.**
 
-À rejouer **une fois par trimestre**, et à redater ici à chaque fois.
+Déroulé, avec l'image de production réelle :
+
+1. Conteneur lancé avec `LITESTREAM_REPLICA_URL` vers le bucket ; Litestream annonce
+   `replicating to type=s3`.
+2. Données écrites par l'API : un compte utilisateur, un compte bancaire à 250 000, trois
+   dépenses. Solde résultant **197 500**, 3 transactions, 11 catégories.
+3. Fichiers `.ltx` vérifiés présents sur le bucket.
+4. **Sinistre** : conteneur détruit _et_ volume Docker supprimé — la base n'existait plus
+   nulle part localement.
+5. Conteneur relancé sur un **volume vide**, avec les mêmes variables. Aucune commande de
+   restauration lancée à la main.
+6. Le compte se reconnecte, le solde est **197 500**, 3 transactions, 11 catégories.
+
+**Ce que cela prouve** : le chemin de restauration de `entrypoint.sh`, le motif
+`replicate -exec`, le fait qu'un volume vide se soigne seul, et la forme de l'URL
+Litestream 0.5.
+
+**Ce que cela ne prouve pas** : l'endpoint de Hetzner Object Storage, ses identifiants et
+son TLS. À rejouer contre le vrai bucket au premier déploiement, puis **une fois par
+trimestre**, en redatant cette section à chaque fois.
 
 ## Ce que cette sauvegarde ne couvre pas
 

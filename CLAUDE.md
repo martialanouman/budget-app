@@ -213,6 +213,12 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
   joignables le 29/08/2026. Couvrir le cas du compte demanderait une copie périodique
   ailleurs, jamais un second Litestream : deux réplications sur la même base se marchent
   dessus.
+- **La restauration a été exercée pour de vrai le 29/08/2026**, contre un endpoint S3 local
+  (MinIO) et avec l'image de production : conteneur et volume Docker détruits, relance sur
+  un volume vide, et l'application est revenue seule — solde à 197 500 au franc près,
+  3 transactions, 11 catégories, le compte se reconnecte. Ce qui reste non éprouvé est
+  l'endpoint de Hetzner, ses identifiants et son TLS ; à rejouer au premier déploiement.
+  Le déroulé et cette distinction sont dans `deploy/README.md`.
 - **Litestream 0.5 n'a pas la forme de 0.3**, et les deux différences cassent au premier
   build : la configuration prend un `replica:` **singulier** là où 0.3 prenait un tableau
   `replicas:`, et les artefacts s'appellent `litestream-0.5.16-linux-x86_64.tar.gz` — sans
