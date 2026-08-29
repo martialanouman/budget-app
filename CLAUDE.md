@@ -191,6 +191,8 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
 - **Déploiement de type « Docker Compose », jamais « Application ».** Dokploy fait tourner
   Docker Swarm, dont l'ordonnanceur raisonne en répliques ; SQLite n'admet qu'un écrivain.
   Compose tient le mono-instance par construction, pas par convention.
+- **Un déploiement Compose chez Dokploy ne reçoit aucune étiquette Traefik automatiquement**, contrairement au type « Application » : le routeur se déclare dans `deploy/compose.yml`, et le conteneur doit rejoindre le réseau externe `dokploy-network`. Sans les deux, le domaine résout, le TLS se termine, et **tout renvoie le 404 par défaut de Traefik** — 19 octets de `text/plain`, à ne pas confondre avec celui de PocketBase, qui répond du JSON. Un 502 dirait « conteneur mort », un 404 dit « aucune route ». Mesuré au premier déploiement réel, le 29/08/2026. `APP_DOMAIN` porte le domaine nu, `APP_URL` le même avec son schéma.
+- **Aucun middleware Traefik n'est nommé dans les étiquettes.** Référencer un middleware inexistant met le routeur en erreur et fait retomber le HTTP en 404 — ce qui casse le défi ACME et, derrière un proxy qui parle en clair à l'origine, casse le site.
 - **Le volume est nommé, pas monté depuis un chemin hôte.** Dokploy efface les bind mounts
   en chemin absolu à chaque déploiement — la base disparaîtrait au _second_ déploiement,
   donc le jour où il y a quelque chose à perdre.
