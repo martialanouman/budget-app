@@ -1,8 +1,7 @@
 # Déploiement
 
-Cible : **Dokploy sur un VPS Hetzner**. Les specs techniques (§2.3, §6, §7) nomment
-encore Fly.io ; elles sont périmées sur ce point et seront corrigées avec le reste de
-l'étape 8.
+Cible : **Dokploy sur un VPS Hetzner**, ce que les specs techniques (§2.3, §6, §7) disent
+désormais aussi.
 
 L'image est construite **sur le serveur** par Dokploy. Tout ce dont le build a besoin est
 donc dans le dépôt : `pb_public/` et `pb_hooks/lib/` sont des artefacts générés et

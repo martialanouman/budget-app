@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État du dépôt
 
-Étapes 0 à 7 du plan livrées : outillage et CI ; authentification complète (inscription, connexion, réinitialisation vérifiée via Mailpit) ; noyau monétaire XOF partagé et exécuté par le moteur de PocketBase ; comptes, catégories et soldes calculés ; transactions, virements atomiques et scissions ; budgets mensuels avec seuils, alertes, reports et reste à vivre ; dettes avec échéancier, capital rejoué depuis l'historique et rappels J-3/J-1/J ; tableau de bord, centre de notifications et PWA installable. **Étape 8 en cours, le déploiement** : image, persistance et SMTP livrés et vérifiés dans un conteneur réel ; la cible est **Dokploy sur Hetzner** et non Fly.io, et le fournisseur d'e-mail est **Resend**. L'export RGPD et la fermeture de compte (`USR-04`) sont faits. Restent l'exercice de restauration contre le vrai bucket, la supervision, et la mise à jour des specs techniques qui nomment encore Fly.io.
+Étapes 0 à 7 du plan livrées : outillage et CI ; authentification complète (inscription, connexion, réinitialisation vérifiée via Mailpit) ; noyau monétaire XOF partagé et exécuté par le moteur de PocketBase ; comptes, catégories et soldes calculés ; transactions, virements atomiques et scissions ; budgets mensuels avec seuils, alertes, reports et reste à vivre ; dettes avec échéancier, capital rejoué depuis l'historique et rappels J-3/J-1/J ; tableau de bord, centre de notifications et PWA installable. **Étape 8 en cours, le déploiement** : image, persistance et SMTP livrés et vérifiés dans un conteneur réel ; la cible est **Dokploy sur Hetzner** et non Fly.io, et le fournisseur d'e-mail est **Resend**. L'export RGPD et la fermeture de compte (`USR-04`) sont faits. Les specs techniques ont été alignées sur ce qui tourne réellement. Restent l'exercice de restauration contre le vrai bucket, la supervision, et le retrait de la console d'administration d'Internet (branche `console-behind-ssh-tunnel`, non fusionnée).
 
 Les deux documents de référence, à lire avant toute décision d'implémentation :
 
@@ -197,8 +197,8 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
 
 ## Déploiement
 
-- **La cible est Dokploy sur un VPS Hetzner, pas Fly.io.** Les specs techniques (§2.3, §6,
-  §7) nomment encore Fly.io et `fly deploy` : elles sont périmées sur ce point. Raison du
+- **La cible est Dokploy sur un VPS Hetzner, pas Fly.io.** Les specs techniques ont été
+  alignées le 29/08/2026 (§1, §2.2, §2.3, §6, §7) et ne mentionnent plus Fly.io. Raison du
   changement : un volume Fly est un NVMe local non répliqué, donc la durabilité repose de
   toute façon entièrement sur Litestream, et la plateforme gérée n'achète rien à une
   application mono-conteneur qui ne peut pas se répliquer. Le VPS rend surtout l'exercice
