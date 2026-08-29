@@ -95,7 +95,13 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
 ## Comptes et catégories
 
 - `accounts.initial_balance` est déclaré `onlyInt` : PocketBase refuse un montant fractionnaire en HTTP 400. L'invariant XOF tient jusqu'au stockage, pas seulement dans le domaine. Tout futur champ monétaire doit faire de même.
-- Rien ne se supprime : un compte s'archive (`archived`), une catégorie se désactive (`active`). L'historique des transactions doit rester rattachable.
+- Rien ne se supprime **tant qu'un historique y est attaché** : un compte s'archive (`archived`), une catégorie se désactive (`active`). En revanche une catégorie que **rien ne référence** se supprime — elle ne protège aucun historique, et la désactiver ne fait que la garder à l'écran pour toujours.
+- **`pb_hooks/guard_category_deletion.pb.js` compte avant `e.next()`, jamais après.** `budgets.category` est la seule relation vers `categories` qui **cascade** : un garde-fou placé après aurait refusé la catégorie en ayant déjà détruit toutes ses enveloppes, mois passés compris, sans rien afficher. Le refus couvre les transactions, les enveloppes et les sous-catégories.
+- **Une relation non cascadante ne protège rien quand le champ est optionnel.** Mesuré le 29/08/2026 en retirant le garde-fou : PocketBase supprime la catégorie et laisse la transaction pointer sur un identifiant mort. Le cas des comptes se comportait autrement seulement parce que `transactions.account` est obligatoire.
+- **Le garde-fou n'empêche pas la suppression d'un compte utilisateur**, vérifié en l'attribuant : un utilisateur sans données se supprime en 204 avec le garde-fou en place, et un utilisateur avec transactions échoue en 400 **même sans lui** — c'est le défaut préexistant de `transactions.account`, pas une régression.
+- **`category_usage` est une view collection**, comme `account_balances` et `budget_spending` : savoir ce qui retient une catégorie se demande à SQLite, jamais en tirant l'historique dans le navigateur. Ses colonnes portent un `CAST(... AS INT)`, sans quoi l'agrégat revient en valeur JSON.
+- **Le bouton « Supprimer » n'apparaît que si les compteurs ont été lus et valent zéro** — même politique que les chiffres du tableau de bord. Offrir un bouton qui échouera ferait découvrir l'obstacle après l'action ; la ligne dit ce qui retient la catégorie, et la désactivation reste offerte.
+- Le module des catégories est passé à `useDerivedMutation` : il était le dernier à invalider en `onSuccess` sans `cancelQueries`, exactement le défaut que `frontend/src/lib/mutations.ts` documente.
 - `account_balances` est une view collection, qui somme désormais les transactions.
 - Les mutations de comptes invalident aussi `['account-balances']` : le solde est dérivé côté serveur et aucun canal realtime ne le pousse.
 

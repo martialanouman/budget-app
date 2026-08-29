@@ -10,8 +10,15 @@ import {
   CATEGORY_KIND_LABELS,
   type Category,
   type CategoryKind,
+  type CategoryUsage,
 } from '@/lib/collections'
-import { useCategories, useCreateCategory, useSetCategoryActive } from './categories-api.ts'
+import {
+  useCategories,
+  useCategoryUsage,
+  useCreateCategory,
+  useDeleteCategory,
+  useSetCategoryActive,
+} from './categories-api.ts'
 
 const schema = z.object({
   name: z.string().min(1, 'Nom requis').max(60, '60 caractères maximum'),
@@ -21,14 +28,40 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
+const countLabel = (count: number, one: string, many: string) =>
+  count === 0 ? undefined : `${count} ${count === 1 ? one : many}`
+
+/**
+ * What is holding this category, or undefined when nothing is — and equally
+ * when the counts have not been read. The delete button does not rely on that
+ * ambiguity: it follows `deletable`, which is false until the counts are in.
+ */
+function heldBy(usage: CategoryUsage | undefined) {
+  if (!usage) return undefined
+
+  const holders = [
+    countLabel(usage.transaction_count, 'transaction', 'transactions'),
+    countLabel(usage.budget_count, 'enveloppe', 'enveloppes'),
+    countLabel(usage.child_count, 'sous-catégorie', 'sous-catégories'),
+  ].filter((holder) => holder !== undefined)
+
+  return holders.length > 0 ? `Non supprimable — ${holders.join(', ')}` : undefined
+}
+
 // Roots and children share the row: CAT-02 must be reachable on both, and a
 // deactivated one must look deactivated wherever it appears.
 function CategoryRow({
   category,
+  held,
+  deletable,
   onToggle,
+  onDelete,
 }: {
   category: Category
+  held: string | undefined
+  deletable: boolean
   onToggle: (category: Category) => void
+  onDelete: (category: Category) => void
 }) {
   return (
     <div className="flex items-center gap-3">
@@ -40,6 +73,7 @@ function CategoryRow({
           {CATEGORY_KIND_LABELS[category.kind]}
           {category.active ? '' : ' — désactivée'}
         </span>
+        {held ? <span className="block text-sm text-slate-600">{held}</span> : null}
       </span>
       <button
         type="button"
@@ -48,14 +82,27 @@ function CategoryRow({
       >
         {category.active ? 'Désactiver' : 'Réactiver'} {category.name}
       </button>
+      {/* Offered only when it will work. A button that fails teaches the
+          obstacle at the costliest moment — after the user has acted. */}
+      {deletable ? (
+        <button
+          type="button"
+          onClick={() => onDelete(category)}
+          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+        >
+          Supprimer {category.name}
+        </button>
+      ) : null}
     </div>
   )
 }
 
 export function CategoriesPage() {
   const categories = useCategories()
+  const usage = useCategoryUsage()
   const createCategory = useCreateCategory()
   const setActive = useSetCategoryActive()
+  const deleteCategory = useDeleteCategory()
 
   const { register, handleSubmit, reset, formState } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -84,8 +131,27 @@ export function CategoriesPage() {
   const childrenOf = (parentId: string) =>
     categories.data?.filter((category) => category.parent === parentId) ?? []
 
-  const toggle = (category: Category) =>
+  const toggle = (category: Category) => {
+    deleteCategory.reset()
     setActive.mutate({ id: category.id, active: !category.active })
+  }
+
+  const remove = (category: Category) => {
+    setActive.reset()
+    deleteCategory.mutate(category.id)
+  }
+
+  const usageOf = (id: string) => usage.data?.find((row) => row.id === id)
+
+  const rowProps = (category: Category) => {
+    const held = heldBy(usageOf(category.id))
+
+    return { held, deletable: usage.isSuccess && held === undefined }
+  }
+
+  // Kept apart from the form's: a failed deletion belongs beside the list, not
+  // under the "add a category" form it has nothing to do with.
+  const listMutationFailed = setActive.isError || deleteCategory.isError
 
   // A retired parent must not collect new children.
   const selectableParents = roots.filter((category) => category.active)
@@ -98,8 +164,8 @@ export function CategoriesPage() {
     <AppShell title="Catégories">
       <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
         <h2 className="text-lg font-medium">Ajouter une catégorie</h2>
-        {createCategory.isError || setActive.isError ? (
-          <FormError message="L'opération a échoué. Vérifiez votre connexion et réessayez." />
+        {createCategory.isError ? (
+          <FormError message="La création de la catégorie a échoué. Vérifiez votre connexion et réessayez." />
         ) : null}
         <TextField label="Nom" error={formState.errors.name?.message} {...register('name')} />
         <SelectField
@@ -119,15 +185,28 @@ export function CategoriesPage() {
         <h2 className="text-lg font-medium">Mes catégories</h2>
         {categories.isPending ? <p>Chargement…</p> : null}
         {categories.isError ? <FormError message="Impossible de charger vos catégories." /> : null}
+        {listMutationFailed ? (
+          <FormError message="L'opération sur cette catégorie a échoué. Vérifiez votre connexion et réessayez." />
+        ) : null}
         <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
           {roots.map((category) => (
             <li key={category.id} className="p-3">
-              <CategoryRow category={category} onToggle={toggle} />
+              <CategoryRow
+                category={category}
+                {...rowProps(category)}
+                onToggle={toggle}
+                onDelete={remove}
+              />
               {childrenOf(category.id).length > 0 ? (
                 <ul className="mt-3 ml-4 space-y-3 border-l border-slate-200 pl-3">
                   {childrenOf(category.id).map((child) => (
                     <li key={child.id}>
-                      <CategoryRow category={child} onToggle={toggle} />
+                      <CategoryRow
+                        category={child}
+                        {...rowProps(child)}
+                        onToggle={toggle}
+                        onDelete={remove}
+                      />
                     </li>
                   ))}
                 </ul>

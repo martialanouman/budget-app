@@ -9,17 +9,95 @@ beforeEach(() => {
   pb.authStore.clear()
 })
 
-// Nothing is ever deleted: an account is archived, a category deactivated, so
-// past transactions stay attachable. The storage layer has to enforce that —
-// the UI merely respects it.
-it('refuses to delete a category outright', async () => {
-  await createSignedInUser('rules')
-  const category = await firstCategory()
+const anAccount = () =>
+  pb.collection('accounts').create({
+    user: currentUserId(),
+    name: 'Compte courant',
+    type: 'banque',
+    initial_balance: 100_000,
+  })
 
-  await expect(pb.collection('categories').delete(category.id)).rejects.toThrow()
-  expect((await pb.collection('categories').getFullList()).map((row) => row.id)).toContain(
-    category.id,
-  )
+const spareCategory = (name = 'Créée par erreur') =>
+  pb.collection('categories').create<Category>({
+    user: currentUserId(),
+    name,
+    kind: 'variable',
+    active: true,
+  })
+
+const categoryIds = async () =>
+  (await pb.collection('categories').getFullList()).map((row) => row.id)
+
+// A category nothing points at carries no history to preserve, so it can go.
+// Deactivation still exists for every other case — that is what keeps past
+// transactions attachable.
+it('deletes a category nothing points at', async () => {
+  await createSignedInUser('rules')
+  const spare = await spareCategory()
+
+  await pb.collection('categories').delete(spare.id)
+
+  expect(await categoryIds()).not.toContain(spare.id)
+})
+
+it('refuses to delete a category a transaction still points at', async () => {
+  await createSignedInUser('rules')
+  const account = await anAccount()
+  const used = await spareCategory('Utilisée')
+  await pb.collection('transactions').create({
+    user: currentUserId(),
+    account: account.id,
+    category: used.id,
+    type: 'depense',
+    amount: 5_000,
+    date: '2026-08-12 10:00:00',
+  })
+
+  await expect(pb.collection('categories').delete(used.id)).rejects.toThrow()
+  expect(await categoryIds()).toContain(used.id)
+})
+
+// budgets.category cascades. The refusal has to come before the delete, not
+// after: a guard that ran late would reject the category and still have taken
+// its envelopes with it, silently and with nothing on screen to say so.
+it('keeps the envelopes of a category it refuses to delete', async () => {
+  await createSignedInUser('rules')
+  const budgeted = await spareCategory('Budgétée')
+  const envelope = await pb.collection('budgets').create({
+    user: currentUserId(),
+    category: budgeted.id,
+    month: '2026-08',
+    cap_amount: 50_000,
+  })
+
+  await expect(pb.collection('categories').delete(budgeted.id)).rejects.toThrow()
+
+  expect(await categoryIds()).toContain(budgeted.id)
+  await expect(pb.collection('budgets').getOne(envelope.id)).resolves.toBeTruthy()
+})
+
+it('refuses to delete a category that still has children', async () => {
+  await createSignedInUser('rules')
+  const parent = await spareCategory('Parente')
+  await pb.collection('categories').create({
+    user: currentUserId(),
+    name: 'Enfant',
+    kind: 'variable',
+    parent: parent.id,
+    active: true,
+  })
+
+  await expect(pb.collection('categories').delete(parent.id)).rejects.toThrow()
+  expect(await categoryIds()).toContain(parent.id)
+})
+
+it('never lets an owner delete somebody else’s category', async () => {
+  await createSignedInUser('victim')
+  const theirs = await firstCategory()
+
+  await createSignedInUser('intruder')
+
+  await expect(pb.collection('categories').delete(theirs.id)).rejects.toThrow()
 })
 
 it('refuses to delete an account outright', async () => {
