@@ -207,6 +207,8 @@ L'artefact est **généré et gitignoré**. Le harnais de test le **reconstruit 
   `litestream restore -if-db-not-exists -if-replica-exists` avant de servir : une machine
   qui démarre sur un volume vide se restaure seule, et le chemin est donc exercé à chaque
   déploiement neuf plutôt qu'une fois par trimestre.
+- **Le SMTP de Resend passe par le port 587, pas 465.** Mesuré le 29/08/2026 depuis deux réseaux : les deux ports en TLS implicite (465, 2465) **expirent sans répondre**, les trois en STARTTLS (25, 587, 2587) répondent. Le symptôme en production était `dial tcp …:465: connect: connection timed out` — un délai d'attente, donc rien qui ressemble à une erreur, et un mail qui n'arrive jamais. `SMTP_PORT` vaut 587 par défaut dans le hook, qui en déduit `tls`.
+- **Attribuer une panne réseau au bon coupable demande de la mesurer des deux côtés.** J'avais annoncé un blocage SMTP sortant de Hetzner avec assurance ; le port 465 s'est révélé muet depuis ma machine aussi, sur un réseau où même le port 25 passe. La cause n'était pas l'hébergeur. Un `connection timed out` ne dit pas _qui_ filtre.
 - **Le bucket est chez Hetzner, donc chez le même fournisseur que le serveur** (décidé le
   29/08/2026, pour garder la réplication à l'intérieur du datacentre). La conséquence est
   à connaître : Litestream couvre toujours la perte du disque et de la machine, mais plus
