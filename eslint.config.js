@@ -61,6 +61,7 @@ export default tseslint.config(
         $security: 'readonly',
         __hooks: 'readonly',
         migrate: 'readonly',
+        onBootstrap: 'readonly',
         cronAdd: 'readonly',
         routerAdd: 'readonly',
         Collection: 'readonly',
