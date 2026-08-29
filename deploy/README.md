@@ -83,33 +83,47 @@ un proxy qui parle en clair à l'origine, casse le site. La redirection vers HTT
 
 ## La console d'administration
 
-`/_/` est servie sur la même origine que l'application. Deux protections, qui ne couvrent
-pas la même chose — et c'est la distinction qui compte.
+**Elle n'est pas sur Internet.** Traefik refuse de router deux chemins, et c'est cela — pas
+une consigne d'usage — qui la retire de la vue :
 
-**Cloudflare Access, devant `/_/`.** À configurer dans le tableau de bord Zero Trust, hors
-de ce dépôt :
+```
+/_                              la console elle-même
+/api/collections/_superusers/   la porte à laquelle elle frappe
+```
 
-1. _Zero Trust → Access → Applications → Add an application → Self-hosted_
-2. Domaine `budget.manouman.com`, chemin `/_/*`
-3. Politique : _Allow_, critère _Emails_, votre adresse
-4. Laisser le reste du site hors application — l'API doit rester publique, la SPA
-   l'utilise.
+Ne bloquer que le premier aurait caché la page en laissant le point d'authentification
+public. La console est une _page_ ; ce point d'accès est la _porte_, et un attaquant qui
+connaît l'API de PocketBase ne visite jamais la page. La SPA ne touche ni l'un ni l'autre,
+donc rien ne change pour les utilisateurs.
 
-Vous y accédez ensuite par la même URL, avec une authentification par e-mail au niveau du
-CDN, avant même que la requête n'atteigne le serveur.
+Vérifié le 29/08/2026 contre un vrai Traefik, avec la règle telle qu'elle est livrée :
 
-**Ce que cela ne protège pas, et c'est le point important.** La console est une _page_ ;
-`/api/collections/_superusers/auth-with-password` est la _porte_. Un attaquant qui connaît
-l'API de PocketBase ne visite jamais la page. Mettre `/_/` derrière Access réduit la
-surface d'attaque de l'interface, pas celle de l'authentification.
+| Chemin                                             | À travers Traefik    | Par le tunnel |
+| -------------------------------------------------- | -------------------- | ------------- |
+| `/`, `/budgets`, `/sw.js`, `/manifest.webmanifest` | 200                  | —             |
+| `/api/health`                                      | 200                  | 200           |
+| `/api/collections/users/auth-with-password`        | 400 (route atteinte) | —             |
+| `/_/`                                              | **404**              | **200**       |
+| `/api/collections/_superusers/auth-with-password`  | **404**              | **200**       |
 
-**D'où la limitation de débit**, activée par `pb_hooks/apply_env_settings.pb.js` au
-démarrage. PocketBase la livre désactivée ; ses règles par défaut plafonnent
-l'authentification à deux tentatives par trois secondes. Mesuré le 29/08/2026 : à la
-deuxième tentative de mot de passe superadmin, la réponse passe de 400 à **429**.
+### Y accéder
 
-Le premier superadministrateur se crée en ligne de commande, un volume neuf n'en ayant
-aucun :
+Le conteneur publie son port sur la **boucle locale du VPS uniquement**
+(`127.0.0.1:8090:8090`), jamais sur l'interface publique. On l'atteint par un tunnel :
+
+```bash
+ssh -L 8090:localhost:8090 <utilisateur>@<vps>
+```
+
+puis **http://localhost:8090/_/** dans le navigateur, tant que la session SSH est ouverte.
+
+Conséquence assumée : la console est inaccessible depuis un téléphone, ou depuis toute
+machine sans votre clé SSH. C'est le prix de n'avoir aucune surface d'attaque publique, et
+c'est un écran qu'on ouvre rarement.
+
+### Le premier superadministrateur
+
+Un volume neuf n'en a aucun :
 
 ```bash
 docker exec -it <conteneur> pocketbase superuser upsert vous@exemple.com '<mot de passe>' --dir=/pb/pb_data
@@ -117,6 +131,13 @@ docker exec -it <conteneur> pocketbase superuser upsert vous@exemple.com '<mot d
 
 `upsert` réinitialise aussi le mot de passe d'un compte existant. Le mot de passe passe en
 argument, donc dans l'historique du shell.
+
+### Et la limitation de débit reste
+
+`pb_hooks/apply_env_settings.pb.js` active au démarrage la limitation de débit de
+PocketBase, livrée désactivée. Ses règles par défaut plafonnent l'authentification à deux
+tentatives par trois secondes — mesuré : la deuxième tentative répond **429** au lieu de 400. Elle ne protège plus la console, désormais hors d'atteinte, mais elle couvre
+l'authentification des utilisateurs ordinaires, qui reste publique par nécessité.
 
 ## Restauration
 
