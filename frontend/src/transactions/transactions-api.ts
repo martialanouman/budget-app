@@ -57,10 +57,16 @@ export function useTransactions(filters: TransactionFilters) {
 }
 
 // Balances are derived server-side with no realtime channel, so every write
-// has to invalidate them explicitly alongside the list.
+// has to invalidate them explicitly alongside the list. So is what holds a
+// category: a spend recorded here decides whether the categories page may
+// still offer to delete the category it landed on.
 const useTransactionMutation = <TVariables>(
   mutationFn: (variables: TVariables) => Promise<unknown>,
-) => useDerivedMutation<TVariables>([['transactions'], ['account-balances']], mutationFn)
+) =>
+  useDerivedMutation<TVariables>(
+    [['transactions'], ['account-balances'], ['category-usage']],
+    mutationFn,
+  )
 
 export function useRecordTransaction() {
   return useTransactionMutation((draft: TransactionDraft) =>

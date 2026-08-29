@@ -144,9 +144,13 @@ export function CategoriesPage() {
   const usageOf = (id: string) => usage.data?.find((row) => row.id === id)
 
   const rowProps = (category: Category) => {
-    const held = heldBy(usageOf(category.id))
+    const counts = usageOf(category.id)
 
-    return { held, deletable: usage.isSuccess && held === undefined }
+    // The row itself has to be there. ['categories'] and ['category-usage'] are
+    // two queries resolving in either order, so a category present in one
+    // payload and not yet the other would otherwise be offered for deletion on
+    // the strength of a figure nobody has read.
+    return { held: heldBy(counts), deletable: counts !== undefined && heldBy(counts) === undefined }
   }
 
   // Kept apart from the form's: a failed deletion belongs beside the list, not

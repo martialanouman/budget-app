@@ -1,5 +1,5 @@
 import { beforeEach, expect, it } from 'vitest'
-import { createSignedInUser, currentUserId } from '../../test/journey-harness.tsx'
+import { createSignedInUser, currentUserId, signInAs } from '../../test/journey-harness.tsx'
 import { type Category } from '@/lib/collections'
 import { pb } from '@/lib/pocketbase'
 
@@ -91,13 +91,41 @@ it('refuses to delete a category that still has children', async () => {
   expect(await categoryIds()).toContain(parent.id)
 })
 
+// categories.user cascades, and PocketBase runs the delete hooks for cascaded
+// records too. A guard that cannot tell a cascade from a deliberate delete sees
+// the parent's surviving child and refuses — making any account that ever
+// created a sub-category impossible to close (USR-04). Sub-categories are a
+// first-class action on the categories page, so that is most accounts.
+it('lets an owner close an account that has a sub-category', async () => {
+  await createSignedInUser('closing')
+  const owner = currentUserId()!
+  const parent = (await pb.collection('categories').getFullList<Category>()).find(
+    (category) => category.name === 'Loisirs',
+  )!
+  await pb.collection('categories').create({
+    user: owner,
+    name: 'Concert',
+    kind: 'variable',
+    parent: parent.id,
+    active: true,
+  })
+
+  await expect(pb.collection('users').delete(owner)).resolves.toBe(true)
+})
+
 it('never lets an owner delete somebody else’s category', async () => {
-  await createSignedInUser('victim')
+  const victim = await createSignedInUser('victim')
   const theirs = await firstCategory()
 
   await createSignedInUser('intruder')
 
   await expect(pb.collection('categories').delete(theirs.id)).rejects.toThrow()
+
+  // Read back as the owner: a refusal that had already deleted the record
+  // would look identical from the intruder's side, which cannot see it either
+  // way. Every sibling test here pairs the rejection with a survival check.
+  await signInAs(victim)
+  expect(await categoryIds()).toContain(theirs.id)
 })
 
 it('refuses to delete an account outright', async () => {

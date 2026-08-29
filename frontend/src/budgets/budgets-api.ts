@@ -35,8 +35,10 @@ export function useBudgetSpending(month: string) {
   })
 }
 
+// An envelope is one of the things that holds a category, so writing one
+// changes whether that category may still be deleted.
 const useBudgetMutation = <TVariables>(mutationFn: (variables: TVariables) => Promise<unknown>) =>
-  useDerivedMutation<TVariables>([['budgets']], mutationFn)
+  useDerivedMutation<TVariables>([['budgets'], ['category-usage']], mutationFn)
 
 /**
  * One envelope per category and month, so setting a cap twice adjusts the

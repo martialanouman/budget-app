@@ -17,5 +17,9 @@ export function splitTransaction(request: SplitRequest) {
 }
 
 export function useSplitTransaction() {
-  return useDerivedMutation([['transactions'], ['account-balances']], splitTransaction)
+  // Every part of a split carries a category, so this changes what holds them.
+  return useDerivedMutation(
+    [['transactions'], ['account-balances'], ['category-usage']],
+    splitTransaction,
+  )
 }
