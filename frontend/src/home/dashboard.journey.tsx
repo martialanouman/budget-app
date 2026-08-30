@@ -229,21 +229,32 @@ it('counts the days to an instalment from today, not from the day it was announc
 // The accounts screen already holds this policy: a figure that could not be
 // read is shown as missing. A confident zero on the very numbers a spend is
 // decided on would be worse than an admission.
+//
+// The reads are made to fail for real — the server is simply not there — which
+// is the only way to reach the policy from a journey. The earlier version of
+// this test corrupted the session token instead, and it passed for a reason
+// that was not the one it claimed: **PocketBase answers an unrecognised token
+// with HTTP 200 and an empty list**, measured on 30/08/2026, so nothing failed
+// at all. It caught the loading frame, where no figure has been read yet, and
+// never reached the state it named. A revoked session still shows zeros; that
+// gap needs the session refuted at start-up, not a dashboard change.
 it('admits it could not read a figure rather than showing a zero', async () => {
   await createSignedInUser('db')
   await anAccount(600_000)
 
-  // A session the server has revoked still looks valid to the guard: the token
-  // carries its own expiry, and nothing else. This is the shape of an expired
-  // or rotated session, not an invented one.
-  pb.authStore.save(`${pb.authStore.token}x`, pb.authStore.record)
+  const reachable = pb.baseURL
+  pb.baseURL = 'http://127.0.0.1:1'
 
-  const { screen } = await renderApp('/')
+  try {
+    const { screen } = await renderApp('/')
 
-  await expect.element(screen.getByText('—').first()).toBeVisible()
-  await expect.element(screen.getByText(xof('600 000'))).not.toBeInTheDocument()
-  // The defect this holds: not a missing figure, but a confident zero.
-  await expect.element(screen.getByText(/^0\sF\sCFA$/u)).not.toBeInTheDocument()
+    await expect.element(screen.getByText('—').first()).toBeVisible()
+    await expect.element(screen.getByText(xof('600 000'))).not.toBeInTheDocument()
+    // The defect this holds: not a missing figure, but a confident zero.
+    await expect.element(screen.getByText(/^0\sF\sCFA$/u)).not.toBeInTheDocument()
+  } finally {
+    pb.baseURL = reachable
+  }
 })
 
 // CPT-04: an archived account can no longer be spent from nor transferred to,

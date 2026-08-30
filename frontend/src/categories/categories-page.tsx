@@ -2,7 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { FormError, SubmitButton } from '@/components/form-feedback'
+import { ListSkeleton } from '@/components/list-skeleton'
 import { AppShell } from '@/components/app-shell'
+import { Disclosure } from '@/components/disclosure'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
 import {
@@ -174,28 +176,29 @@ export function CategoriesPage() {
 
   return (
     <AppShell title="Catégories">
-      <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
-        <h2 className="text-lg font-medium">Ajouter une catégorie</h2>
-        {createCategory.isError ? (
-          <FormError message="La création de la catégorie a échoué. Vérifiez votre connexion et réessayez." />
-        ) : null}
-        <TextField label="Nom" error={formState.errors.name?.message} {...register('name')} />
-        <SelectField
-          label="Nature"
-          options={CATEGORY_KINDS.map((kind: CategoryKind) => ({
-            value: kind,
-            label: CATEGORY_KIND_LABELS[kind],
-          }))}
-          error={formState.errors.kind?.message}
-          {...register('kind')}
-        />
-        <SelectField label="Catégorie parente" options={parentOptions} {...register('parent')} />
-        <SubmitButton pending={formState.isSubmitting}>Créer la catégorie</SubmitButton>
-      </form>
+      <Disclosure summary="Ajouter une catégorie">
+        <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
+          {createCategory.isError ? (
+            <FormError message="La création de la catégorie a échoué. Vérifiez votre connexion et réessayez." />
+          ) : null}
+          <TextField label="Nom" error={formState.errors.name?.message} {...register('name')} />
+          <SelectField
+            label="Nature"
+            options={CATEGORY_KINDS.map((kind: CategoryKind) => ({
+              value: kind,
+              label: CATEGORY_KIND_LABELS[kind],
+            }))}
+            error={formState.errors.kind?.message}
+            {...register('kind')}
+          />
+          <SelectField label="Catégorie parente" options={parentOptions} {...register('parent')} />
+          <SubmitButton pending={formState.isSubmitting}>Créer la catégorie</SubmitButton>
+        </form>
+      </Disclosure>
 
       <section className="space-y-2">
         <h2 className="text-lg font-medium">Mes catégories</h2>
-        {categories.isPending ? <p>Chargement…</p> : null}
+        {categories.isPending ? <ListSkeleton /> : null}
         {categories.isError ? <FormError message="Impossible de charger vos catégories." /> : null}
         {listMutationFailed ? (
           <FormError message="L'opération sur cette catégorie a échoué. Vérifiez votre connexion et réessayez." />

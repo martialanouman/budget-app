@@ -30,6 +30,7 @@ it('transfers between accounts and leaves the total unchanged', async () => {
 
   const { screen } = await renderApp('/transactions')
 
+  await screen.getByRole('heading', { name: 'Virement entre comptes' }).click()
   await screen.getByLabelText('Montant à transférer').fill('30 000')
   await screen.getByLabelText('Depuis le compte').selectOptions('Compte courant')
   await screen.getByLabelText('Vers le compte').selectOptions('Épargne')
@@ -51,6 +52,7 @@ it('refuses a transfer to the same account', async () => {
 
   const { screen } = await renderApp('/transactions')
 
+  await screen.getByRole('heading', { name: 'Virement entre comptes' }).click()
   await screen.getByLabelText('Montant à transférer').fill('10 000')
   await screen.getByLabelText('Depuis le compte').selectOptions('Épargne')
   await screen.getByLabelText('Vers le compte').selectOptions('Épargne')
@@ -87,6 +89,7 @@ it('names each leg’s delete button after its own account', async () => {
 
   const { screen } = await renderApp('/transactions')
 
+  await screen.getByRole('heading', { name: 'Virement entre comptes' }).click()
   await screen.getByLabelText('Montant à transférer').fill('30 000')
   await screen.getByLabelText('Depuis le compte').selectOptions('Compte courant')
   await screen.getByLabelText('Vers le compte').selectOptions('Épargne')

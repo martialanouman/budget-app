@@ -4,6 +4,7 @@ import { useAccounts } from '@/accounts/accounts-api.ts'
 import { useCategories } from '@/categories/categories-api.ts'
 import { AppShell } from '@/components/app-shell'
 import { FormError } from '@/components/form-feedback'
+import { ListSkeleton } from '@/components/list-skeleton'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
 import { ENTRY_TYPE_LABELS, type Transaction, isCredit, isTransfer } from '@/lib/collections'
@@ -159,7 +160,7 @@ export function TransactionsPage() {
           />
         </div>
 
-        {entries.isPending ? <p>Chargement…</p> : null}
+        {entries.isPending ? <ListSkeleton /> : null}
         {entries.isError ? <FormError message="Impossible de charger vos transactions." /> : null}
         {deleteTransaction.isError ? (
           <FormError message="La suppression a échoué. Vérifiez votre connexion et réessayez." />

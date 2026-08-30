@@ -3,6 +3,7 @@ import { parseAmount } from '@budget/domain'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { FormError, SubmitButton } from '@/components/form-feedback'
+import { Disclosure } from '@/components/disclosure'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
 import { type Account } from '@/lib/collections'
@@ -72,36 +73,37 @@ export function TransferForm({
   const options = accounts.map((account) => ({ value: account.id, label: account.name }))
 
   return (
-    <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
-      <h2 className="text-lg font-medium">Virement entre comptes</h2>
-      {failed ? (
-        <FormError message="Le virement a échoué. Aucun mouvement n'a été enregistré." />
-      ) : null}
-      <TextField
-        label="Montant à transférer"
-        inputMode="numeric"
-        error={formState.errors.amount?.message}
-        {...register('amount')}
-      />
-      <SelectField
-        label="Depuis le compte"
-        options={options}
-        error={formState.errors.from?.message}
-        {...register('from')}
-      />
-      <SelectField
-        label="Vers le compte"
-        options={options}
-        error={formState.errors.to?.message}
-        {...register('to')}
-      />
-      <TextField
-        label="Date du virement"
-        type="date"
-        error={formState.errors.date?.message}
-        {...register('date')}
-      />
-      <SubmitButton pending={formState.isSubmitting}>Transférer</SubmitButton>
-    </form>
+    <Disclosure summary="Virement entre comptes">
+      <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
+        {failed ? (
+          <FormError message="Le virement a échoué. Aucun mouvement n'a été enregistré." />
+        ) : null}
+        <TextField
+          label="Montant à transférer"
+          inputMode="numeric"
+          error={formState.errors.amount?.message}
+          {...register('amount')}
+        />
+        <SelectField
+          label="Depuis le compte"
+          options={options}
+          error={formState.errors.from?.message}
+          {...register('from')}
+        />
+        <SelectField
+          label="Vers le compte"
+          options={options}
+          error={formState.errors.to?.message}
+          {...register('to')}
+        />
+        <TextField
+          label="Date du virement"
+          type="date"
+          error={formState.errors.date?.message}
+          {...register('date')}
+        />
+        <SubmitButton pending={formState.isSubmitting}>Transférer</SubmitButton>
+      </form>
+    </Disclosure>
   )
 }

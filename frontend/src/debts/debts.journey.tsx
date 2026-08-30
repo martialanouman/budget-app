@@ -40,6 +40,7 @@ it('records a repayment and shows the capital falling', async () => {
   await aDebt()
 
   const { screen } = await renderApp('/debts')
+  await screen.getByRole('heading', { name: 'Nouvelle dette' }).click()
 
   await screen.getByRole('link', { name: /Banque Atlantique/u }).click()
 
@@ -111,6 +112,7 @@ it('records a new debt from the form', async () => {
   await createSignedInUser('dt')
 
   const { screen } = await renderApp('/debts')
+  await screen.getByRole('heading', { name: 'Nouvelle dette' }).click()
 
   await screen.getByLabelText('Créancier').fill('Tontine du quartier')
   await screen.getByLabelText('Montant emprunté').fill('300 000')

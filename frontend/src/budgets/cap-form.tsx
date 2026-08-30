@@ -3,6 +3,7 @@ import { parseAmount } from '@budget/domain'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { FormError, SubmitButton } from '@/components/form-feedback'
+import { Disclosure } from '@/components/disclosure'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
 import { type Category } from '@/lib/collections'
@@ -59,26 +60,27 @@ export function CapForm({
   })
 
   return (
-    <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
-      <h2 className="text-lg font-medium">Définir une enveloppe</h2>
-      {failed ? <FormError message="Le plafond n'a pas pu être enregistré." /> : null}
-      <SelectField
-        label="Catégorie"
-        options={categories.map((category) => ({ value: category.id, label: category.name }))}
-        error={formState.errors.category?.message}
-        {...register('category')}
-      />
-      <TextField
-        label="Plafond mensuel"
-        inputMode="numeric"
-        error={formState.errors.cap?.message}
-        {...register('cap')}
-      />
-      <label className="flex items-center gap-2 text-sm text-slate-700">
-        <input type="checkbox" className="size-4" {...register('carryOver')} />
-        Reporter le solde non dépensé sur le mois suivant
-      </label>
-      <SubmitButton pending={formState.isSubmitting}>Définir le plafond</SubmitButton>
-    </form>
+    <Disclosure summary="Définir une enveloppe">
+      <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
+        {failed ? <FormError message="Le plafond n'a pas pu être enregistré." /> : null}
+        <SelectField
+          label="Catégorie"
+          options={categories.map((category) => ({ value: category.id, label: category.name }))}
+          error={formState.errors.category?.message}
+          {...register('category')}
+        />
+        <TextField
+          label="Plafond mensuel"
+          inputMode="numeric"
+          error={formState.errors.cap?.message}
+          {...register('cap')}
+        />
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" className="size-4" {...register('carryOver')} />
+          Reporter le solde non dépensé sur le mois suivant
+        </label>
+        <SubmitButton pending={formState.isSubmitting}>Définir le plafond</SubmitButton>
+      </form>
+    </Disclosure>
   )
 }
