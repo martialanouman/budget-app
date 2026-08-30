@@ -65,8 +65,14 @@ function CategoryRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="flex-1">
-        <span className={category.active ? 'font-medium' : 'font-medium text-slate-400'}>
+      <span className="min-w-0 flex-1">
+        <span
+          className={
+            category.active
+              ? 'block truncate font-medium'
+              : 'block truncate font-medium text-slate-400'
+          }
+        >
           {category.name}
         </span>
         <span className="block text-sm text-slate-600">
@@ -78,9 +84,10 @@ function CategoryRow({
       <button
         type="button"
         onClick={() => onToggle(category)}
-        className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+        aria-label={`${category.active ? 'Désactiver' : 'Réactiver'} ${category.name}`}
+        className="shrink-0 rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
       >
-        {category.active ? 'Désactiver' : 'Réactiver'} {category.name}
+        {category.active ? 'Désactiver' : 'Réactiver'}
       </button>
       {/* Offered only when it will work. A button that fails teaches the
           obstacle at the costliest moment — after the user has acted. */}
@@ -88,9 +95,10 @@ function CategoryRow({
         <button
           type="button"
           onClick={() => onDelete(category)}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+          aria-label={`Supprimer ${category.name}`}
+          className="shrink-0 rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
         >
-          Supprimer {category.name}
+          Supprimer
         </button>
       ) : null}
     </div>

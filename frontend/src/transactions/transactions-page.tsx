@@ -7,7 +7,7 @@ import { FormError } from '@/components/form-feedback'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
 import { ENTRY_TYPE_LABELS, type Transaction, isCredit, isTransfer } from '@/lib/collections'
-import { todayLocally } from '@/lib/dates.ts'
+import { dayLabel, todayLocally } from '@/lib/dates.ts'
 import { QuickEntryForm } from './quick-entry-form.tsx'
 import { TransferForm } from './transfer-form.tsx'
 import { useTransfer } from './transfers-api.ts'
@@ -20,14 +20,45 @@ import {
 
 const SEARCH_DELAY_MS = 300
 
-/** A row whose amount is out of range costs only itself, never the page. */
-function signedAmount(entry: Transaction) {
+/** A figure that cannot be made sense of is missing, never zero. */
+function safeAmount(value: number) {
   try {
-    return formatAmount(toMoney(isCredit(entry.type) ? entry.amount : -entry.amount))
+    return formatAmount(toMoney(value))
   } catch {
     return '—'
   }
 }
+
+/** A row whose amount is out of range costs only itself, never the page. */
+const signedAmount = (entry: Transaction) =>
+  safeAmount(isCredit(entry.type) ? entry.amount : -entry.amount)
+
+/**
+ * The list in days, newest first. It arrives sorted by date, so one pass keeps
+ * that order without sorting again.
+ */
+function byDay(entries: Transaction[]) {
+  const days: { date: string; entries: Transaction[] }[] = []
+
+  for (const entry of entries) {
+    const date = entry.date.slice(0, 10)
+    const last = days.at(-1)
+
+    if (last?.date === date) last.entries.push(entry)
+    else days.push({ date, entries: [entry] })
+  }
+
+  return days
+}
+
+/**
+ * What left the wallet that day. A transfer moves money between the owner's own
+ * accounts, so counting one would inflate a figure that reads as spending.
+ */
+const spentOn = (entries: Transaction[]) =>
+  entries
+    .filter((entry) => entry.type === 'depense')
+    .reduce((total, entry) => total + entry.amount, 0)
 
 /** Only a transfer is a transfer: an income typed without a category is not. */
 const titleOf = (entry: Transaction) =>
@@ -151,39 +182,62 @@ export function TransactionsPage() {
         ) : null}
         {entries.isSuccess && entries.data.length === 0 ? <p>Aucune transaction.</p> : null}
 
-        <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
-          {(entries.data ?? []).map((entry) => (
-            <li key={entry.id} className="flex items-center gap-3 p-3">
-              <span className="flex-1">
-                <span className="font-medium">{titleOf(entry)}</span>
-                <span className="block text-sm text-slate-600">
-                  {ENTRY_TYPE_LABELS[entry.type]} · {entry.date.slice(0, 10)} ·{' '}
-                  {entry.expand?.account?.name}
-                  {entry.note ? ` · ${entry.note}` : ''}
-                </span>
-              </span>
-              <span
-                className={
-                  isCredit(entry.type)
-                    ? 'tabular-nums text-emerald-700'
-                    : 'tabular-nums text-slate-900'
-                }
-              >
-                {signedAmount(entry)}
-              </span>
-              {/* Two steps on purpose: a transaction is hard-deleted, and the
-                  button sits millimetres from the amount on a phone. */}
-              <button
-                type="button"
-                onClick={() => remove(entry.id)}
-                onBlur={() => setConfirming(undefined)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 aria-pressed:border-red-600 aria-pressed:text-red-700"
-                aria-pressed={confirming === entry.id}
-              >
-                {confirming === entry.id ? 'Confirmer la suppression' : 'Supprimer'}{' '}
-                {entry.expand?.category?.name ?? ENTRY_TYPE_LABELS[entry.type]} sur{' '}
-                {entry.expand?.account?.name} du {entry.date.slice(0, 10)}
-              </button>
+        <ul className="space-y-4">
+          {byDay(entries.data ?? []).map((day) => (
+            <li key={day.date}>
+              {/* The day carries the date once, so no row has to repeat it. */}
+              <div className="flex items-baseline justify-between gap-3 px-1 pb-1">
+                <h3 className="text-sm font-medium text-slate-600">{dayLabel(day.date)}</h3>
+                {spentOn(day.entries) > 0 ? (
+                  <span className="text-sm tabular-nums text-slate-600">
+                    {safeAmount(spentOn(day.entries))} dépensé
+                  </span>
+                ) : null}
+              </div>
+              <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+                {day.entries.map((entry) => {
+                  // Spelled out for the screen reader, short on screen: every row
+                  // would otherwise offer a button reading only "Supprimer".
+                  const describes = `${entry.expand?.category?.name ?? ENTRY_TYPE_LABELS[entry.type]} sur ${entry.expand?.account?.name} du ${dayLabel(entry.date)}`
+
+                  return (
+                    <li key={entry.id} className="flex items-center gap-3 p-3">
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{titleOf(entry)}</span>
+                        <span className="block truncate text-sm text-slate-600">
+                          {ENTRY_TYPE_LABELS[entry.type]} · {entry.expand?.account?.name}
+                          {entry.note ? ` · ${entry.note}` : ''}
+                        </span>
+                      </span>
+                      <span
+                        className={
+                          isCredit(entry.type)
+                            ? 'tabular-nums text-emerald-700'
+                            : 'tabular-nums text-slate-900'
+                        }
+                      >
+                        {signedAmount(entry)}
+                      </span>
+                      {/* Two steps on purpose: a transaction is hard-deleted, and
+                          the button sits millimetres from the amount on a phone. */}
+                      <button
+                        type="button"
+                        onClick={() => remove(entry.id)}
+                        onBlur={() => setConfirming(undefined)}
+                        aria-label={
+                          confirming === entry.id
+                            ? `Confirmer la suppression ${describes}`
+                            : `Supprimer ${describes}`
+                        }
+                        className="shrink-0 rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 aria-pressed:border-red-600 aria-pressed:text-red-700"
+                        aria-pressed={confirming === entry.id}
+                      >
+                        {confirming === entry.id ? 'Confirmer' : 'Supprimer'}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
             </li>
           ))}
         </ul>

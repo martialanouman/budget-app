@@ -1,7 +1,7 @@
 import { beforeEach, expect, it } from 'vitest'
 import { createSignedInUser, currentUserId, renderApp } from '../../test/journey-harness.tsx'
 import { type Debt } from '@/lib/collections'
-import { todayLocally } from '@/lib/dates.ts'
+import { dayLabel, todayLocally } from '@/lib/dates.ts'
 import { pb } from '@/lib/pocketbase'
 
 const xof = (amount: string) => new RegExp(amount.replace(/ /gu, '\\s'), 'u')
@@ -59,7 +59,7 @@ it('estimates the end date from what is still owed', async () => {
 
   const { screen } = await renderApp('/debts')
 
-  await expect.element(screen.getByText(new RegExp(nextMonthOn(5), 'u'))).toBeVisible()
+  await expect.element(screen.getByText(new RegExp(dayLabel(nextMonthOn(5)), 'u'))).toBeVisible()
 })
 
 // DET-05: what the debts weigh, and what share of the month's income goes to
@@ -132,7 +132,7 @@ it('shows the schedule of instalments to come', async () => {
   await screen.getByRole('link', { name: /Banque Atlantique/u }).click()
 
   await expect.element(screen.getByRole('heading', { name: 'Échéancier' })).toBeVisible()
-  await expect.element(screen.getByText(new RegExp(nextMonthOn(5), 'u'))).toBeVisible()
+  await expect.element(screen.getByText(new RegExp(dayLabel(nextMonthOn(5)), 'u'))).toBeVisible()
 })
 
 // `remaining_amount || initial_amount` tested a falsy value rather than an

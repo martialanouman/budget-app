@@ -35,9 +35,9 @@ it('transfers between accounts and leaves the total unchanged', async () => {
   await screen.getByLabelText('Vers le compte').selectOptions('Épargne')
   await screen.getByRole('button', { name: 'Transférer' }).click()
 
-  // Matched loosely: the row carries today's date, so pinning it would make
-  // this test start failing tomorrow.
-  await expect.element(screen.getByText(/^Virement sortant · .+ · Compte courant$/u)).toBeVisible()
+  // The day now heads its own group, so the row itself carries only what
+  // distinguishes it from the others — and this can be matched exactly.
+  await expect.element(screen.getByText('Virement sortant · Compte courant')).toBeVisible()
 
   await screen.getByRole('link', { name: 'Comptes' }).click()
 
