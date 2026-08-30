@@ -65,7 +65,11 @@ it('passes an automated WCAG AA pass on the dashboard', async () => {
 
   const { screen } = await renderApp('/')
 
-  await expect.element(screen.getByText('Alimentation')).toBeVisible()
+  // Exact, because the name now appears twice: the envelope is set below what
+  // has already been spent, so the dashboard carries the alert as well as the
+  // breakdown row. The audit is the better for it — the amber card and its
+  // dismiss button are on the page being checked.
+  await expect.element(screen.getByText('Alimentation', { exact: true })).toBeVisible()
 
   expect(await violations()).toEqual([])
 })

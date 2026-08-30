@@ -78,3 +78,61 @@ onRecordAfterDeleteSuccess((e) => {
 
   e.next()
 }, 'transactions')
+
+// The envelope is the other half of the question, and for a long time only the
+// spending side asked it. Someone who set a ceiling on a category they had
+// already spent on — the ordinary way of discovering one spends too much on it
+// — was told nothing until their next expense; someone who raised a ceiling in
+// answer to an alert kept the alert.
+//
+// The same reconciliation serves, because it never asks what happened, only
+// what should be on file now. Removing the envelope leaves a ceiling of zero,
+// which reaches no threshold, so its unread alerts go with it — a warning
+// about a figure the screen no longer shows.
+onRecordAfterCreateSuccess((e) => {
+  try {
+    const job = require(`${__hooks}/jobs/budget_alerts.js`)
+    const record = e.record
+
+    job.reconcile(e.app, record.get('user'), record.get('category'), record.get('month'))
+  } catch (err) {
+    e.app.logger().error('Budget threshold alert failed', 'error', String(err))
+  }
+
+  e.next()
+}, 'budgets')
+
+onRecordAfterUpdateSuccess((e) => {
+  try {
+    const job = require(`${__hooks}/jobs/budget_alerts.js`)
+    const record = e.record
+    const before = record.original()
+    // Both scopes, as for a transaction: an envelope moved to another category
+    // or month leaves one behind that no longer stands where it did.
+    const scopes = [
+      { category: record.get('category'), month: record.get('month') },
+      { category: before.get('category'), month: before.get('month') },
+    ]
+
+    for (let i = 0; i < scopes.length; i++) {
+      job.reconcile(e.app, record.get('user'), scopes[i].category, scopes[i].month)
+    }
+  } catch (err) {
+    e.app.logger().error('Budget threshold alert failed', 'error', String(err))
+  }
+
+  e.next()
+}, 'budgets')
+
+onRecordAfterDeleteSuccess((e) => {
+  try {
+    const job = require(`${__hooks}/jobs/budget_alerts.js`)
+    const record = e.record
+
+    job.reconcile(e.app, record.get('user'), record.get('category'), record.get('month'))
+  } catch (err) {
+    e.app.logger().error('Budget threshold alert failed', 'error', String(err))
+  }
+
+  e.next()
+}, 'budgets')

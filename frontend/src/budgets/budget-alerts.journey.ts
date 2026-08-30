@@ -192,3 +192,69 @@ it('takes the alert back when the expense moves to another category', async () =
 
   expect(await alerts()).toEqual([])
 })
+
+// The envelope is half of the question the alert answers, and until now only
+// the other half asked it: the reconciliation ran on every write to a
+// transaction and on none to a budget. Someone who sets a ceiling on a
+// category they have already spent on — the ordinary way of discovering one
+// spends too much on it — was told nothing until their next expense.
+it('alerts as soon as a ceiling is set below what is already spent', async () => {
+  await createSignedInUser('al')
+  const account = await pb.collection('accounts').create({
+    user: currentUserId(),
+    name: 'Compte courant',
+    type: 'banque',
+    initial_balance: 500_000,
+  })
+  const categories = await pb.collection('categories').getFullList<Category>()
+  const food = categories.find((one) => one.name === 'Alimentation')!.id
+
+  await spend(account.id, food, 90_000)
+
+  expect(await alerts()).toEqual([])
+
+  await pb.collection('budgets').create({
+    user: currentUserId(),
+    month: month(),
+    category: food,
+    cap_amount: 100_000,
+    carry_over: false,
+    carried_amount: 0,
+  })
+
+  expect(await alerts()).toEqual([{ month: month(), category: food, threshold: 80 }])
+})
+
+// Raising the ceiling is the user answering the alert. Leaving it up would
+// show a warning about a threshold the envelope no longer stands at.
+it('withdraws the alert when the ceiling is raised above the spending', async () => {
+  await createSignedInUser('al')
+  const { account, food } = await context(100_000)
+
+  await spend(account, food, 85_000)
+
+  expect(await alerts()).toHaveLength(1)
+
+  const [envelope] = await pb.collection('budgets').getFullList()
+
+  await pb.collection('budgets').update(envelope!.id, { cap_amount: 200_000 })
+
+  expect(await alerts()).toEqual([])
+})
+
+// Without an envelope there is no threshold to stand at, and the screen no
+// longer shows the figure the warning refers to.
+it('withdraws the alert when the envelope itself is removed', async () => {
+  await createSignedInUser('al')
+  const { account, food } = await context(100_000)
+
+  await spend(account, food, 85_000)
+
+  expect(await alerts()).toHaveLength(1)
+
+  const [envelope] = await pb.collection('budgets').getFullList()
+
+  await pb.collection('budgets').delete(envelope!.id)
+
+  expect(await alerts()).toEqual([])
+})
