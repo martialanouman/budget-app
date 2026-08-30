@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useCategories } from '@/categories/categories-api.ts'
 import { AppShell } from '@/components/app-shell'
 import { FormError } from '@/components/form-feedback'
+import { Meter } from '@/components/meter'
 import { TextField } from '@/components/text-field'
 import { type Budget } from '@/lib/collections'
 import { monthOf, todayLocally } from '@/lib/dates.ts'
@@ -59,11 +60,15 @@ function Envelope({
           Supprimer
         </button>
       </div>
-      <progress
-        value={Math.min(total, cap)}
+      {/* The bar now carries the colour of the threshold it has crossed, which
+          the native <progress> could not — and renders the same everywhere,
+          which it also could not. The wording above stays: colour is never the
+          only carrier of the alert. */}
+      <Meter
+        value={total}
         max={cap}
-        aria-label={`Consommation de l'enveloppe ${budget.expand?.category?.name ?? ''}`}
-        className="h-2 w-full"
+        tone={reached.includes(100) ? 'over' : reached.includes(80) ? 'warning' : 'neutral'}
+        label={`Consommation de l'enveloppe ${budget.expand?.category?.name ?? ''}`}
       />
       <p className="text-sm text-slate-600">
         {`Reste ${formatAmount(unspent(cap, total))}`}

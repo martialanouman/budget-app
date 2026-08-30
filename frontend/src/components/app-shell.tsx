@@ -1,5 +1,6 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useEffect } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { ArrowLeftRight, HandCoins, House, Landmark, Wallet } from 'lucide-react'
 import { signOut, useAuth } from '@/auth/auth.ts'
 import { EntrySheet } from '@/transactions/entry-sheet.tsx'
 
@@ -7,13 +8,16 @@ import { EntrySheet } from '@/transactions/entry-sheet.tsx'
  * The five destinations someone opens the app for. Categories and the account
  * itself are configuration, reached from the header — a tab bar that holds
  * everything holds nothing, and five is where a thumb stops distinguishing.
+ *
+ * The icons are decoration, hidden from assistive technology: each tab keeps
+ * its word, because an icon alone is a guess for the reader.
  */
 const TABS = [
-  { to: '/', label: 'Accueil' },
-  { to: '/transactions', label: 'Transactions' },
-  { to: '/budgets', label: 'Budgets' },
-  { to: '/debts', label: 'Dettes' },
-  { to: '/accounts', label: 'Comptes' },
+  { to: '/', label: 'Accueil', Icon: House },
+  { to: '/transactions', label: 'Transactions', Icon: ArrowLeftRight },
+  { to: '/budgets', label: 'Budgets', Icon: Wallet },
+  { to: '/debts', label: 'Dettes', Icon: HandCoins },
+  { to: '/accounts', label: 'Comptes', Icon: Landmark },
 ] as const
 
 const SETTINGS = [
@@ -24,6 +28,12 @@ const SETTINGS = [
 export function AppShell({ title, children }: { title: string; children: ReactNode }) {
   const navigate = useNavigate()
   const { email } = useAuth()
+
+  // Twelve screens shared one tab title, so a pinned tab and a history entry
+  // said "Budget" and nothing more.
+  useEffect(() => {
+    document.title = `${title} · Budget`
+  }, [title])
 
   return (
     <div className="min-h-dvh bg-slate-50">
@@ -82,8 +92,9 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
                 // app. The others want the prefix: /debts/$debtId keeps Dettes
                 // lit.
                 activeOptions={{ exact: item.to === '/' }}
-                className="flex min-h-14 flex-col items-center justify-center px-1 text-center text-xs text-slate-600 aria-[current=page]:font-semibold aria-[current=page]:text-slate-900"
+                className="flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-center text-xs text-slate-600 aria-[current=page]:font-semibold aria-[current=page]:text-slate-900"
               >
+                <item.Icon aria-hidden="true" size={20} strokeWidth={1.75} />
                 {item.label}
               </Link>
             </li>
