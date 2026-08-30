@@ -11,6 +11,8 @@ import {
   type Category,
   TRANSACTION_TYPES,
   TRANSACTION_TYPE_LABELS,
+  type Transaction,
+  isTransactionType,
 } from '@/lib/collections'
 import type { TransactionDraft } from './transactions-api.ts'
 
@@ -48,38 +50,67 @@ export function QuickEntryForm({
   accounts,
   categories,
   failed,
+  entry,
   onRecord,
   onRecorded,
 }: {
   accounts: Account[]
   categories: Category[]
   failed: boolean
+  /**
+   * The entry being corrected, absent when one is being typed. One form and one
+   * schema for both: a second copy would be a second place for the rules on an
+   * amount to drift.
+   */
+  entry?: Transaction | undefined
   onRecord: (draft: TransactionDraft) => Promise<unknown>
   /** Called once the entry is in and the form has been reset, never before. */
   onRecorded?: (() => void) | undefined
 }) {
+  const correcting = entry !== undefined
   const { register, handleSubmit, reset, formState } = useForm<
     FormInput,
     unknown,
     z.infer<typeof schema>
   >({
     resolver: zodResolver(schema),
-    defaultValues: {
-      amount: '',
-      type: 'depense',
-      // Prefilled, since most people have one account and the entry should
-      // take seconds. The category stays a deliberate choice.
-      account: accounts[0]?.id ?? '',
-      category: '',
-      date: todayLocally(),
-      note: '',
-    },
+    defaultValues: entry
+      ? {
+          // Plain digits rather than the formatted figure: parseAmount reads
+          // them, and no round trip through a display format can go wrong.
+          amount: String(entry.amount),
+          // A transfer leg has a type this form does not offer, and is refused
+          // by the server anyway — the screen never opens one here.
+          type: isTransactionType(entry.type) ? entry.type : 'depense',
+          account: entry.account,
+          category: entry.category,
+          date: entry.date.slice(0, 10),
+          note: entry.note,
+        }
+      : {
+          amount: '',
+          type: 'depense',
+          // Prefilled, since most people have one account and the entry should
+          // take seconds. The category stays a deliberate choice.
+          account: accounts[0]?.id ?? '',
+          category: '',
+          date: todayLocally(),
+          note: '',
+        },
   })
 
   const onSubmit = handleSubmit(async (values) => {
     try {
       await onRecord(values)
-      reset({ ...values, amount: '', note: '' })
+      // Clearing the amount sets up the next entry; on a correction it would
+      // wipe what was just saved out from under the person who saved it. The
+      // amount goes back as a string either way: the schema parses one on the
+      // way in and hands back a Money on the way out.
+      reset(
+        correcting
+          ? { ...values, amount: String(values.amount) }
+          : { ...values, amount: '', note: '' },
+      )
       onRecorded?.()
     } catch {
       // Surfaced through `failed` below.
@@ -89,7 +120,13 @@ export function QuickEntryForm({
   return (
     <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
       {failed ? (
-        <FormError message="L'enregistrement a échoué. Vérifiez votre connexion et réessayez." />
+        <FormError
+          message={
+            correcting
+              ? 'La modification a échoué. Vérifiez votre connexion et réessayez.'
+              : "L'enregistrement a échoué. Vérifiez votre connexion et réessayez."
+          }
+        />
       ) : null}
       <TextField
         label="Montant"
@@ -138,7 +175,9 @@ export function QuickEntryForm({
           <TextField label="Note" error={formState.errors.note?.message} {...register('note')} />
         </div>
       </details>
-      <SubmitButton pending={formState.isSubmitting}>Enregistrer</SubmitButton>
+      <SubmitButton pending={formState.isSubmitting}>
+        {correcting ? 'Enregistrer les modifications' : 'Enregistrer'}
+      </SubmitButton>
     </form>
   )
 }

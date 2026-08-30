@@ -100,6 +100,28 @@ it('lets an owner close an account that has a history behind it', async () => {
   await expect(pb.collection('users').delete(owner)).resolves.toBe(true)
 })
 
+// The thirty-day window (TRX-05) is the third hook to meet this cascade, and
+// the reason both its handlers are the *Request* variants. users cascades into
+// transactions and PocketBase runs the model hooks for cascaded rows: on
+// onRecordDelete, every entry older than a month would refuse to go, and
+// closing an account would be impossible for anyone who had used the app for
+// more than a month — which is to say, for everyone who would ever want to.
+it('lets an owner close an account whose entries are older than the edit window', async () => {
+  await createSignedInUser('closing')
+  const owner = await aFurnishedAccount()
+
+  const settled = new Date(Date.now() - 400 * 86_400_000).toISOString().replace('T', ' ')
+
+  for (const entry of await pb.collection('transactions').getFullList()) {
+    await pb.send('/api/test/backdate-transaction', {
+      method: 'POST',
+      body: { id: entry.id, created: settled },
+    })
+  }
+
+  await expect(pb.collection('users').delete(owner)).resolves.toBe(true)
+})
+
 // Closing has to mean the data is gone, not merely hidden. Asking as another
 // owner would prove nothing — the rules hide other people's rows either way —
 // so this counts through a probe that sees the whole table.

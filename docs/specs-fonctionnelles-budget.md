@@ -66,7 +66,7 @@ Particulier souhaitant reprendre le contrôle de ses finances : suivi quotidien 
 | TRX-02 | Chaque transaction est rattachée à une catégorie et, en option, une sous-catégorie et des étiquettes (tags). |
 | TRX-03 | Transactions récurrentes : loyer, abonnements, salaire… avec fréquence (hebdo, mensuelle, annuelle), génération automatique et rappel avant échéance. |
 | TRX-04 | Recherche et filtres : par période, compte, catégorie, montant, texte libre. |
-| TRX-05 | Modification et suppression d'une transaction, avec recalcul immédiat des soldes et budgets. |
+| TRX-05 | Modification et suppression d'une transaction, avec recalcul immédiat des soldes et budgets. Les deux restent possibles **pendant 30 jours après l'enregistrement** de la transaction, et non après ; le délai court depuis la saisie, pas depuis la date de l'opération. Une jambe de virement ne se modifie jamais seule : elle se supprime, et sa jumelle tombe avec elle. |
 | TRX-06 | Import de relevés au format CSV/Excel : correspondance des colonnes assistée, détection des doublons, catégorisation automatique par règles (ex. « libellé contient 'ORANGE' → Téléphonie »). |
 | TRX-07 | Possibilité de joindre une photo de reçu à une transaction. |
 | TRX-08 | Scinder une transaction en plusieurs catégories (ex. courses au supermarché : alimentation + hygiène). |
