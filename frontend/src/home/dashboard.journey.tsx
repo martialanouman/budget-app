@@ -64,7 +64,8 @@ it('answers where the user stands in one screen', async () => {
   await expect.element(screen.getByRole('heading', { name: 'Reste à vivre' })).toBeVisible()
 })
 
-// The DoD of this step: what was just typed is what the dashboard shows.
+// The DoD of this step: what was just typed is what the dashboard shows —
+// without leaving it, now that the entry sheet opens from anywhere (TRX-01).
 it('reflects an expense typed a moment ago', async () => {
   await createSignedInUser('db')
   await anAccount(500_000)
@@ -73,12 +74,10 @@ it('reflects an expense typed a moment ago', async () => {
 
   await expect.element(screen.getByText(xof('500 000'))).toBeVisible()
 
-  await screen.getByRole('link', { name: 'Transactions' }).click()
+  await screen.getByRole('button', { name: 'Nouvelle transaction' }).click()
   await screen.getByLabelText('Montant').fill('75 000')
   await screen.getByLabelText('Catégorie', { exact: true }).selectOptions('Alimentation')
   await screen.getByRole('button', { name: 'Enregistrer' }).click()
-
-  await screen.getByRole('link', { name: 'Accueil' }).click()
 
   await expect.element(screen.getByText(xof('425 000'))).toBeVisible()
 })

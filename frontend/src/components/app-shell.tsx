@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { signOut, useAuth } from '@/auth/auth.ts'
+import { EntrySheet } from '@/transactions/entry-sheet.tsx'
 
 /**
  * The five destinations someone opens the app for. Categories and the account
@@ -64,6 +65,8 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
       {/* Cleared of the tab bar, which is fixed and would otherwise sit on top
           of the last rows of every list. */}
       <main className="mx-auto max-w-3xl space-y-6 p-4 pb-28">{children}</main>
+
+      <EntrySheet />
 
       <nav
         aria-label="Navigation principale"

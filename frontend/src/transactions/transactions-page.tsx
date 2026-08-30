@@ -8,13 +8,11 @@ import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
 import { ENTRY_TYPE_LABELS, type Transaction, isCredit, isTransfer } from '@/lib/collections'
 import { dayLabel, todayLocally } from '@/lib/dates.ts'
-import { QuickEntryForm } from './quick-entry-form.tsx'
 import { TransferForm } from './transfer-form.tsx'
 import { useTransfer } from './transfers-api.ts'
 import {
   type TransactionFilters,
   useDeleteTransaction,
-  useRecordTransaction,
   useTransactions,
 } from './transactions-api.ts'
 
@@ -72,7 +70,6 @@ export function TransactionsPage() {
   const accounts = useAccounts()
   const categories = useCategories()
   const entries = useTransactions(filters)
-  const recordTransaction = useRecordTransaction()
   const deleteTransaction = useDeleteTransaction()
   const makeTransfer = useTransfer()
 
@@ -90,10 +87,9 @@ export function TransactionsPage() {
   const allAccounts = accounts.data ?? []
   const allCategories = categories.data ?? []
 
-  // Entry only offers what is still in use; the filters must keep offering
-  // everything, since archiving exists to keep past entries readable.
+  // The transfer form only offers accounts still in use; the filters must keep
+  // offering everything, since archiving exists to keep past entries readable.
   const openAccounts = allAccounts.filter((account) => !account.archived)
-  const activeCategories = allCategories.filter((category) => category.active)
 
   const ready = accounts.isSuccess && categories.isSuccess
 
@@ -110,21 +106,9 @@ export function TransactionsPage() {
 
   return (
     <AppShell title="Transactions">
-      {ready ? (
-        <QuickEntryForm
-          accounts={openAccounts}
-          categories={activeCategories}
-          failed={recordTransaction.isError}
-          onRecord={(draft) => {
-            recordTransaction.reset()
-
-            return recordTransaction.mutateAsync(draft)
-          }}
-        />
-      ) : (
-        <p>Chargement…</p>
-      )}
-
+      {/* No entry form here: the "+" button in the shell owns that, from every
+          screen. Two ways to type the same expense, one of them reachable only
+          after navigating, is the redundancy TRX-01 exists to remove. */}
       {ready && openAccounts.length >= 2 ? (
         <TransferForm
           accounts={openAccounts}

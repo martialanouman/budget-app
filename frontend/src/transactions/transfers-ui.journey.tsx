@@ -70,7 +70,9 @@ it('hides the transfer form when there is only one account', async () => {
   })
 
   const { screen } = await renderApp('/transactions')
-  await expect.element(screen.getByLabelText('Compte', { exact: true })).toBeVisible()
+  // Waited on an option that only exists once the accounts are in: asserting an
+  // absence before the page has its data would pass whatever the rule is.
+  await expect.element(screen.getByRole('option', { name: 'Compte unique' })).toBeInTheDocument()
 
   await expect
     .element(screen.getByRole('heading', { name: 'Virement entre comptes' }))

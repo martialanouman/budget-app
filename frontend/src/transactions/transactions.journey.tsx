@@ -26,6 +26,7 @@ async function fillEntry(
   amount: string,
   type: string,
 ) {
+  await screen.getByRole('button', { name: 'Nouvelle transaction' }).click()
   await screen.getByLabelText('Montant', { exact: true }).fill(amount)
   await screen.getByLabelText('Type').selectOptions(type)
   await screen.getByLabelText('Compte', { exact: true }).selectOptions('Compte courant')
@@ -41,6 +42,8 @@ it('records an entry from the defaults the screen already shows', async () => {
   await anAccountAndCategory(150_000)
 
   const { screen } = await renderApp('/transactions')
+
+  await screen.getByRole('button', { name: 'Nouvelle transaction' }).click()
   await expect.element(screen.getByLabelText('Compte', { exact: true })).toBeVisible()
 
   // The account keeps whatever the screen shows; only the category, which must
