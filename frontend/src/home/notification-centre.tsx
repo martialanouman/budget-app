@@ -99,7 +99,7 @@ export function NotificationCentre({
               type="button"
               onClick={() => onDismiss(notification.id)}
               aria-label={`Marquer comme lue : ${wording}`}
-              className="rounded-md border border-amber-400 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-amber-700/40"
+              className="min-h-11 rounded-md border border-amber-400 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-amber-700/40"
             >
               Marquer comme lue
             </button>

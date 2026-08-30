@@ -56,7 +56,7 @@ export function ProfilePage() {
             exportData.mutate()
           }}
           disabled={exportData.isPending}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60"
+          className="min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60"
         >
           Télécharger mes données
         </button>

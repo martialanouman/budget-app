@@ -229,7 +229,7 @@ export function TransactionsPage() {
                             ? `Confirmer la suppression ${describes}`
                             : `Supprimer ${describes}`
                         }
-                        className="shrink-0 rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 aria-pressed:border-red-600 aria-pressed:text-red-700"
+                        className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 aria-pressed:border-red-600 aria-pressed:text-red-700"
                         aria-pressed={confirming === entry.id}
                       >
                         {confirming === entry.id ? 'Confirmer' : 'Supprimer'}

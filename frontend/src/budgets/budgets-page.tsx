@@ -54,7 +54,7 @@ function Envelope({
           type="button"
           onClick={onRemove}
           aria-label={`Supprimer l’enveloppe ${budget.expand?.category?.name ?? ''}`}
-          className="rounded-md border border-slate-300 px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+          className="min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
         >
           Supprimer
         </button>
@@ -160,7 +160,7 @@ export function BudgetsPage() {
               duplicate.mutate(month)
             }}
             disabled={duplicate.isPending}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60"
+            className="min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60"
           >
             Dupliquer le mois précédent
           </button>

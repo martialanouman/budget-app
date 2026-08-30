@@ -85,7 +85,7 @@ function CategoryRow({
         type="button"
         onClick={() => onToggle(category)}
         aria-label={`${category.active ? 'Désactiver' : 'Réactiver'} ${category.name}`}
-        className="shrink-0 rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+        className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
       >
         {category.active ? 'Désactiver' : 'Réactiver'}
       </button>
@@ -96,7 +96,7 @@ function CategoryRow({
           type="button"
           onClick={() => onDelete(category)}
           aria-label={`Supprimer ${category.name}`}
-          className="shrink-0 rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+          className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
         >
           Supprimer
         </button>

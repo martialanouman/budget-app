@@ -103,7 +103,7 @@ export function DebtDetailPage({ debtId }: { debtId: string }) {
                 type="button"
                 onClick={() => deletePayment.mutate(payment.id)}
                 aria-label={`Supprimer le remboursement du ${dayLabel(payment.date)}`}
-                className="shrink-0 rounded-md border border-slate-300 px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+                className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
               >
                 Supprimer
               </button>
