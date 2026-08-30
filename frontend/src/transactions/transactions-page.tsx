@@ -187,21 +187,27 @@ export function TransactionsPage() {
 
                   return (
                     <li key={entry.id} className="flex items-center gap-3 p-3">
+                      {/* The amount shares the first line with the title, so the
+                          account and the note get the whole width of the second.
+                          Beside the amount they were cut to "Com…" on a phone —
+                          which is the row's information, not its decoration. */}
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{titleOf(entry)}</span>
+                        <span className="flex items-baseline justify-between gap-2">
+                          <span className="truncate font-medium">{titleOf(entry)}</span>
+                          <span
+                            className={
+                              isCredit(entry.type)
+                                ? 'shrink-0 tabular-nums text-emerald-700'
+                                : 'shrink-0 tabular-nums text-slate-900'
+                            }
+                          >
+                            {signedAmount(entry)}
+                          </span>
+                        </span>
                         <span className="block truncate text-sm text-slate-600">
                           {ENTRY_TYPE_LABELS[entry.type]} · {entry.expand?.account?.name}
                           {entry.note ? ` · ${entry.note}` : ''}
                         </span>
-                      </span>
-                      <span
-                        className={
-                          isCredit(entry.type)
-                            ? 'tabular-nums text-emerald-700'
-                            : 'tabular-nums text-slate-900'
-                        }
-                      >
-                        {signedAmount(entry)}
                       </span>
                       {/* Two steps on purpose: a transaction is hard-deleted, and
                           the button sits millimetres from the amount on a phone. */}

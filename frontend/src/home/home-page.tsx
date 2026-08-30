@@ -1,4 +1,5 @@
 import { formatAmount, toMoney } from '@budget/domain'
+import { useId } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useAccountBalances, useAccounts } from '@/accounts/accounts-api.ts'
 import { useBudgetSpending, useBudgets } from '@/budgets/budgets-api.ts'
@@ -41,31 +42,40 @@ const Figure = ({
   note?: string | undefined
   pending?: boolean
   primary?: boolean
-}) => (
-  <section
-    className={
-      primary
-        ? 'rounded-lg border-2 border-slate-900 bg-white p-4'
-        : 'rounded-md border border-slate-200 bg-white p-3'
-    }
-  >
-    <h2 className="text-sm font-medium text-slate-600">{label}</h2>
-    {pending ? (
-      <p className={primary ? 'py-1' : ''}>
-        <span className="sr-only">Chargement…</span>
-        <span
-          aria-hidden="true"
-          className={`block animate-pulse rounded bg-slate-200 ${primary ? 'h-9 w-56' : 'h-8 w-44'}`}
-        />
-      </p>
-    ) : (
-      <p className={primary ? 'text-3xl font-semibold tabular-nums' : 'text-2xl tabular-nums'}>
-        {value ?? UNKNOWN}
-      </p>
-    )}
-    {note ? <p className="text-sm text-slate-600">{note}</p> : null}
-  </section>
-)
+}) => {
+  const labelId = useId()
+
+  return (
+    // Named after its own heading, so each figure is a region a reader can jump
+    // to — and so the same amount appearing in two of them stays tellable apart.
+    <section
+      aria-labelledby={labelId}
+      className={
+        primary
+          ? 'rounded-lg border-2 border-slate-900 bg-white p-4'
+          : 'rounded-md border border-slate-200 bg-white p-3'
+      }
+    >
+      <h2 id={labelId} className="text-sm font-medium text-slate-600">
+        {label}
+      </h2>
+      {pending ? (
+        <p className={primary ? 'py-1' : ''}>
+          <span className="sr-only">Chargement…</span>
+          <span
+            aria-hidden="true"
+            className={`block animate-pulse rounded bg-slate-200 ${primary ? 'h-9 w-56' : 'h-8 w-44'}`}
+          />
+        </p>
+      ) : (
+        <p className={primary ? 'text-3xl font-semibold tabular-nums' : 'text-2xl tabular-nums'}>
+          {value ?? UNKNOWN}
+        </p>
+      )}
+      {note ? <p className="text-sm text-slate-600">{note}</p> : null}
+    </section>
+  )
+}
 
 export function HomePage() {
   const month = monthOf(todayLocally())
@@ -106,10 +116,15 @@ export function HomePage() {
 
   const budgeted = toMoney((budgets.data ?? []).reduce((sum, budget) => sum + ceilingOf(budget), 0))
 
-  const monthlySpending =
-    summary.isSuccess && budgets.isSuccess
-      ? `${formatAmount(toMoney(summary.data.spent))} sur ${formatAmount(budgeted)}`
-      : undefined
+  // The figure alone, with the ceiling underneath. On one line the two amounts
+  // wrapped mid-sentence at 24px on a phone, and read as one broken number.
+  const monthlySpending = summary.isSuccess ? formatAmount(toMoney(summary.data.spent)) : undefined
+
+  const againstBudget = budgets.isSuccess
+    ? budgeted === 0
+      ? 'Aucune enveloppe définie pour ce mois'
+      : `sur ${formatAmount(budgeted)} d’enveloppes`
+    : undefined
 
   const remaining =
     summary.isSuccess &&
@@ -157,10 +172,8 @@ export function HomePage() {
       <Figure
         label="Dépenses du mois"
         value={monthlySpending}
-        pending={summary.isPending || budgets.isPending}
-        note={
-          budgets.isSuccess && budgeted === 0 ? 'Aucune enveloppe définie pour ce mois' : undefined
-        }
+        pending={summary.isPending}
+        note={againstBudget}
       />
 
       <NotificationCentre

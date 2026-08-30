@@ -56,10 +56,15 @@ it('answers where the user stands in one screen', async () => {
 
   // Total balance across accounts: 600 000 less the 120 000 spent.
   await expect.element(screen.getByText(xof('480 000'))).toBeVisible()
+  // The spend and the ceiling it is measured against, now two elements rather
+  // than one sentence: side by side the two amounts wrapped mid-line on a phone
+  // and read as a single broken number. Scoped to their own figure, since the
+  // same amount appears again in the breakdown below.
+  const spending = screen.getByRole('region', { name: 'Dépenses du mois' })
+
+  await expect.element(spending.getByText(xof('120 000'))).toBeVisible()
   await expect
-    .element(
-      screen.getByText(new RegExp(`${xof('120 000').source}.+${xof('200 000').source}`, 'u')),
-    )
+    .element(spending.getByText(new RegExp(`sur.+${xof('200 000').source}.+enveloppes`, 'u')))
     .toBeVisible()
   await expect.element(screen.getByRole('heading', { name: 'Reste à vivre' })).toBeVisible()
 })
