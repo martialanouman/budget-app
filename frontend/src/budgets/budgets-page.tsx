@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useCategories } from '@/categories/categories-api.ts'
 import { AppShell } from '@/components/app-shell'
 import { FormError } from '@/components/form-feedback'
+import { Meter } from '@/components/meter'
 import { TextField } from '@/components/text-field'
 import { type Budget } from '@/lib/collections'
 import { monthOf, todayLocally } from '@/lib/dates.ts'
@@ -43,10 +44,12 @@ function Envelope({
 
   return (
     <li className="space-y-2 p-3">
-      <div className="flex items-baseline justify-between gap-3">
-        <h3 className="font-medium">{budget.expand?.category?.name}</h3>
-        <span className="text-sm tabular-nums text-slate-600">
-          {`${formatAmount(total)} sur ${formatAmount(cap)}`}
+      <div className="flex items-center gap-3">
+        {/* The spent amount travels with the name and the ceiling moves down to
+            the "Reste" line: the pair wrapped mid-figure on a phone. */}
+        <span className="flex min-w-0 flex-1 items-baseline justify-between gap-2">
+          <h3 className="truncate font-medium">{budget.expand?.category?.name}</h3>
+          <span className="shrink-0 tabular-nums">{formatAmount(total)}</span>
         </span>
         {/* Named after its own envelope: several buttons on the page would
             otherwise read alike to a screen reader. */}
@@ -54,19 +57,23 @@ function Envelope({
           type="button"
           onClick={onRemove}
           aria-label={`Supprimer l’enveloppe ${budget.expand?.category?.name ?? ''}`}
-          className="rounded-md border border-slate-300 px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+          className="min-h-11 shrink-0 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
         >
           Supprimer
         </button>
       </div>
-      <progress
-        value={Math.min(total, cap)}
+      {/* The bar now carries the colour of the threshold it has crossed, which
+          the native <progress> could not — and renders the same everywhere,
+          which it also could not. The wording above stays: colour is never the
+          only carrier of the alert. */}
+      <Meter
+        value={total}
         max={cap}
-        aria-label={`Consommation de l'enveloppe ${budget.expand?.category?.name ?? ''}`}
-        className="h-2 w-full"
+        tone={reached.includes(100) ? 'over' : reached.includes(80) ? 'warning' : 'neutral'}
+        label={`Consommation de l'enveloppe ${budget.expand?.category?.name ?? ''}`}
       />
       <p className="text-sm text-slate-600">
-        {`Reste ${formatAmount(unspent(cap, total))}`}
+        {`Reste ${formatAmount(unspent(cap, total))} sur ${formatAmount(cap)}`}
         {budget.carry_over ? ' · reporté le mois suivant' : ''}
       </p>
       {alert ? (
@@ -160,9 +167,13 @@ export function BudgetsPage() {
               duplicate.mutate(month)
             }}
             disabled={duplicate.isPending}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60"
+            // Spelled out for the reader who cannot see which month is on
+            // screen; two words on it, because the full phrase and the heading
+            // both wrapped onto two lines side by side on a phone.
+            aria-label="Dupliquer le mois précédent"
+            className="min-h-11 shrink-0 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60"
           >
-            Dupliquer le mois précédent
+            Dupliquer
           </button>
         </div>
 

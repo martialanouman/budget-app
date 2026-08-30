@@ -49,11 +49,14 @@ export function QuickEntryForm({
   categories,
   failed,
   onRecord,
+  onRecorded,
 }: {
   accounts: Account[]
   categories: Category[]
   failed: boolean
   onRecord: (draft: TransactionDraft) => Promise<unknown>
+  /** Called once the entry is in and the form has been reset, never before. */
+  onRecorded?: (() => void) | undefined
 }) {
   const { register, handleSubmit, reset, formState } = useForm<
     FormInput,
@@ -77,6 +80,7 @@ export function QuickEntryForm({
     try {
       await onRecord(values)
       reset({ ...values, amount: '', note: '' })
+      onRecorded?.()
     } catch {
       // Surfaced through `failed` below.
     }
@@ -84,7 +88,6 @@ export function QuickEntryForm({
 
   return (
     <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
-      <h2 className="text-lg font-medium">Saisie rapide</h2>
       {failed ? (
         <FormError message="L'enregistrement a échoué. Vérifiez votre connexion et réessayez." />
       ) : null}
@@ -118,13 +121,23 @@ export function QuickEntryForm({
         error={formState.errors.category?.message}
         {...register('category')}
       />
-      <TextField
-        label="Date"
-        type="date"
-        error={formState.errors.date?.message}
-        {...register('date')}
-      />
-      <TextField label="Note" error={formState.errors.note?.message} {...register('note')} />
+      {/* Today and no note are right almost every time. Folded away they cost
+          nothing to skip and stay one tap from being changed — which is the
+          difference between a ten-second entry and a six-field one. */}
+      <details className="rounded-md border border-slate-200 bg-white">
+        <summary className="cursor-pointer px-3 py-3 text-sm font-medium text-slate-700">
+          Date et note
+        </summary>
+        <div className="space-y-4 border-t border-slate-200 p-3">
+          <TextField
+            label="Date"
+            type="date"
+            error={formState.errors.date?.message}
+            {...register('date')}
+          />
+          <TextField label="Note" error={formState.errors.note?.message} {...register('note')} />
+        </div>
+      </details>
       <SubmitButton pending={formState.isSubmitting}>Enregistrer</SubmitButton>
     </form>
   )

@@ -2,7 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { FormError, SubmitButton } from '@/components/form-feedback'
+import { ListSkeleton } from '@/components/list-skeleton'
 import { AppShell } from '@/components/app-shell'
+import { Disclosure } from '@/components/disclosure'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
 import {
@@ -65,8 +67,14 @@ function CategoryRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="flex-1">
-        <span className={category.active ? 'font-medium' : 'font-medium text-slate-400'}>
+      <span className="min-w-0 flex-1">
+        <span
+          className={
+            category.active
+              ? 'block truncate font-medium'
+              : 'block truncate font-medium text-slate-400'
+          }
+        >
           {category.name}
         </span>
         <span className="block text-sm text-slate-600">
@@ -78,9 +86,10 @@ function CategoryRow({
       <button
         type="button"
         onClick={() => onToggle(category)}
-        className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+        aria-label={`${category.active ? 'Désactiver' : 'Réactiver'} ${category.name}`}
+        className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
       >
-        {category.active ? 'Désactiver' : 'Réactiver'} {category.name}
+        {category.active ? 'Désactiver' : 'Réactiver'}
       </button>
       {/* Offered only when it will work. A button that fails teaches the
           obstacle at the costliest moment — after the user has acted. */}
@@ -88,9 +97,10 @@ function CategoryRow({
         <button
           type="button"
           onClick={() => onDelete(category)}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+          aria-label={`Supprimer ${category.name}`}
+          className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
         >
-          Supprimer {category.name}
+          Supprimer
         </button>
       ) : null}
     </div>
@@ -166,28 +176,29 @@ export function CategoriesPage() {
 
   return (
     <AppShell title="Catégories">
-      <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
-        <h2 className="text-lg font-medium">Ajouter une catégorie</h2>
-        {createCategory.isError ? (
-          <FormError message="La création de la catégorie a échoué. Vérifiez votre connexion et réessayez." />
-        ) : null}
-        <TextField label="Nom" error={formState.errors.name?.message} {...register('name')} />
-        <SelectField
-          label="Nature"
-          options={CATEGORY_KINDS.map((kind: CategoryKind) => ({
-            value: kind,
-            label: CATEGORY_KIND_LABELS[kind],
-          }))}
-          error={formState.errors.kind?.message}
-          {...register('kind')}
-        />
-        <SelectField label="Catégorie parente" options={parentOptions} {...register('parent')} />
-        <SubmitButton pending={formState.isSubmitting}>Créer la catégorie</SubmitButton>
-      </form>
+      <Disclosure summary="Ajouter une catégorie">
+        <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
+          {createCategory.isError ? (
+            <FormError message="La création de la catégorie a échoué. Vérifiez votre connexion et réessayez." />
+          ) : null}
+          <TextField label="Nom" error={formState.errors.name?.message} {...register('name')} />
+          <SelectField
+            label="Nature"
+            options={CATEGORY_KINDS.map((kind: CategoryKind) => ({
+              value: kind,
+              label: CATEGORY_KIND_LABELS[kind],
+            }))}
+            error={formState.errors.kind?.message}
+            {...register('kind')}
+          />
+          <SelectField label="Catégorie parente" options={parentOptions} {...register('parent')} />
+          <SubmitButton pending={formState.isSubmitting}>Créer la catégorie</SubmitButton>
+        </form>
+      </Disclosure>
 
       <section className="space-y-2">
         <h2 className="text-lg font-medium">Mes catégories</h2>
-        {categories.isPending ? <p>Chargement…</p> : null}
+        {categories.isPending ? <ListSkeleton /> : null}
         {categories.isError ? <FormError message="Impossible de charger vos catégories." /> : null}
         {listMutationFailed ? (
           <FormError message="L'opération sur cette catégorie a échoué. Vérifiez votre connexion et réessayez." />

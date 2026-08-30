@@ -13,6 +13,7 @@ beforeEach(() => {
 it('creates two accounts and archives one of them', async () => {
   await createSignedInUser('owner')
   const { screen } = await renderApp('/accounts')
+  await screen.getByRole('heading', { name: 'Ajouter un compte' }).click()
 
   await screen.getByLabelText('Nom').fill('Compte courant')
   await screen.getByLabelText('Solde initial').fill('150 000')
@@ -71,6 +72,7 @@ it('keeps showing the valid balances when one row is out of range', async () => 
   })
 
   const { screen } = await renderApp('/accounts')
+  await screen.getByRole('heading', { name: 'Ajouter un compte' }).click()
 
   await expect.element(screen.getByText(xof('50 000'))).toBeVisible()
 })
@@ -80,6 +82,7 @@ it.each(['1500,75', '1500.75', '99999999999999999999'])(
   async (amount) => {
     await createSignedInUser('owner')
     const { screen } = await renderApp('/accounts')
+    await screen.getByRole('heading', { name: 'Ajouter un compte' }).click()
 
     await screen.getByLabelText('Nom').fill('Compte bancaire')
     await screen.getByLabelText('Solde initial').fill(amount)
@@ -95,6 +98,7 @@ it.each(['1500,75', '1500.75', '99999999999999999999'])(
 it('reports an over-long name on the field itself', async () => {
   await createSignedInUser('owner')
   const { screen } = await renderApp('/accounts')
+  await screen.getByRole('heading', { name: 'Ajouter un compte' }).click()
 
   await screen.getByLabelText('Nom').fill('x'.repeat(61))
   await screen.getByLabelText('Solde initial').fill('1000')

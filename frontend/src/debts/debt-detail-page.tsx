@@ -2,6 +2,7 @@ import { formatAmount, toMoney } from '@budget/domain'
 import { AppShell } from '@/components/app-shell'
 import { FormError } from '@/components/form-feedback'
 import { DEBT_DIRECTION_LABELS, DEBT_KIND_LABELS } from '@/lib/collections'
+import { dayLabel } from '@/lib/dates.ts'
 import { PaymentForm } from './payment-form.tsx'
 import { estimatedEnd, owedOn, scheduleOf } from './debt-figures.ts'
 import { useDebt, useDebtPayments, useDeletePayment, useRecordPayment } from './debts-api.ts'
@@ -42,7 +43,7 @@ export function DebtDetailPage({ debtId }: { debtId: string }) {
           Mensualité {formatAmount(toMoney(debt.data.monthly_payment))} le {debt.data.due_day} du
           mois
           {end
-            ? ` · fin estimée le ${end}`
+            ? ` · fin estimée le ${dayLabel(end)}`
             : owedOn(debt.data) <= 0
               ? ' · soldée'
               : ' · la mensualité ne couvre pas les intérêts'}
@@ -71,7 +72,7 @@ export function DebtDetailPage({ debtId }: { debtId: string }) {
           {schedule.map((instalment) => (
             <li key={instalment.number} className="flex justify-between gap-3 p-3 text-sm">
               <span>
-                {instalment.number}. {instalment.dueDate}
+                {instalment.number}. {dayLabel(instalment.dueDate)}
               </span>
               <span className="tabular-nums">
                 {`${formatAmount(instalment.principal)} de capital · ${formatAmount(instalment.interest)} d’intérêts`}
@@ -91,8 +92,8 @@ export function DebtDetailPage({ debtId }: { debtId: string }) {
         <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
           {(payments.data ?? []).map((payment) => (
             <li key={payment.id} className="flex items-center gap-3 p-3 text-sm">
-              <span className="flex-1">
-                {payment.date.slice(0, 10)}
+              <span className="min-w-0 flex-1">
+                {dayLabel(payment.date)}
                 <span className="block text-slate-600 tabular-nums">
                   {`${formatAmount(toMoney(payment.principal_part))} de capital · ${formatAmount(toMoney(payment.interest_part))} d’intérêts`}
                 </span>
@@ -101,8 +102,8 @@ export function DebtDetailPage({ debtId }: { debtId: string }) {
               <button
                 type="button"
                 onClick={() => deletePayment.mutate(payment.id)}
-                aria-label={`Supprimer le remboursement du ${payment.date.slice(0, 10)}`}
-                className="rounded-md border border-slate-300 px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+                aria-label={`Supprimer le remboursement du ${dayLabel(payment.date)}`}
+                className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
               >
                 Supprimer
               </button>

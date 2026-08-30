@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { AppShell } from '@/components/app-shell'
 import { FormError } from '@/components/form-feedback'
 import { DEBT_DIRECTION_LABELS, DEBT_KIND_LABELS, type Debt } from '@/lib/collections'
-import { monthOf, todayLocally } from '@/lib/dates.ts'
+import { dayLabel, monthOf, todayLocally } from '@/lib/dates.ts'
 import { DebtForm } from './debt-form.tsx'
 import { estimatedEnd, owedOn, shareOfIncome, totalOwed } from './debt-figures.ts'
 import { useCreateDebt, useDebts, useMonthlyIncome } from './debts-api.ts'
@@ -27,7 +27,7 @@ function DebtRow({ debt }: { debt: Debt }) {
       <p className="tabular-nums">{formatAmount(owedOn(debt))}</p>
       <p className="text-sm text-slate-600">
         {end
-          ? `Fin estimée le ${end}`
+          ? `Fin estimée le ${dayLabel(end)}`
           : owedOn(debt) <= 0
             ? 'Soldée'
             : 'La mensualité ne couvre pas les intérêts'}

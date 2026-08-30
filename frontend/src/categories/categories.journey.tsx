@@ -41,6 +41,7 @@ it('lists the default categories', async () => {
 it('adds a sub-category and lets it be deactivated too', async () => {
   await createSignedInUser('cats')
   const { screen } = await renderApp('/categories')
+  await screen.getByRole('heading', { name: 'Ajouter une catégorie' }).click()
 
   await expect
     .element(screen.getByRole('button', { name: 'Désactiver Alimentation' }))
@@ -69,6 +70,7 @@ it('deactivates a category without losing it', async () => {
 it('stops offering a deactivated category as a parent', async () => {
   await createSignedInUser('cats')
   const { screen } = await renderApp('/categories')
+  await screen.getByRole('heading', { name: 'Ajouter une catégorie' }).click()
 
   await screen.getByRole('button', { name: 'Désactiver Loisirs' }).click()
   await expect.element(screen.getByRole('button', { name: 'Réactiver Loisirs' })).toBeVisible()
@@ -83,6 +85,7 @@ it('stops offering a deactivated category as a parent', async () => {
 it('does not file a new category under a parent deactivated meanwhile', async () => {
   await createSignedInUser('cats')
   const { screen } = await renderApp('/categories')
+  await screen.getByRole('heading', { name: 'Ajouter une catégorie' }).click()
 
   await screen.getByLabelText('Catégorie parente').selectOptions('Loisirs')
   await screen.getByRole('button', { name: 'Désactiver Loisirs' }).click()
@@ -114,6 +117,7 @@ it('never exposes another owner’s categories', async () => {
 it('deletes a category nothing points at', async () => {
   await createSignedInUser('cats')
   const { screen } = await renderApp('/categories')
+  await screen.getByRole('heading', { name: 'Ajouter une catégorie' }).click()
 
   await screen.getByLabelText('Nom').fill('Créée par erreur')
   await screen.getByRole('button', { name: 'Créer la catégorie' }).click()

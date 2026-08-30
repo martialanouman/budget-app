@@ -3,6 +3,7 @@ import { parseAmount } from '@budget/domain'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { FormError, SubmitButton } from '@/components/form-feedback'
+import { Disclosure } from '@/components/disclosure'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
 import {
@@ -101,60 +102,61 @@ export function DebtForm({
   })
 
   return (
-    <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
-      <h2 className="text-lg font-medium">Nouvelle dette</h2>
-      {failed ? <FormError message="La dette n'a pas pu être enregistrée." /> : null}
-      <TextField
-        label="Créancier"
-        error={formState.errors.creditor?.message}
-        {...register('creditor')}
-      />
-      <SelectField
-        label="Type"
-        options={DEBT_KINDS.map((kind) => ({ value: kind, label: DEBT_KIND_LABELS[kind] }))}
-        error={formState.errors.kind?.message}
-        {...register('kind')}
-      />
-      <SelectField
-        label="Sens"
-        options={DEBT_DIRECTIONS.map((direction) => ({
-          value: direction,
-          label: DEBT_DIRECTION_LABELS[direction],
-        }))}
-        error={formState.errors.direction?.message}
-        {...register('direction')}
-      />
-      <TextField
-        label="Montant emprunté"
-        inputMode="numeric"
-        error={formState.errors.initialAmount?.message}
-        {...register('initialAmount')}
-      />
-      <TextField
-        label="Mensualité"
-        inputMode="numeric"
-        error={formState.errors.monthlyPayment?.message}
-        {...register('monthlyPayment')}
-      />
-      <TextField
-        label="Taux annuel (%)"
-        inputMode="decimal"
-        error={formState.errors.interestRate?.message}
-        {...register('interestRate')}
-      />
-      <TextField
-        label="Jour d’échéance"
-        inputMode="numeric"
-        error={formState.errors.dueDay?.message}
-        {...register('dueDay')}
-      />
-      <TextField
-        label="Date de début"
-        type="date"
-        error={formState.errors.startDate?.message}
-        {...register('startDate')}
-      />
-      <SubmitButton pending={formState.isSubmitting}>Ajouter la dette</SubmitButton>
-    </form>
+    <Disclosure summary="Nouvelle dette">
+      <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
+        {failed ? <FormError message="La dette n'a pas pu être enregistrée." /> : null}
+        <TextField
+          label="Créancier"
+          error={formState.errors.creditor?.message}
+          {...register('creditor')}
+        />
+        <SelectField
+          label="Type"
+          options={DEBT_KINDS.map((kind) => ({ value: kind, label: DEBT_KIND_LABELS[kind] }))}
+          error={formState.errors.kind?.message}
+          {...register('kind')}
+        />
+        <SelectField
+          label="Sens"
+          options={DEBT_DIRECTIONS.map((direction) => ({
+            value: direction,
+            label: DEBT_DIRECTION_LABELS[direction],
+          }))}
+          error={formState.errors.direction?.message}
+          {...register('direction')}
+        />
+        <TextField
+          label="Montant emprunté"
+          inputMode="numeric"
+          error={formState.errors.initialAmount?.message}
+          {...register('initialAmount')}
+        />
+        <TextField
+          label="Mensualité"
+          inputMode="numeric"
+          error={formState.errors.monthlyPayment?.message}
+          {...register('monthlyPayment')}
+        />
+        <TextField
+          label="Taux annuel (%)"
+          inputMode="decimal"
+          error={formState.errors.interestRate?.message}
+          {...register('interestRate')}
+        />
+        <TextField
+          label="Jour d’échéance"
+          inputMode="numeric"
+          error={formState.errors.dueDay?.message}
+          {...register('dueDay')}
+        />
+        <TextField
+          label="Date de début"
+          type="date"
+          error={formState.errors.startDate?.message}
+          {...register('startDate')}
+        />
+        <SubmitButton pending={formState.isSubmitting}>Ajouter la dette</SubmitButton>
+      </form>
+    </Disclosure>
   )
 }

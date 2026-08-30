@@ -36,6 +36,7 @@ it('alerts on the budget screen after an expense busts the cap', async () => {
 
   const { screen } = await renderApp('/transactions')
 
+  await screen.getByRole('button', { name: 'Nouvelle transaction' }).click()
   await screen.getByLabelText('Montant').fill('120 000')
   await screen.getByLabelText('Catégorie', { exact: true }).selectOptions('Alimentation')
   await screen.getByRole('button', { name: 'Enregistrer' }).click()
@@ -51,6 +52,7 @@ it('lets the user dismiss an alert they have seen', async () => {
 
   const { screen } = await renderApp('/transactions')
 
+  await screen.getByRole('button', { name: 'Nouvelle transaction' }).click()
   await screen.getByLabelText('Montant').fill('85 000')
   await screen.getByLabelText('Catégorie', { exact: true }).selectOptions('Alimentation')
   await screen.getByRole('button', { name: 'Enregistrer' }).click()

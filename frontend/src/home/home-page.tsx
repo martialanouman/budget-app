@@ -1,4 +1,5 @@
 import { formatAmount, toMoney } from '@budget/domain'
+import { useId } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useAccountBalances, useAccounts } from '@/accounts/accounts-api.ts'
 import { useBudgetSpending, useBudgets } from '@/budgets/budgets-api.ts'
@@ -20,21 +21,61 @@ import { upcomingDues } from './upcoming-dues.ts'
  */
 const UNKNOWN = '—'
 
+/**
+ * Three identical cards asked the reader to decide which figure mattered.
+ * `primary` answers that: what is left to live on is the number this screen is
+ * opened for, and it should not have to be found among its neighbours.
+ *
+ * `pending` separates "not read yet" from "could not be read". Both used to
+ * show the same dash, so a figure still in flight was indistinguishable from
+ * one the server refused.
+ */
 const Figure = ({
   label,
   value,
   note,
+  pending = false,
+  primary = false,
 }: {
   label: string
   value: string | undefined
   note?: string | undefined
-}) => (
-  <section className="rounded-md border border-slate-200 bg-white p-3">
-    <h2 className="text-lg font-medium">{label}</h2>
-    <p className="text-2xl tabular-nums">{value ?? UNKNOWN}</p>
-    {note ? <p className="text-sm text-slate-600">{note}</p> : null}
-  </section>
-)
+  pending?: boolean
+  primary?: boolean
+}) => {
+  const labelId = useId()
+
+  return (
+    // Named after its own heading, so each figure is a region a reader can jump
+    // to — and so the same amount appearing in two of them stays tellable apart.
+    <section
+      aria-labelledby={labelId}
+      className={
+        primary
+          ? 'rounded-lg border-2 border-slate-900 bg-white p-4'
+          : 'rounded-md border border-slate-200 bg-white p-3'
+      }
+    >
+      <h2 id={labelId} className="text-sm font-medium text-slate-600">
+        {label}
+      </h2>
+      {pending ? (
+        <p className={primary ? 'py-1' : ''}>
+          <span className="sr-only">Chargement…</span>
+          <span
+            aria-hidden="true"
+            className={`block animate-pulse rounded bg-slate-200 ${primary ? 'h-9 w-56' : 'h-8 w-44'}`}
+          />
+        </p>
+      ) : (
+        <p className={primary ? 'text-3xl font-semibold tabular-nums' : 'text-2xl tabular-nums'}>
+          {value ?? UNKNOWN}
+        </p>
+      )}
+      {note ? <p className="text-sm text-slate-600">{note}</p> : null}
+    </section>
+  )
+}
 
 export function HomePage() {
   const month = monthOf(todayLocally())
@@ -75,10 +116,15 @@ export function HomePage() {
 
   const budgeted = toMoney((budgets.data ?? []).reduce((sum, budget) => sum + ceilingOf(budget), 0))
 
-  const monthlySpending =
-    summary.isSuccess && budgets.isSuccess
-      ? `${formatAmount(toMoney(summary.data.spent))} sur ${formatAmount(budgeted)}`
-      : undefined
+  // The figure alone, with the ceiling underneath. On one line the two amounts
+  // wrapped mid-sentence at 24px on a phone, and read as one broken number.
+  const monthlySpending = summary.isSuccess ? formatAmount(toMoney(summary.data.spent)) : undefined
+
+  const againstBudget = budgets.isSuccess
+    ? budgeted === 0
+      ? 'Aucune enveloppe définie pour ce mois'
+      : `sur ${formatAmount(budgeted)} d’enveloppes`
+    : undefined
 
   const remaining =
     summary.isSuccess &&
@@ -102,20 +148,32 @@ export function HomePage() {
 
   return (
     <AppShell title="Où j’en suis">
-      <Figure label="Solde total" value={totalBalance()} />
+      {/* The one figure a spend is decided against, so it leads. */}
+      <Figure
+        primary
+        label="Reste à vivre"
+        value={remaining}
+        pending={
+          summary.isPending ||
+          budgets.isPending ||
+          spending.isPending ||
+          debts.isPending ||
+          payments.isPending
+        }
+        note="Revenus du mois, moins les dépenses réalisées, ce qui reste à payer sur les charges fixes et les échéances de dettes."
+      />
+
+      <Figure
+        label="Solde total"
+        value={totalBalance()}
+        pending={accounts.isPending || balances.isPending}
+      />
 
       <Figure
         label="Dépenses du mois"
         value={monthlySpending}
-        note={
-          budgets.isSuccess && budgeted === 0 ? 'Aucune enveloppe définie pour ce mois' : undefined
-        }
-      />
-
-      <Figure
-        label="Reste à vivre"
-        value={remaining}
-        note="Revenus du mois, moins les dépenses réalisées, ce qui reste à payer sur les charges fixes et les échéances de dettes."
+        pending={summary.isPending}
+        note={againstBudget}
       />
 
       <NotificationCentre

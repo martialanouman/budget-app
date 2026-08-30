@@ -3,7 +3,9 @@ import { formatAmount, parseAmount } from '@budget/domain'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { FormError, SubmitButton } from '@/components/form-feedback'
+import { ListSkeleton } from '@/components/list-skeleton'
 import { AppShell } from '@/components/app-shell'
+import { Disclosure } from '@/components/disclosure'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
 import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, type Account } from '@/lib/collections'
@@ -89,30 +91,34 @@ export function AccountsPage() {
 
   return (
     <AppShell title="Comptes">
-      <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
-        <h2 className="text-lg font-medium">Ajouter un compte</h2>
-        {createAccount.isError ? (
-          <FormError message="La création du compte a échoué. Vérifiez votre connexion et réessayez." />
-        ) : null}
-        <TextField label="Nom" error={formState.errors.name?.message} {...register('name')} />
-        <SelectField
-          label="Type"
-          options={ACCOUNT_TYPES.map((type) => ({ value: type, label: ACCOUNT_TYPE_LABELS[type] }))}
-          error={formState.errors.type?.message}
-          {...register('type')}
-        />
-        <TextField
-          label="Solde initial"
-          inputMode="numeric"
-          error={formState.errors.initialBalance?.message}
-          {...register('initialBalance')}
-        />
-        <SubmitButton pending={formState.isSubmitting}>Créer le compte</SubmitButton>
-      </form>
+      <Disclosure summary="Ajouter un compte">
+        <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
+          {createAccount.isError ? (
+            <FormError message="La création du compte a échoué. Vérifiez votre connexion et réessayez." />
+          ) : null}
+          <TextField label="Nom" error={formState.errors.name?.message} {...register('name')} />
+          <SelectField
+            label="Type"
+            options={ACCOUNT_TYPES.map((type) => ({
+              value: type,
+              label: ACCOUNT_TYPE_LABELS[type],
+            }))}
+            error={formState.errors.type?.message}
+            {...register('type')}
+          />
+          <TextField
+            label="Solde initial"
+            inputMode="numeric"
+            error={formState.errors.initialBalance?.message}
+            {...register('initialBalance')}
+          />
+          <SubmitButton pending={formState.isSubmitting}>Créer le compte</SubmitButton>
+        </form>
+      </Disclosure>
 
       <section className="space-y-2">
         <h2 className="text-lg font-medium">Mes comptes</h2>
-        {accounts.isPending ? <p>Chargement…</p> : null}
+        {accounts.isPending ? <ListSkeleton /> : null}
         {accounts.isError ? <FormError message="Impossible de charger vos comptes." /> : null}
         {listMutationFailed ? (
           <FormError message="L'opération sur ce compte a échoué. Vérifiez votre connexion et réessayez." />
@@ -125,8 +131,8 @@ export function AccountsPage() {
 
             return (
               <li key={account.id} className="flex items-center gap-3 p-3">
-                <span className="flex-1">
-                  <span className="font-medium">{account.name}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{account.name}</span>
                   <span className="block text-sm text-slate-600">
                     {ACCOUNT_TYPE_LABELS[account.type]}
                   </span>
@@ -137,9 +143,10 @@ export function AccountsPage() {
                 <button
                   type="button"
                   onClick={() => archive(account.id)}
-                  className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+                  aria-label={`Archiver ${account.name}`}
+                  className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
                 >
-                  Archiver {account.name}
+                  Archiver
                 </button>
               </li>
             )
@@ -153,13 +160,14 @@ export function AccountsPage() {
           <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
             {archived.map((account) => (
               <li key={account.id} className="flex items-center gap-3 p-3">
-                <span className="flex-1 text-slate-600">{account.name}</span>
+                <span className="min-w-0 flex-1 truncate text-slate-600">{account.name}</span>
                 <button
                   type="button"
                   onClick={() => restore(account.id)}
-                  className="rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+                  aria-label={`Restaurer ${account.name}`}
+                  className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
                 >
-                  Restaurer {account.name}
+                  Restaurer
                 </button>
               </li>
             ))}

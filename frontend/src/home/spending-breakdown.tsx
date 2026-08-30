@@ -1,4 +1,5 @@
 import { formatAmount, toMoney } from '@budget/domain'
+import { Meter } from '@/components/meter'
 import { type BudgetSpending, type Category } from '@/lib/collections'
 
 const TOP = 5
@@ -45,12 +46,7 @@ export function SpendingBreakdown({
             </div>
             {/* The figure sits beside the bar rather than inside it: the bar is
                 a comparison, not the information. */}
-            <div className="h-2 w-full rounded-full bg-slate-200" aria-hidden="true">
-              <div
-                className="h-2 rounded-full bg-slate-900"
-                style={{ width: `${largest === 0 ? 0 : Math.round((row.spent * 100) / largest)}%` }}
-              />
-            </div>
+            <Meter value={row.spent} max={largest} label={`Part de ${nameOf(row.category)}`} />
           </li>
         ))}
       </ul>

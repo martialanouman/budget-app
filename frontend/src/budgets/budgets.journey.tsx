@@ -45,6 +45,7 @@ it('sets a cap on a category and shows what is left', async () => {
   await spend(30_000, 'Alimentation')
 
   const { screen } = await renderApp('/budgets')
+  await screen.getByRole('heading', { name: 'Définir une enveloppe' }).click()
 
   await screen.getByLabelText('Catégorie').selectOptions('Alimentation')
   await screen.getByLabelText('Plafond mensuel').fill('100 000')
@@ -64,6 +65,7 @@ it('announces the 80 % threshold in words', async () => {
   await spend(80_000, 'Alimentation')
 
   const { screen } = await renderApp('/budgets')
+  await screen.getByRole('heading', { name: 'Définir une enveloppe' }).click()
 
   await screen.getByLabelText('Catégorie').selectOptions('Alimentation')
   await screen.getByLabelText('Plafond mensuel').fill('100 000')
@@ -78,6 +80,7 @@ it('says when the cap is exceeded', async () => {
   await spend(120_000, 'Alimentation')
 
   const { screen } = await renderApp('/budgets')
+  await screen.getByRole('heading', { name: 'Définir une enveloppe' }).click()
 
   await screen.getByLabelText('Catégorie').selectOptions('Alimentation')
   await screen.getByLabelText('Plafond mensuel').fill('100 000')
@@ -94,6 +97,7 @@ it('counts only the month on screen', async () => {
   await spend(90_000, 'Alimentation', '2026-01-15')
 
   const { screen } = await renderApp('/budgets')
+  await screen.getByRole('heading', { name: 'Définir une enveloppe' }).click()
 
   await screen.getByLabelText('Catégorie').selectOptions('Alimentation')
   await screen.getByLabelText('Plafond mensuel').fill('100 000')

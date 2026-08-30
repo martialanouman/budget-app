@@ -30,14 +30,15 @@ it('transfers between accounts and leaves the total unchanged', async () => {
 
   const { screen } = await renderApp('/transactions')
 
+  await screen.getByRole('heading', { name: 'Virement entre comptes' }).click()
   await screen.getByLabelText('Montant à transférer').fill('30 000')
   await screen.getByLabelText('Depuis le compte').selectOptions('Compte courant')
   await screen.getByLabelText('Vers le compte').selectOptions('Épargne')
   await screen.getByRole('button', { name: 'Transférer' }).click()
 
-  // Matched loosely: the row carries today's date, so pinning it would make
-  // this test start failing tomorrow.
-  await expect.element(screen.getByText(/^Virement sortant · .+ · Compte courant$/u)).toBeVisible()
+  // The day now heads its own group, so the row itself carries only what
+  // distinguishes it from the others — and this can be matched exactly.
+  await expect.element(screen.getByText('Virement sortant · Compte courant')).toBeVisible()
 
   await screen.getByRole('link', { name: 'Comptes' }).click()
 
@@ -51,6 +52,7 @@ it('refuses a transfer to the same account', async () => {
 
   const { screen } = await renderApp('/transactions')
 
+  await screen.getByRole('heading', { name: 'Virement entre comptes' }).click()
   await screen.getByLabelText('Montant à transférer').fill('10 000')
   await screen.getByLabelText('Depuis le compte').selectOptions('Épargne')
   await screen.getByLabelText('Vers le compte').selectOptions('Épargne')
@@ -70,7 +72,9 @@ it('hides the transfer form when there is only one account', async () => {
   })
 
   const { screen } = await renderApp('/transactions')
-  await expect.element(screen.getByLabelText('Compte', { exact: true })).toBeVisible()
+  // Waited on an option that only exists once the accounts are in: asserting an
+  // absence before the page has its data would pass whatever the rule is.
+  await expect.element(screen.getByRole('option', { name: 'Compte unique' })).toBeInTheDocument()
 
   await expect
     .element(screen.getByRole('heading', { name: 'Virement entre comptes' }))
@@ -85,6 +89,7 @@ it('names each leg’s delete button after its own account', async () => {
 
   const { screen } = await renderApp('/transactions')
 
+  await screen.getByRole('heading', { name: 'Virement entre comptes' }).click()
   await screen.getByLabelText('Montant à transférer').fill('30 000')
   await screen.getByLabelText('Depuis le compte').selectOptions('Compte courant')
   await screen.getByLabelText('Vers le compte').selectOptions('Épargne')

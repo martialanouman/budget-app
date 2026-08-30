@@ -84,6 +84,7 @@ it('passes an automated WCAG AA pass on the entry form', async () => {
 
   const { screen } = await renderApp('/transactions')
 
+  await screen.getByRole('button', { name: 'Nouvelle transaction' }).click()
   await expect.element(screen.getByLabelText('Montant')).toBeVisible()
 
   expect(await violations()).toEqual([])
