@@ -39,14 +39,21 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
     <div className="min-h-dvh bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 pt-2">
-          {/* Which account this is, on every screen rather than on one: the
-              sign-out button sits beside it, and pressing it should never be
-              a guess about whose data is about to disappear.
-              The address stands in until a name is given — nobody has one
-              before they write it, and "Bon retour," followed by nothing
-              greets no one. */}
-          <span className="min-w-0 truncate text-xs text-slate-600">
-            Bon retour, {name || email}
+          {/* The greeting, and under it which account is being greeted.
+              The sign-out button sits beside both, and pressing it should
+              never be a guess about whose data is about to disappear — a
+              greeting alone stopped saying that, on a shared device or between
+              two people who go by the same first name.
+              The address stands in as the greeting until a name is given —
+              nobody has one before they write it, and "Bon retour," followed
+              by nothing greets no one — and then moves to its own line rather
+              than sharing one, where a long name would have truncated it away
+              on a phone. */}
+          <span className="min-w-0">
+            <span className="block truncate text-xs text-slate-600">
+              Bon retour, {name || email}
+            </span>
+            {name ? <span className="block truncate text-xs text-slate-500">{email}</span> : null}
           </span>
           <button
             type="button"

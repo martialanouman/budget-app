@@ -103,3 +103,47 @@ it('follows the name when the record changes under it', async () => {
 
   await expect.element(screen.getByText('Bon retour, Aya')).toBeVisible()
 })
+
+// The greeting replaced the address, and the sign-out button is still beside
+// it: on a shared device, or between two people with the same first name, the
+// header stopped saying whose data that button is about to destroy. The
+// greeting is what was asked for; the address is what the line was for.
+it('keeps the address in view once a name greets in its place', async () => {
+  const email = await createSignedInUser('profile')
+  const { screen } = await renderApp('/profile')
+
+  await screen.getByLabelText('Nom').fill('Aya')
+  await screen.getByRole('button', { name: 'Enregistrer mon nom' }).click()
+
+  await expect.element(screen.getByText('Bon retour, Aya')).toBeVisible()
+  await expect.element(screen.getByText(email, { exact: true })).toBeVisible()
+})
+
+// The export section directly below says when it is done; this one said
+// nothing, so a screen reader heard nothing and re-saving an unchanged name
+// gave no sign the click had landed. WCAG 2.1 SC 4.1.3, which is AA.
+it('says the name was saved', async () => {
+  await createSignedInUser('profile')
+  const { screen } = await renderApp('/profile')
+
+  await screen.getByLabelText('Nom').fill('Aya')
+  await screen.getByRole('button', { name: 'Enregistrer mon nom' }).click()
+
+  await expect.element(screen.getByText(/Votre nom a été enregistré/u)).toBeVisible()
+})
+
+// The field was seeded once and never looked again. With /profile open in two
+// tabs, LocalAuthStore carries the other tab's save into this one — the header
+// follows it, the input does not — and saving here writes the older name back
+// over the newer one.
+it('follows a name saved somewhere else rather than overwriting it', async () => {
+  await createSignedInUser('profile')
+  const { screen } = await renderApp('/profile')
+
+  await expect.element(screen.getByLabelText('Nom')).toHaveValue('')
+
+  const record = pb.authStore.record!
+  pb.authStore.save(pb.authStore.token, { ...record, name: 'Aya' })
+
+  await expect.element(screen.getByLabelText('Nom')).toHaveValue('Aya')
+})
