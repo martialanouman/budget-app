@@ -1,14 +1,25 @@
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { type Money } from '@budget/domain'
 import { type Transaction, type TransactionType } from '@/lib/collections'
+import { nextMonth } from '@/lib/dates.ts'
 import { useDerivedMutation } from '@/lib/mutations.ts'
 import { pb } from '@/lib/pocketbase'
 
 const transactions = () => pb.collection('transactions')
 
+/**
+ * Large enough that a phone screen is filled by the first page and most months
+ * need only one, small enough that the whole history is never the price of
+ * opening the screen. It also bounds what an invalidation costs: TanStack
+ * refetches every loaded page, so few large pages beat many small ones.
+ */
+const PAGE_SIZE = 50
+
 export type TransactionFilters = {
   account?: string
   category?: string
+  /** A calendar month, `YYYY-MM`. */
+  month?: string
   from?: string
   to?: string
   search?: string
@@ -35,6 +46,16 @@ function toFilter(filters: TransactionFilters) {
   // Dates are stored as full timestamps, so a date-only upper bound would drop
   // every entry made after midnight on the closing day.
   if (filters.to) clauses.push(pb.filter('date <= {:to}', { to: `${filters.to} 23:59:59` }))
+  if (filters.month) {
+    // Bounded below by the first of the month and above by the first of the
+    // next, which is why nothing here has to know how long a month is.
+    clauses.push(
+      pb.filter('date >= {:from} && date < {:until}', {
+        from: `${filters.month}-01 00:00:00`,
+        until: `${nextMonth(filters.month)}-01 00:00:00`,
+      }),
+    )
+  }
   if (filters.search) {
     clauses.push(pb.filter('note ~ {:search}', { search: literal(filters.search) }))
   }
@@ -42,17 +63,51 @@ function toFilter(filters: TransactionFilters) {
   return clauses.join(' && ')
 }
 
+/**
+ * Newest first, and total. `date` ties for every entry of a day and `created`
+ * ties too — seeded fixtures share an instant, and so do two entries typed
+ * within the same millisecond — so without `id` the order between tied rows is
+ * left to SQLite, which owes no promise across two calls.
+ *
+ * Measured, and worth stating plainly: removing `id` does NOT break the paging
+ * test. The query plan is the same for both pages, so ties come back in the
+ * same order today. `id` is here because that equality is a property of the
+ * plan and not of the query — a filter that picks another index would resolve
+ * them differently — and because the index added in 1787600000 carries it, so
+ * it costs nothing. It is a guard by construction, not a measured fix.
+ */
+const NEWEST_FIRST = '-date,-created,-id'
+
 export function useTransactions(filters: TransactionFilters) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['transactions', filters],
-    queryFn: () =>
-      transactions().getFullList<Transaction>({
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      transactions().getList<Transaction>(pageParam, PAGE_SIZE, {
         filter: toFilter(filters),
-        // Entries typed the same day share a midnight timestamp, so `-created`
-        // breaks the tie and keeps the newest first.
-        sort: '-date,-created',
+        sort: NEWEST_FIRST,
         expand: 'account,category',
       }),
+    // totalPages is what says whether another page exists, so the count is
+    // worth its COUNT(*): skipTotal would leave the list unable to stop.
+    getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
+  })
+}
+
+/**
+ * The month of the owner's oldest entry, which bounds the month filter. Asked
+ * of the server as a single row rather than derived from what is on screen: the
+ * list is paginated, so the entries in hand say nothing about how far back the
+ * history goes.
+ */
+export function useEarliestMonth() {
+  return useQuery({
+    queryKey: ['transactions', 'earliest'],
+    queryFn: async () => {
+      const first = await transactions().getList<Transaction>(1, 1, { sort: 'date' })
+
+      return first.items[0]?.date.slice(0, 7)
+    },
   })
 }
 

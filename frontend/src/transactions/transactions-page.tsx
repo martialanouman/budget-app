@@ -1,5 +1,5 @@
 import { EDIT_WINDOW_DAYS, formatAmount, remainsEditable, toMoney } from '@budget/domain'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAccounts } from '@/accounts/accounts-api.ts'
 import { useCategories } from '@/categories/categories-api.ts'
 import { AppShell } from '@/components/app-shell'
@@ -9,12 +9,13 @@ import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
 import { ENTRY_TYPE_LABELS, type Transaction, isCredit, isTransfer } from '@/lib/collections'
 import { EditEntrySheet } from './edit-entry-sheet.tsx'
-import { dayLabel, todayLocally } from '@/lib/dates.ts'
+import { dayLabel, monthLabel, monthOf, monthsFrom, todayLocally } from '@/lib/dates.ts'
 import { TransferForm } from './transfer-form.tsx'
 import { useTransfer } from './transfers-api.ts'
 import {
   type TransactionFilters,
   useDeleteTransaction,
+  useEarliestMonth,
   useTransactions,
 } from './transactions-api.ts'
 
@@ -84,6 +85,7 @@ export function TransactionsPage() {
   const [search, setSearch] = useState('')
   const [confirming, setConfirming] = useState<string>()
   const [editing, setEditing] = useState<Transaction>()
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   // Read once per render rather than per row: every row of a list must answer
   // the same question against the same instant.
@@ -92,8 +94,16 @@ export function TransactionsPage() {
   const accounts = useAccounts()
   const categories = useCategories()
   const entries = useTransactions(filters)
+  const earliest = useEarliestMonth()
   const deleteTransaction = useDeleteTransaction()
   const makeTransfer = useTransfer()
+
+  const loaded = entries.data?.pages.flatMap((page) => page.items) ?? []
+  const days = byDay(loaded)
+
+  // The months on offer reach back exactly as far as the history does. Until
+  // that single row has been read there is nothing honest to offer but "all".
+  const months = earliest.data ? monthsFrom(earliest.data, monthOf(todayLocally())) : []
 
   // Debounced: the search box feeds the query key, so every keystroke would
   // otherwise be a cache miss that blanks the list and refetches it whole.
@@ -105,6 +115,25 @@ export function TransactionsPage() {
 
     return () => clearTimeout(timer)
   }, [search])
+
+  // Watched rather than polled: the sentinel sits after the last row, so the
+  // next page is asked for as it comes into view. `fetchNextPage` is a no-op
+  // while one is already in flight, so a fast scroll cannot stack requests.
+  const { fetchNextPage, hasNextPage, isFetchingNextPage } = entries
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+
+    if (!sentinel || !hasNextPage) return
+
+    const observer = new IntersectionObserver((rows) => {
+      if (rows.some((row) => row.isIntersecting)) void fetchNextPage()
+    })
+
+    observer.observe(sentinel)
+
+    return () => observer.disconnect()
+  }, [fetchNextPage, hasNextPage])
 
   const allAccounts = accounts.data ?? []
   const allCategories = categories.data ?? []
@@ -181,6 +210,20 @@ export function TransactionsPage() {
               setFilters((current) => ({ ...current, category: event.target.value }))
             }
           />
+          {/* A select rather than <input type="month">: the native control
+              renders in the browser's locale, not the page's, so a French
+              screen showed an English month. monthLabel names it the same way
+              the budgets screen does — one month, one name. */}
+          <SelectField
+            label="Filtrer par mois"
+            options={[
+              { value: '', label: 'Tous les mois' },
+              ...months.map((month) => ({ value: month, label: monthLabel(month) })),
+            ]}
+            onChange={(event) =>
+              setFilters((current) => ({ ...current, month: event.target.value }))
+            }
+          />
           <TextField
             label="Rechercher dans les notes"
             value={search}
@@ -193,15 +236,19 @@ export function TransactionsPage() {
         {deleteTransaction.isError ? (
           <FormError message="La suppression a échoué. Vérifiez votre connexion et réessayez." />
         ) : null}
-        {entries.isSuccess && entries.data.length === 0 ? <p>Aucune transaction.</p> : null}
+        {entries.isSuccess && loaded.length === 0 ? <p>Aucune transaction.</p> : null}
 
         <ul className="space-y-4">
-          {byDay(entries.data ?? []).map((day) => (
+          {days.map((day, index) => (
             <li key={day.date}>
               {/* The day carries the date once, so no row has to repeat it. */}
               <div className="flex items-baseline justify-between gap-3 px-1 pb-1">
                 <h3 className="text-sm font-medium text-slate-600">{dayLabel(day.date)}</h3>
-                {spentOn(day.entries) > 0 ? (
+                {/* The last day of a page may be cut in two, and half a day's
+                    spending is a wrong figure on the screen that reports
+                    spending. It is withheld until the day is whole, never
+                    shown partial. */}
+                {spentOn(day.entries) > 0 && !(hasNextPage && index === days.length - 1) ? (
                   <span className="text-sm tabular-nums text-slate-600">
                     {safeAmount(spentOn(day.entries))} dépensé
                   </span>
@@ -288,6 +335,22 @@ export function TransactionsPage() {
             </li>
           ))}
         </ul>
+
+        {/* The observer covers scrolling; the button covers everyone it does
+            not — a keyboard, a screen reader, a browser that never fires the
+            intersection. Neither is a fallback for the other. */}
+        {hasNextPage ? (
+          <div ref={sentinelRef} className="pt-2">
+            <button
+              type="button"
+              onClick={() => void fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60"
+            >
+              {isFetchingNextPage ? 'Chargement…' : 'Charger plus'}
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <EditEntrySheet entry={editing} onClose={() => setEditing(undefined)} />

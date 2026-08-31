@@ -26,6 +26,29 @@ export function nextMonth(month: string) {
   return index === 12 ? `${year + 1}-01` : `${year}-${String(index + 1).padStart(2, '0')}`
 }
 
+/**
+ * Every month from `earliest` to `latest`, newest first, both included. Used to
+ * offer a month filter that reaches as far back as the history does and no
+ * further — a fixed window would either hide old entries or offer months the
+ * owner never used.
+ *
+ * Bounded so a corrupt date cannot spin here: a month is a single row read from
+ * the server, and no one has a hundred years of expenses.
+ */
+export function monthsFrom(earliest: string, latest: string) {
+  const months: string[] = []
+
+  for (
+    let month = latest;
+    month >= earliest && months.length < 1200;
+    month = previousMonth(month)
+  ) {
+    months.push(month)
+  }
+
+  return months
+}
+
 // Intl rather than a date library: the only need is a month name, and the
 // browser already carries the French one. A parser will earn its dependency
 // when something actually has to compute on dates.
