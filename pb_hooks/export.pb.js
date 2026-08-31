@@ -28,6 +28,7 @@ routerAdd(
       account: {
         id: e.auth.id,
         email: e.auth.get('email'),
+        name: e.auth.get('name'),
         verified: e.auth.get('verified'),
         settings: e.auth.get('settings'),
         created: String(e.auth.get('created')),

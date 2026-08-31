@@ -1,20 +1,41 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { AppShell } from '@/components/app-shell'
-import { FormError } from '@/components/form-feedback'
+import { FormError, SubmitButton } from '@/components/form-feedback'
 import { TextField } from '@/components/text-field'
 import { useAuth } from '@/auth/auth.ts'
-import { useCloseAccount, useExportData } from './profile-api.ts'
+import { useCloseAccount, useExportData, useSaveName } from './profile-api.ts'
+
+/** What the `users.name` column holds; the field refuses more rather than the server. */
+const NAME_MAX_LENGTH = 255
 
 const DESTRUCTIVE =
   'w-full rounded-md bg-red-700 px-4 py-2.5 text-base font-medium text-white outline-none focus-visible:ring-2 focus-visible:ring-red-700/40 disabled:opacity-50'
 
 export function ProfilePage() {
-  const { email } = useAuth()
+  const { email, name } = useAuth()
   const exportData = useExportData()
   const closeAccount = useCloseAccount()
+  const saveName = useSaveName()
   const navigate = useNavigate()
   const [confirmation, setConfirmation] = useState('')
+  const [nameDraft, setNameDraft] = useState(name ?? '')
+  const [lastSeenName, setLastSeenName] = useState(name)
+
+  // Seeded once, the field went on holding whatever it was born with. The auth
+  // store carries a name saved in another tab into this one, so the header
+  // followed it while the input did not — and saving here wrote the older name
+  // back over the newer. Following it means an edit in progress gives way to a
+  // name saved elsewhere, which is the right way round: that one is on record.
+  //
+  // Adjusted during the render rather than in an effect: React re-runs this
+  // one before committing anything, so nothing flashes and no cascade of
+  // renders follows. A `key` on the form would reset it too, but by remounting
+  // — which drops focus from the button the owner has just pressed.
+  if (name !== lastSeenName) {
+    setLastSeenName(name)
+    setNameDraft(name ?? '')
+  }
 
   // Typing the address is what separates a deliberate closure from a slip, and
   // that is all it has to do. The comparison forgives case and surrounding
@@ -35,6 +56,39 @@ export function ProfilePage() {
 
   return (
     <AppShell title="Mon compte">
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">Mon profil</h2>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            saveName.reset()
+            saveName.mutate(nameDraft)
+          }}
+          className="space-y-3"
+        >
+          {saveName.isError ? (
+            <FormError message="L’enregistrement a échoué. Vérifiez votre connexion et réessayez." />
+          ) : null}
+          <TextField
+            label="Nom"
+            value={nameDraft}
+            autoComplete="name"
+            maxLength={NAME_MAX_LENGTH}
+            onChange={(event) => setNameDraft(event.target.value)}
+          />
+          {/* Said aloud, like the export below it. Saving a name that is
+              already the name changes nothing on screen, so without this the
+              only evidence the click landed was the header — and none at all
+              for a screen reader (WCAG 2.1 SC 4.1.3, which is AA). */}
+          {saveName.isSuccess ? (
+            <p role="status" className="text-sm text-slate-600">
+              Votre nom a été enregistré.
+            </p>
+          ) : null}
+          <SubmitButton pending={saveName.isPending}>Enregistrer mon nom</SubmitButton>
+        </form>
+      </section>
+
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Mes données</h2>
         <p className="text-sm text-slate-600">

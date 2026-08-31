@@ -1,6 +1,23 @@
 import { useMutation } from '@tanstack/react-query'
 import { pb } from '@/lib/pocketbase'
 
+/**
+ * The name the header greets by. It lives on the auth record, so the write
+ * refreshes the auth store itself rather than any query cache — nothing else
+ * reads it, and useAuth is watching the store.
+ */
+export function useSaveName() {
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const id = pb.authStore.record?.id
+
+      if (!id) throw new Error('No account is signed in.')
+
+      await pb.collection('users').update(id, { name: name.trim() })
+    },
+  })
+}
+
 /** Whatever the server gathered; the screen only ever writes it to a file. */
 type AccountExport = Record<string, unknown>
 

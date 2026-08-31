@@ -72,7 +72,7 @@ it('signs up, lands on the protected home, signs out and signs back in', async (
   await screen.getByLabelText('Confirmer le mot de passe').fill(PASSWORD)
   await screen.getByRole('button', { name: 'Créer mon compte' }).click()
 
-  await expect.element(screen.getByText(`Connecté en tant que ${email}`)).toBeVisible()
+  await expect.element(screen.getByText(`Bon retour, ${email}`)).toBeVisible()
 
   await screen.getByRole('button', { name: 'Se déconnecter' }).click()
   await expect.element(screen.getByRole('heading', { name: 'Connexion' })).toBeVisible()
@@ -81,7 +81,7 @@ it('signs up, lands on the protected home, signs out and signs back in', async (
   await screen.getByLabelText('Mot de passe', { exact: true }).fill(PASSWORD)
   await screen.getByRole('button', { name: 'Se connecter' }).click()
 
-  await expect.element(screen.getByText(`Connecté en tant que ${email}`)).toBeVisible()
+  await expect.element(screen.getByText(`Bon retour, ${email}`)).toBeVisible()
 })
 
 it('sends an anonymous visitor from the protected home to the sign-in screen', async () => {
@@ -176,7 +176,7 @@ it('leaves the protected home when the session is cleared without navigating', a
   await signInAs(email)
 
   const { screen } = await renderApp('/')
-  await expect.element(screen.getByText(`Connecté en tant que ${email}`)).toBeVisible()
+  await expect.element(screen.getByText(`Bon retour, ${email}`)).toBeVisible()
 
   pb.authStore.clear()
 

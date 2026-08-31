@@ -139,6 +139,7 @@ Particulier souhaitant reprendre le contrôle de ses finances : suivi quotidien 
 | USR-03 | Paramètres : format de date, langue (français en v1). Devise fixe : XOF. Mois budgétaire : du 1er au dernier jour du mois calendaire. |
 | USR-04 | Export complet des données personnelles et suppression définitive du compte (droit à l'oubli). |
 | USR-05 | Verrouillage optionnel par code PIN pour un accès rapide. |
+| USR-06 | Profil : l'utilisateur renseigne un nom, par lequel l'application le salue. L'adresse e-mail reste affichée à côté de la salutation — c'est elle qui dit quel compte la déconnexion va quitter. Tant qu'aucun nom n'est donné, l'adresse tient lieu de salutation. |
 
 ---
 

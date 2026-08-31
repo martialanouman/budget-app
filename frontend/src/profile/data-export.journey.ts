@@ -71,10 +71,14 @@ beforeEach(() => {
 it('hands the owner everything they put in', async () => {
   const email = await createSignedInUser('export')
   await aFurnishedAccount('Banque Atlantique')
+  await pb.collection('users').update(currentUserId()!, { name: 'Aya Konaté' })
 
   const data = await exportEverything()
 
   expect(data.account.email).toBe(email)
+  // The account block is an allow-list, so a field added to the screen and not
+  // to the hook leaves the export quietly missing something the owner typed.
+  expect(data.account.name).toBe('Aya Konaté')
   expect(data.accounts.map((one) => one.name)).toContain('Compte de Banque Atlantique')
   expect(data.transactions.map((one) => one.amount)).toContain(12_000)
   expect(data.budgets.map((one) => one.cap_amount)).toContain(80_000)
