@@ -49,7 +49,17 @@ export async function confirmPasswordReset(
 
 const subscribe = (onStoreChange: () => void) => pb.authStore.onChange(onStoreChange)
 
-const getSnapshot = () => pb.authStore.token
+/**
+ * The token and the name together, as one string.
+ *
+ * The token alone stopped being enough once the name reached the screen:
+ * saving it refreshes the record without minting a new token, so React
+ * compared two identical snapshots and re-rendered nothing — the name right in
+ * the database and stale in the header. A string rather than an object,
+ * because getSnapshot runs on every render and a fresh object each time would
+ * loop forever.
+ */
+const getSnapshot = () => `${pb.authStore.token}|${pb.authStore.record?.name ?? ''}`
 
 export function useAuth() {
   useSyncExternalStore(subscribe, getSnapshot)
@@ -57,5 +67,6 @@ export function useAuth() {
   return {
     isAuthenticated: pb.authStore.isValid,
     email: pb.authStore.record?.email as string | undefined,
+    name: pb.authStore.record?.name as string | undefined,
   }
 }
