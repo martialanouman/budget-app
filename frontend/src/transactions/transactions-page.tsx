@@ -1,4 +1,4 @@
-import { formatAmount, toMoney } from '@budget/domain'
+import { EDIT_WINDOW_DAYS, formatAmount, remainsEditable, toMoney } from '@budget/domain'
 import { useEffect, useState } from 'react'
 import { useAccounts } from '@/accounts/accounts-api.ts'
 import { useCategories } from '@/categories/categories-api.ts'
@@ -8,6 +8,7 @@ import { ListSkeleton } from '@/components/list-skeleton'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
 import { ENTRY_TYPE_LABELS, type Transaction, isCredit, isTransfer } from '@/lib/collections'
+import { EditEntrySheet } from './edit-entry-sheet.tsx'
 import { dayLabel, todayLocally } from '@/lib/dates.ts'
 import { TransferForm } from './transfer-form.tsx'
 import { useTransfer } from './transfers-api.ts'
@@ -59,6 +60,21 @@ const spentOn = (entries: Transaction[]) =>
     .filter((entry) => entry.type === 'depense')
     .reduce((total, entry) => total + entry.amount, 0)
 
+/**
+ * TRX-05. Everything settles thirty days after it was recorded. Asked of the
+ * domain, which is what the server hook asks too, so the button and the refusal
+ * can never disagree.
+ */
+const stillRemovable = (entry: Transaction, now: string) => remainsEditable(entry.created, now)
+
+/**
+ * Correcting is the narrower of the two: a transfer leg is deletable — the pair
+ * falls together by design — but never editable on its own, since a PATCH of
+ * its type once turned a 30 000 debit into a credit and invented 60 000 F.
+ */
+const stillCorrectable = (entry: Transaction, now: string) =>
+  !isTransfer(entry.type) && stillRemovable(entry, now)
+
 /** Only a transfer is a transfer: an income typed without a category is not. */
 const titleOf = (entry: Transaction) =>
   entry.expand?.category?.name ?? (isTransfer(entry.type) ? 'Virement' : 'Sans catégorie')
@@ -67,6 +83,11 @@ export function TransactionsPage() {
   const [filters, setFilters] = useState<TransactionFilters>({})
   const [search, setSearch] = useState('')
   const [confirming, setConfirming] = useState<string>()
+  const [editing, setEditing] = useState<Transaction>()
+
+  // Read once per render rather than per row: every row of a list must answer
+  // the same question against the same instant.
+  const now = new Date().toISOString()
 
   const accounts = useAccounts()
   const categories = useCategories()
@@ -125,6 +146,13 @@ export function TransactionsPage() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Historique</h2>
+        {/* Said once for the screen rather than on every settled row: the
+            absence of the buttons already carries it, and a "plus modifiable"
+            label on each line of an old month would be permanent noise. */}
+        <p className="text-sm text-slate-600">
+          Une transaction reste modifiable et supprimable pendant {EDIT_WINDOW_DAYS} jours après sa
+          saisie.
+        </p>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <SelectField
@@ -186,12 +214,12 @@ export function TransactionsPage() {
                   const describes = `${entry.expand?.category?.name ?? ENTRY_TYPE_LABELS[entry.type]} sur ${entry.expand?.account?.name} du ${dayLabel(entry.date)}`
 
                   return (
-                    <li key={entry.id} className="flex items-center gap-3 p-3">
+                    <li key={entry.id} className="space-y-2 p-3">
                       {/* The amount shares the first line with the title, so the
                           account and the note get the whole width of the second.
                           Beside the amount they were cut to "Com…" on a phone —
                           which is the row's information, not its decoration. */}
-                      <span className="min-w-0 flex-1">
+                      <span className="block min-w-0">
                         <span className="flex items-baseline justify-between gap-2">
                           <span className="truncate font-medium">{titleOf(entry)}</span>
                           <span
@@ -209,22 +237,50 @@ export function TransactionsPage() {
                           {entry.note ? ` · ${entry.note}` : ''}
                         </span>
                       </span>
-                      {/* Two steps on purpose: a transaction is hard-deleted, and
-                          the button sits millimetres from the amount on a phone. */}
-                      <button
-                        type="button"
-                        onClick={() => remove(entry.id)}
-                        onBlur={() => setConfirming(undefined)}
-                        aria-label={
-                          confirming === entry.id
-                            ? `Confirmer la suppression ${describes}`
-                            : `Supprimer ${describes}`
-                        }
-                        className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 aria-pressed:border-red-600 aria-pressed:text-red-700"
-                        aria-pressed={confirming === entry.id}
-                      >
-                        {confirming === entry.id ? 'Confirmer' : 'Supprimer'}
-                      </button>
+                      {/* The actions get their own line rather than the end of
+                          the first. Once a row could carry two of them, 390px
+                          left the title showing "A…" and the account "Compte …"
+                          — the same squeeze the amount caused before it moved
+                          up, and the row's information again losing to its
+                          controls. Empty when nothing is offered, and the
+                          spacing goes with it.
+
+                          Neither button is offered on what the server would
+                          refuse: finding the deadline out by losing an edit to
+                          it is the wrong order. */}
+                      <span className="flex justify-end gap-2 empty:hidden">
+                        {stillCorrectable(entry, now) ? (
+                          <button
+                            type="button"
+                            onClick={() => setEditing(entry)}
+                            aria-label={`Modifier ${describes}`}
+                            className="min-h-11 shrink-0 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+                          >
+                            Modifier
+                          </button>
+                        ) : null}
+                        {stillRemovable(entry, now) ? (
+                          <>
+                            {/* Two steps on purpose: a transaction is hard-deleted,
+                              and the button sits millimetres from the amount on a
+                              phone. */}
+                            <button
+                              type="button"
+                              onClick={() => remove(entry.id)}
+                              onBlur={() => setConfirming(undefined)}
+                              aria-label={
+                                confirming === entry.id
+                                  ? `Confirmer la suppression ${describes}`
+                                  : `Supprimer ${describes}`
+                              }
+                              className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 aria-pressed:border-red-600 aria-pressed:text-red-700"
+                              aria-pressed={confirming === entry.id}
+                            >
+                              {confirming === entry.id ? 'Confirmer' : 'Supprimer'}
+                            </button>
+                          </>
+                        ) : null}
+                      </span>
                     </li>
                   )
                 })}
@@ -233,6 +289,8 @@ export function TransactionsPage() {
           ))}
         </ul>
       </section>
+
+      <EditEntrySheet entry={editing} onClose={() => setEditing(undefined)} />
     </AppShell>
   )
 }

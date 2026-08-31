@@ -25,8 +25,16 @@ describe('Given the entry point bundled for PocketBase', () => {
     'splitPayment',
     'nextDueDate',
     'daysUntil',
+    'remainsEditable',
   ])('exposes %s to the hooks', (name) => {
     expect(typeof server[name as keyof typeof server]).toBe('function')
+  })
+
+  // Not in the list above: it is a number, and the hook needs the value, not
+  // a call. Left unexported it would read as undefined and every window
+  // comparison would quietly become NaN.
+  it('exposes the edit window itself, which the guard compares against', () => {
+    expect(server.EDIT_WINDOW_DAYS).toBe(30)
   })
 
   it('keeps localised formatting out, which goja cannot run', () => {

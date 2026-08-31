@@ -79,6 +79,14 @@ export const isCredit = (type: string) => CREDIT_TYPES.includes(type)
 
 export const isTransfer = (type: string) => (TRANSFER_TYPES as readonly string[]).includes(type)
 
+/**
+ * Narrows a stored entry to what the form can hold. The form offers two types
+ * and a row carries four, so editing one needs the compiler to know the
+ * difference rather than a cast that would silently accept a transfer leg.
+ */
+export const isTransactionType = (type: string): type is TransactionType =>
+  (TRANSACTION_TYPES as readonly string[]).includes(type)
+
 export type Transaction = {
   id: string
   user: string
@@ -91,6 +99,8 @@ export type Transaction = {
   note: string
   transfer_group: string
   split_group: string
+  /** When it was recorded, which is what the thirty-day edit window runs from. */
+  created: string
   expand?: {
     account?: Account
     category?: Category

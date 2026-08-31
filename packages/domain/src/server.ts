@@ -27,3 +27,4 @@ export {
   subtractMoney,
   toMoney,
 } from './money.ts'
+export { EDIT_WINDOW_DAYS, remainsEditable } from './entry-window.ts'
