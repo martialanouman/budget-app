@@ -49,6 +49,7 @@ it('shows nothing of the previous account after switching users in the same tab'
   await expect.element(screen.getByRole('button', { name: 'Archiver Compte de Awa' })).toBeVisible()
   expect(client.getQueryData(['accounts'])).toBeDefined()
 
+  await screen.getByRole('button', { name: 'Menu' }).click()
   await screen.getByRole('button', { name: 'Se déconnecter' }).click()
   await expect.element(screen.getByRole('heading', { name: 'Connexion' })).toBeVisible()
 

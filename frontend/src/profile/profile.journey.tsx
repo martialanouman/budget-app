@@ -57,17 +57,20 @@ it('closes the account for good', async () => {
   await expect(pb.collection('users').authWithPassword(email, PASSWORD)).rejects.toThrow()
 })
 
-// The header greets on every screen, so the name has to reach it from the one
-// place it is written. What makes this worth a test is not the label but the
-// refresh: the auth store's snapshot used to be the token alone, and a name
-// saved without a new token left React comparing two identical snapshots and
-// re-rendering nothing — right in the database, stale on screen.
+// The shell greets wherever the sign-out button is — the menu on a phone, the
+// rail on a wide screen — so the name has to reach it from the one place it is
+// written. What makes this worth a test is not the label but the refresh: the
+// auth store's snapshot used to be the token alone, and a name saved without a
+// new token left React comparing two identical snapshots and re-rendering
+// nothing — right in the database, stale on screen.
 it('greets the owner by the name they save', async () => {
   await createSignedInUser('profile')
   const { screen } = await renderApp('/profile')
 
   await screen.getByLabelText('Nom').fill('Aya')
   await screen.getByRole('button', { name: 'Enregistrer mon nom' }).click()
+
+  await screen.getByRole('button', { name: 'Menu' }).click()
 
   await expect.element(screen.getByText('Bon retour, Aya')).toBeVisible()
 })
@@ -78,6 +81,8 @@ it('greets the owner by the name they save', async () => {
 it('falls back to the address while no name has been given', async () => {
   const email = await createSignedInUser('profile')
   const { screen } = await renderApp('/profile')
+
+  await screen.getByRole('button', { name: 'Menu' }).click()
 
   await expect.element(screen.getByText(`Bon retour, ${email}`)).toBeVisible()
 })
@@ -91,11 +96,17 @@ it('falls back to the address while no name has been given', async () => {
 //
 // The path is real: the SDK replaces the record like this whenever it
 // refreshes a session.
+//
+// The menu stays open across the change, and that is the test rather than a
+// convenience: reopening it would remount the greeting, which reads the current
+// name whatever the snapshot does, and the whole point would be lost.
 it('follows the name when the record changes under it', async () => {
   await createSignedInUser('profile')
   const { screen } = await renderApp('/profile')
 
   const record = pb.authStore.record!
+
+  await screen.getByRole('button', { name: 'Menu' }).click()
 
   await expect.element(screen.getByText(/^Bon retour, /u)).toBeVisible()
 
@@ -105,9 +116,11 @@ it('follows the name when the record changes under it', async () => {
 })
 
 // The greeting replaced the address, and the sign-out button is still beside
-// it: on a shared device, or between two people with the same first name, the
-// header stopped saying whose data that button is about to destroy. The
-// greeting is what was asked for; the address is what the line was for.
+// it: on a shared device, or between two people with the same first name,
+// nothing would say whose data that button is about to destroy. The greeting is
+// what was asked for; the address is what the line was for. Both moved into the
+// menu together, and this test is what says they did not get separated on the
+// way.
 it('keeps the address in view once a name greets in its place', async () => {
   const email = await createSignedInUser('profile')
   const { screen } = await renderApp('/profile')
@@ -115,8 +128,11 @@ it('keeps the address in view once a name greets in its place', async () => {
   await screen.getByLabelText('Nom').fill('Aya')
   await screen.getByRole('button', { name: 'Enregistrer mon nom' }).click()
 
+  await screen.getByRole('button', { name: 'Menu' }).click()
+
   await expect.element(screen.getByText('Bon retour, Aya')).toBeVisible()
   await expect.element(screen.getByText(email, { exact: true })).toBeVisible()
+  await expect.element(screen.getByRole('button', { name: 'Se déconnecter' })).toBeVisible()
 })
 
 // The export section directly below says when it is done; this one said

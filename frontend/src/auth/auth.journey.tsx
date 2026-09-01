@@ -72,6 +72,7 @@ it('signs up, lands on the protected home, signs out and signs back in', async (
   await screen.getByLabelText('Confirmer le mot de passe').fill(PASSWORD)
   await screen.getByRole('button', { name: 'Créer mon compte' }).click()
 
+  await screen.getByRole('button', { name: 'Menu' }).click()
   await expect.element(screen.getByText(`Bon retour, ${email}`)).toBeVisible()
 
   await screen.getByRole('button', { name: 'Se déconnecter' }).click()
@@ -81,6 +82,7 @@ it('signs up, lands on the protected home, signs out and signs back in', async (
   await screen.getByLabelText('Mot de passe', { exact: true }).fill(PASSWORD)
   await screen.getByRole('button', { name: 'Se connecter' }).click()
 
+  await screen.getByRole('button', { name: 'Menu' }).click()
   await expect.element(screen.getByText(`Bon retour, ${email}`)).toBeVisible()
 })
 
@@ -176,7 +178,7 @@ it('leaves the protected home when the session is cleared without navigating', a
   await signInAs(email)
 
   const { screen } = await renderApp('/')
-  await expect.element(screen.getByText(`Bon retour, ${email}`)).toBeVisible()
+  await expect.element(screen.getByRole('heading', { name: 'Où j’en suis' })).toBeVisible()
 
   pb.authStore.clear()
 
