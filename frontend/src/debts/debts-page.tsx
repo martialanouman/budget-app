@@ -20,12 +20,12 @@ function DebtRow({ debt }: { debt: Debt }) {
       >
         {debt.creditor}
       </Link>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         {DEBT_DIRECTION_LABELS[debt.direction]} · {DEBT_KIND_LABELS[debt.kind]}
         {debt.status === 'soldee' ? ' · soldée' : ''}
       </p>
       <p className="tabular-nums">{formatAmount(owedOn(debt))}</p>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         {end
           ? `Fin estimée le ${dayLabel(end)}`
           : owedOn(debt) <= 0
@@ -46,10 +46,10 @@ export function DebtsPage() {
 
   return (
     <AppShell title="Dettes">
-      <section className="rounded-md border border-slate-200 bg-white p-3">
+      <section className="rounded-md border border-line bg-surface p-3">
         <h2 className="text-lg font-medium">Total dû</h2>
         <p className="text-2xl tabular-nums">{formatAmount(totalOwed(all))}</p>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           {share === undefined
             ? 'Part des revenus inconnue : aucun revenu ce mois-ci'
             : `${share} % des revenus du mois`}
@@ -71,7 +71,7 @@ export function DebtsPage() {
         {debts.isError ? <FormError message="Impossible de charger vos dettes." /> : null}
         {debts.isSuccess && all.length === 0 ? <p>Aucune dette enregistrée.</p> : null}
 
-        <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+        <ul className="divide-y divide-line rounded-md border border-line bg-surface">
           {all.map((debt) => (
             <DebtRow key={debt.id} debt={debt} />
           ))}

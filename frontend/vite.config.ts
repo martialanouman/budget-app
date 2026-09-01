@@ -16,7 +16,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'],
+        // woff2 is in the list because the fonts are served from this origin:
+        // a precached shell that opened offline in the system font would look
+        // like a different application.
+        globPatterns: ['**/*.{js,css,html,png,svg,webmanifest,woff2}'],
         // PocketBase serves the SPA, its REST API and its admin console on one
         // origin. Without these exclusions the navigation fallback answers
         // /_/ with the precached shell, and the admin console becomes
@@ -24,14 +27,14 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//u, /^\/_\//u],
       },
       manifest: {
-        name: 'Budget',
-        short_name: 'Budget',
+        name: 'Kalpe',
+        short_name: 'Kalpe',
         description: 'Suivi de budget personnel en francs CFA',
         lang: 'fr',
         start_url: '/',
         display: 'standalone',
-        background_color: '#f8fafc',
-        theme_color: '#0f172a',
+        background_color: '#faf7f2',
+        theme_color: '#8a4423',
         icons: [
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },

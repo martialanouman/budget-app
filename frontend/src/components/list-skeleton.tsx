@@ -7,15 +7,15 @@
  */
 export function ListSkeleton({ rows = 3 }: { rows?: number }) {
   return (
-    <div className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+    <div className="divide-y divide-line rounded-card border border-line bg-surface">
       <p className="sr-only">Chargement…</p>
       {Array.from({ length: rows }, (_, row) => (
         <div key={row} aria-hidden="true" className="flex items-center gap-3 p-3">
           <span className="flex-1 space-y-2">
-            <span className="block h-4 w-1/3 animate-pulse rounded bg-slate-200" />
-            <span className="block h-3 w-1/2 animate-pulse rounded bg-slate-100" />
+            <span className="block h-4 w-1/3 animate-pulse rounded bg-surface-2" />
+            <span className="block h-3 w-1/2 animate-pulse rounded bg-surface-2 opacity-60" />
           </span>
-          <span className="block h-4 w-20 animate-pulse rounded bg-slate-200" />
+          <span className="block h-4 w-20 animate-pulse rounded bg-surface-2" />
         </div>
       ))}
     </div>

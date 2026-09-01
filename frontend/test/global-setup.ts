@@ -71,7 +71,7 @@ async function pointPocketBaseAtMailpit() {
     headers: { 'Content-Type': 'application/json', Authorization: token },
     body: JSON.stringify({
       meta: {
-        appName: 'Budget',
+        appName: 'Kalpe',
         appUrl: POCKETBASE_URL,
         senderName: 'Budget',
         senderAddress: 'no-reply@budget.test',

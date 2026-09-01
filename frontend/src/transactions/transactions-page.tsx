@@ -178,7 +178,7 @@ export function TransactionsPage() {
         {/* Said once for the screen rather than on every settled row: the
             absence of the buttons already carries it, and a "plus modifiable"
             label on each line of an old month would be permanent noise. */}
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           Une transaction reste modifiable et supprimable pendant {EDIT_WINDOW_DAYS} jours après sa
           saisie.
         </p>
@@ -243,18 +243,18 @@ export function TransactionsPage() {
             <li key={day.date}>
               {/* The day carries the date once, so no row has to repeat it. */}
               <div className="flex items-baseline justify-between gap-3 px-1 pb-1">
-                <h3 className="text-sm font-medium text-slate-600">{dayLabel(day.date)}</h3>
+                <h3 className="text-sm font-medium text-muted">{dayLabel(day.date)}</h3>
                 {/* The last day of a page may be cut in two, and half a day's
                     spending is a wrong figure on the screen that reports
                     spending. It is withheld until the day is whole, never
                     shown partial. */}
                 {spentOn(day.entries) > 0 && !(hasNextPage && index === days.length - 1) ? (
-                  <span className="text-sm tabular-nums text-slate-600">
+                  <span className="text-sm tabular-nums text-muted">
                     {safeAmount(spentOn(day.entries))} dépensé
                   </span>
                 ) : null}
               </div>
-              <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+              <ul className="divide-y divide-line rounded-md border border-line bg-surface">
                 {day.entries.map((entry) => {
                   // Spelled out for the screen reader, short on screen: every row
                   // would otherwise offer a button reading only "Supprimer".
@@ -272,14 +272,14 @@ export function TransactionsPage() {
                           <span
                             className={
                               isCredit(entry.type)
-                                ? 'shrink-0 tabular-nums text-emerald-700'
-                                : 'shrink-0 tabular-nums text-slate-900'
+                                ? 'shrink-0 tabular-nums text-positive'
+                                : 'shrink-0 tabular-nums text-ink'
                             }
                           >
                             {signedAmount(entry)}
                           </span>
                         </span>
-                        <span className="block truncate text-sm text-slate-600">
+                        <span className="block truncate text-sm text-muted">
                           {ENTRY_TYPE_LABELS[entry.type]} · {entry.expand?.account?.name}
                           {entry.note ? ` · ${entry.note}` : ''}
                         </span>
@@ -301,7 +301,7 @@ export function TransactionsPage() {
                             type="button"
                             onClick={() => setEditing(entry)}
                             aria-label={`Modifier ${describes}`}
-                            className="min-h-11 shrink-0 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+                            className="min-h-11 shrink-0 rounded-md border border-line px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                           >
                             Modifier
                           </button>
@@ -320,7 +320,7 @@ export function TransactionsPage() {
                                   ? `Confirmer la suppression ${describes}`
                                   : `Supprimer ${describes}`
                               }
-                              className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 aria-pressed:border-red-600 aria-pressed:text-red-700"
+                              className="shrink-0 min-h-11 rounded-md border border-line px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 aria-pressed:border-danger aria-pressed:text-danger"
                               aria-pressed={confirming === entry.id}
                             >
                               {confirming === entry.id ? 'Confirmer' : 'Supprimer'}
@@ -345,7 +345,7 @@ export function TransactionsPage() {
               type="button"
               onClick={() => void fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60"
+              className="min-h-11 w-full rounded-md border border-line bg-surface px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60"
             >
               {isFetchingNextPage ? 'Chargement…' : 'Charger plus'}
             </button>

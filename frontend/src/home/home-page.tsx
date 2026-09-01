@@ -52,11 +52,11 @@ const Figure = ({
       aria-labelledby={labelId}
       className={
         primary
-          ? 'rounded-lg border-2 border-slate-900 bg-white p-4'
-          : 'rounded-md border border-slate-200 bg-white p-3'
+          ? 'rounded-lg border-2 border-accent bg-surface p-4'
+          : 'rounded-md border border-line bg-surface p-3'
       }
     >
-      <h2 id={labelId} className="text-sm font-medium text-slate-600">
+      <h2 id={labelId} className="text-sm font-medium text-muted">
         {label}
       </h2>
       {pending ? (
@@ -64,7 +64,7 @@ const Figure = ({
           <span className="sr-only">Chargement…</span>
           <span
             aria-hidden="true"
-            className={`block animate-pulse rounded bg-slate-200 ${primary ? 'h-9 w-56' : 'h-8 w-44'}`}
+            className={`block animate-pulse rounded bg-surface-2 ${primary ? 'h-9 w-56' : 'h-8 w-44'}`}
           />
         </p>
       ) : (
@@ -72,7 +72,7 @@ const Figure = ({
           {value ?? UNKNOWN}
         </p>
       )}
-      {note ? <p className="text-sm text-slate-600">{note}</p> : null}
+      {note ? <p className="text-sm text-muted">{note}</p> : null}
     </section>
   )
 }
@@ -188,7 +188,7 @@ export function HomePage() {
 
         {debts.isSuccess && dues.length === 0 ? <p>Aucune échéance à venir.</p> : null}
 
-        <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+        <ul className="divide-y divide-line rounded-md border border-line bg-surface">
           {dues.map(({ debt, date, inDays }) => (
             <li key={debt.id} className="flex items-center justify-between gap-3 p-3">
               <span>
@@ -199,7 +199,7 @@ export function HomePage() {
                 >
                   {debt.creditor}
                 </Link>
-                <span className="block text-sm text-slate-600">
+                <span className="block text-sm text-muted">
                   {/* DET-02: money owed to the user falls due too, and reading
                       it as one more thing to pay is the opposite of the truth. */}
                   {debt.direction === 'je_dois' ? 'À payer' : 'À recevoir'} le {dayLabel(date)} ·{' '}

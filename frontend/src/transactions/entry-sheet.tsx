@@ -22,7 +22,7 @@ export function EntrySheet() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Nouvelle transaction"
-        className="fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex size-14 items-center justify-center rounded-full bg-slate-900 text-3xl leading-none text-white shadow-lg outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+        className="fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex size-14 items-center justify-center rounded-full bg-accent text-3xl leading-none text-on-accent shadow-lg outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
       >
         <span aria-hidden="true">+</span>
       </button>

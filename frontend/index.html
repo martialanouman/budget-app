@@ -3,11 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <!-- Mirrors the manifest's theme_color. Declared only there, the browser
-         chrome stayed white outside the installed app. -->
-    <meta name="theme-color" content="#0f172a" />
+    <!-- The browser chrome should match the top of the page, which is the app
+         bar, which is --k-surface. Two media-scoped values cover the default
+         case, where the system preference decides; an explicit choice in the
+         settings replaces them at runtime (see lib/theme.ts), because a media
+         query cannot know about a choice stored in this browser.
+         Declared only in the manifest, this stayed white outside the installed
+         app — hence the duplication. -->
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#201c17" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Suivi de budget personnel en francs CFA" />
-    <title>Budget</title>
+    <title>Kalpe</title>
   </head>
   <body>
     <div id="root"></div>

@@ -57,7 +57,7 @@ function Envelope({
           type="button"
           onClick={onRemove}
           aria-label={`Supprimer l’enveloppe ${budget.expand?.category?.name ?? ''}`}
-          className="min-h-11 shrink-0 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+          className="min-h-11 shrink-0 rounded-md border border-line px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
           Supprimer
         </button>
@@ -72,12 +72,12 @@ function Envelope({
         tone={reached.includes(100) ? 'over' : reached.includes(80) ? 'warning' : 'neutral'}
         label={`Consommation de l'enveloppe ${budget.expand?.category?.name ?? ''}`}
       />
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         {`Reste ${formatAmount(unspent(cap, total))} sur ${formatAmount(cap)}`}
         {budget.carry_over ? ' · reporté le mois suivant' : ''}
       </p>
       {alert ? (
-        <p className={reached.includes(100) ? 'text-sm text-red-700' : 'text-sm text-amber-700'}>
+        <p className={reached.includes(100) ? 'text-sm text-danger' : 'text-sm text-warning'}>
           {alert}
         </p>
       ) : null}
@@ -137,10 +137,10 @@ export function BudgetsPage() {
         <p>Chargement…</p>
       )}
 
-      <section className="rounded-md border border-slate-200 bg-white p-3">
+      <section className="rounded-md border border-line bg-surface p-3">
         <h2 className="text-lg font-medium">Reste à vivre</h2>
         <p className="text-2xl tabular-nums">{formatAmount(remaining)}</p>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           Revenus du mois, moins les dépenses réalisées et ce qui reste à payer sur les charges
           fixes.
         </p>
@@ -171,7 +171,7 @@ export function BudgetsPage() {
             // screen; two words on it, because the full phrase and the heading
             // both wrapped onto two lines side by side on a phone.
             aria-label="Dupliquer le mois précédent"
-            className="min-h-11 shrink-0 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60"
+            className="min-h-11 shrink-0 rounded-md border border-line px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60"
           >
             Dupliquer
           </button>
@@ -183,7 +183,7 @@ export function BudgetsPage() {
           <p>Aucune enveloppe pour ce mois.</p>
         ) : null}
 
-        <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+        <ul className="divide-y divide-line rounded-md border border-line bg-surface">
           {(budgets.data ?? []).map((budget) => (
             <Envelope
               key={budget.id}

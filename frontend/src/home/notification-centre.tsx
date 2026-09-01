@@ -90,16 +90,16 @@ export function NotificationCentre({
         {worded.map(({ notification, wording }) => (
           <li
             key={notification.id}
-            className="flex items-center gap-3 rounded-md border border-amber-300 bg-amber-50 p-3"
+            className="flex items-center gap-3 rounded-md border border-warning bg-warning-soft p-3"
           >
-            <span className="flex-1 text-sm text-amber-900">{wording}</span>
+            <span className="flex-1 text-sm text-warning">{wording}</span>
             {/* Short label, full accessible name: several buttons on the
                 page would otherwise read alike. */}
             <button
               type="button"
               onClick={() => onDismiss(notification.id)}
               aria-label={`Marquer comme lue : ${wording}`}
-              className="min-h-11 rounded-md border border-amber-400 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-amber-700/40"
+              className="min-h-11 rounded-md border border-warning px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-warning/40"
             >
               Marquer comme lue
             </button>

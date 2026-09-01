@@ -1,1 +1,206 @@
 @import 'tailwindcss';
+
+/* Sora is a variable font: one file covers 300 to 600, so the four weights the
+   interface uses cost two requests, not eight. Instrument Serif is here for a
+   single line — the coaching sentence on the dashboard — and only in italic.
+
+   Served from our own origin rather than Google's. PocketBase serves the SPA,
+   the API and the admin console on one origin in production: a third party in
+   the critical path would add two DNS lookups to the first paint and drop the
+   typography whenever it is unreachable. The latin-ext subset is not padding —
+   Wolof writes ŋ (U+014B), which latin-1 does not carry. */
+@font-face {
+  font-family: 'Sora';
+  font-style: normal;
+  font-weight: 300 600;
+  font-display: swap;
+  src: url('/fonts/sora-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sora';
+  font-style: normal;
+  font-weight: 300 600;
+  font-display: swap;
+  src: url('/fonts/sora-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/instrument-serif-italic-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/instrument-serif-italic-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+/* The palette lives in runtime variables, never in `dark:` utilities: a theme
+   that swaps a variable changes every surface at once, where a `dark:` class
+   has to be remembered on each one.
+
+   Three definitions, and the order matters. The light set is on bare `:root`,
+   so it is what every colour falls back to. The dark set is repeated twice —
+   once under the system preference, guarded so an explicit "light" wins, and
+   once under an explicit "dark" so the switch wins over the system. Defining a
+   colour ONLY inside a media or [data-theme] block would leave it undefined in
+   the other theme, and nothing would say so. */
+:root {
+  color-scheme: light;
+
+  --k-bg: #faf7f2;
+  --k-surface: #ffffff;
+  --k-surface-2: #f4eee6;
+  --k-ink: #1f1a17;
+  /* #7A6E66 in the mockup: 4.29:1 on --k-surface-2, under the 4.5:1 that AA
+     asks of body text, and that pairing is the day header of the history. */
+  --k-muted: #756a62;
+  --k-line: #e7dfd5;
+
+  --k-accent: #8a4423;
+  --k-accent-soft: #f5e7db;
+  --k-on-accent: #fff9f3;
+
+  --k-positive: #2f6b4f;
+  --k-positive-soft: #e4f0e9;
+  /* #B4791C in the mockup: 3.24:1 on its own soft ground — the "80 %" badge —
+     and 3.69:1 on white. Darkened until both clear, hue kept. */
+  --k-warning: #906116;
+  --k-warning-soft: #fbefd8;
+  --k-danger: #a63a2a;
+  --k-danger-soft: #f8e4df;
+
+  --k-shadow: 0 1px 2px rgb(31 26 23 / 0.05), 0 12px 32px -18px rgb(31 26 23 / 0.25);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --k-bg: #16130f;
+    --k-surface: #201c17;
+    --k-surface-2: #2a241e;
+    --k-ink: #f6f0e8;
+    --k-muted: #a89b90;
+    --k-line: #332c25;
+
+    --k-accent: #e2985f;
+    --k-accent-soft: #33261c;
+    --k-on-accent: #16130f;
+
+    --k-positive: #77c49a;
+    --k-positive-soft: #1e2c24;
+    --k-warning: #e0ac53;
+    --k-warning-soft: #302518;
+    --k-danger: #e08573;
+    --k-danger-soft: #33201c;
+
+    --k-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -20px rgb(0 0 0 / 0.7);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --k-bg: #16130f;
+  --k-surface: #201c17;
+  --k-surface-2: #2a241e;
+  --k-ink: #f6f0e8;
+  --k-muted: #a89b90;
+  --k-line: #332c25;
+
+  --k-accent: #e2985f;
+  --k-accent-soft: #33261c;
+  --k-on-accent: #16130f;
+
+  --k-positive: #77c49a;
+  --k-positive-soft: #1e2c24;
+  --k-warning: #e0ac53;
+  --k-warning-soft: #302518;
+  --k-danger: #e08573;
+  --k-danger-soft: #33201c;
+
+  --k-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -20px rgb(0 0 0 / 0.7);
+}
+
+/* `inline` is what makes the utilities follow the runtime variable instead of
+   baking the light value in at build time. Without it, bg-surface would be a
+   literal #FFFFFF and no theme switch would reach it. */
+@theme inline {
+  --color-bg: var(--k-bg);
+  --color-surface: var(--k-surface);
+  --color-surface-2: var(--k-surface-2);
+  --color-ink: var(--k-ink);
+  --color-muted: var(--k-muted);
+  --color-line: var(--k-line);
+
+  --color-accent: var(--k-accent);
+  --color-accent-soft: var(--k-accent-soft);
+  --color-on-accent: var(--k-on-accent);
+
+  --color-positive: var(--k-positive);
+  --color-positive-soft: var(--k-positive-soft);
+  --color-warning: var(--k-warning);
+  --color-warning-soft: var(--k-warning-soft);
+  --color-danger: var(--k-danger);
+  --color-danger-soft: var(--k-danger-soft);
+
+  --font-sans: 'Sora', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+
+  --radius-field: 14px;
+  --radius-card: 20px;
+
+  --shadow-card: var(--k-shadow);
+}
+
+/* For the rare rule a swapped variable cannot express — an illustration that
+   needs less contrast in the dark, say. It mirrors the palette's own logic, so
+   `dark:` and the variables can never disagree about which theme is on. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
+
+  &:where(:root[data-theme='dark'], :root[data-theme='dark'] *) {
+    @slot;
+  }
+}
+
+@layer base {
+  body {
+    background-color: var(--k-bg);
+    color: var(--k-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Every amount in the interface is compared to another amount, in a column
+     or across a row. Proportional digits make 1 narrower than 8 and the
+     columns stop lining up. */
+  :where(output, [data-amount]) {
+    font-variant-numeric: tabular-nums;
+  }
+}

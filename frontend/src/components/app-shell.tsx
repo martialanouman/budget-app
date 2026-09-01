@@ -32,12 +32,12 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
   // Twelve screens shared one tab title, so a pinned tab and a history entry
   // said "Budget" and nothing more.
   useEffect(() => {
-    document.title = `${title} · Budget`
+    document.title = `${title} · Kalpe`
   }, [title])
 
   return (
-    <div className="min-h-dvh bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="min-h-dvh bg-bg">
+      <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 pt-2">
           {/* The greeting, and under it which account is being greeted.
               The sign-out button sits beside both, and pressing it should
@@ -50,10 +50,8 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
               than sharing one, where a long name would have truncated it away
               on a phone. */}
           <span className="min-w-0">
-            <span className="block truncate text-xs text-slate-600">
-              Bon retour, {name || email}
-            </span>
-            {name ? <span className="block truncate text-xs text-slate-500">{email}</span> : null}
+            <span className="block truncate text-xs text-muted">Bon retour, {name || email}</span>
+            {name ? <span className="block truncate text-xs text-muted">{email}</span> : null}
           </span>
           <button
             type="button"
@@ -67,7 +65,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
           </button>
         </div>
         <div className="mx-auto flex max-w-3xl items-baseline justify-between gap-4 px-4 pt-1 pb-3">
-          <h1 className="min-w-0 truncate text-xl font-semibold text-slate-900">{title}</h1>
+          <h1 className="min-w-0 truncate text-xl font-semibold text-ink">{title}</h1>
           <nav aria-label="Réglages" className="flex shrink-0 gap-4">
             {SETTINGS.map((item) => (
               <Link
@@ -90,7 +88,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
 
       <nav
         aria-label="Navigation principale"
-        className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]"
+        className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)]"
       >
         <ul className="mx-auto flex max-w-3xl">
           {TABS.map((item) => (
@@ -102,7 +100,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
                 // app. The others want the prefix: /debts/$debtId keeps Dettes
                 // lit.
                 activeOptions={{ exact: item.to === '/' }}
-                className="flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-center text-xs text-slate-600 aria-[current=page]:font-semibold aria-[current=page]:text-slate-900"
+                className="flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-center text-xs text-muted aria-[current=page]:font-semibold aria-[current=page]:text-ink"
               >
                 <item.Icon aria-hidden="true" size={20} strokeWidth={1.75} />
                 {item.label}

@@ -10,8 +10,10 @@
  * from the text beside it, and the value is announced through `aria-label` on
  * the wrapper rather than drawn from the pixels.
  *
- * The three tones are the palette measured by hand on 27/08/2026 — slate-900,
- * amber-700 and red-700 — and no new colour is introduced here.
+ * The three tones are palette tokens, so they follow the theme. `neutral` is
+ * the accent rather than a green: this bar also draws a category's share of
+ * the month's spending, where green would congratulate somebody for having
+ * spent.
  */
 export function Meter({
   value,
@@ -25,14 +27,13 @@ export function Meter({
   label: string
 }) {
   const filled = max <= 0 ? 0 : Math.min(100, Math.round((value * 100) / max))
-  const colour =
-    tone === 'over' ? 'bg-red-700' : tone === 'warning' ? 'bg-amber-700' : 'bg-slate-900'
+  const colour = tone === 'over' ? 'bg-danger' : tone === 'warning' ? 'bg-warning' : 'bg-accent'
 
   return (
     <div
       role="img"
       aria-label={`${label} : ${filled} %`}
-      className="h-2 w-full overflow-hidden rounded-full bg-slate-200"
+      className="h-2 w-full overflow-hidden rounded-full bg-surface-2"
     >
       <div
         aria-hidden="true"

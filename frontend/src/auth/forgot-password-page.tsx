@@ -36,7 +36,7 @@ export function ForgotPasswordPage() {
     >
       {sent ? (
         // Deliberately not revealing whether the address exists.
-        <p role="status" className="text-sm text-slate-700">
+        <p role="status" className="text-sm text-ink">
           Si un compte existe pour cette adresse, un lien de réinitialisation vient d'être envoyé.
         </p>
       ) : (

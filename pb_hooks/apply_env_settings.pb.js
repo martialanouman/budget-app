@@ -26,6 +26,11 @@ onBootstrap((e) => {
     settings.meta.appURL = appURL
   }
 
+  // Every mail template interpolates {APP_NAME}, and PocketBase's own default
+  // is not the product's name. Defaulted rather than required: an operator who
+  // forgets it should get the right name, not a broken subject line.
+  settings.meta.appName = $os.getenv('APP_NAME') || 'Kalpe'
+
   const senderAddress = $os.getenv('SMTP_SENDER_ADDRESS')
   if (senderAddress) {
     // Checked here so the failure names the variable. PocketBase validates it

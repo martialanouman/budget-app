@@ -160,7 +160,7 @@ function SecondFactorForm({
         noValidate
       >
         <FormError message={serverError} />
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           Un code vient d’être envoyé à votre adresse e-mail. Il est valable quelques minutes.
         </p>
         {/* inputMode numeric and one-time-code: the keyboard opens on digits,
@@ -174,7 +174,7 @@ function SecondFactorForm({
           onChange={(event) => setCode(event.target.value)}
         />
         {resent ? (
-          <p role="status" className="text-sm text-slate-600">
+          <p role="status" className="text-sm text-muted">
             Un nouveau code vient d’être envoyé.
           </p>
         ) : null}
