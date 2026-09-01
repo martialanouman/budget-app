@@ -8,7 +8,15 @@ import { Disclosure } from '@/components/disclosure'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
 import { ChoiceGrid } from '@/components/choice-grid'
-import { FALLBACK_ICON, HUES, HUE_LABELS, ICONS, hueClassOf, iconOf } from '@/lib/appearance'
+import {
+  FALLBACK_ICON,
+  HUES,
+  HUE_LABELS,
+  ICONS,
+  hueClass,
+  hueClassOf,
+  iconOf,
+} from '@/lib/appearance'
 import {
   CATEGORY_KINDS,
   CATEGORY_KIND_LABELS,
@@ -30,8 +38,11 @@ const schema = z.object({
   parent: z.string(),
   // CAT-04. Both are chosen from a closed set, so the enum is the validation:
   // an emoji field open to anything would have to be validated for something.
-  icon: z.enum(ICONS),
-  color: z.enum(HUES),
+  // Empty is the fourth state and the ordinary one — nothing chosen is stored
+  // as nothing, so the fallback lives in lib/appearance.ts rather than being
+  // frozen into the row on the day it was created.
+  icon: z.enum(ICONS).or(z.literal('')),
+  color: z.enum(HUES).or(z.literal('')),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -139,13 +150,7 @@ export function CategoriesPage() {
 
   const { register, handleSubmit, reset, formState } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      name: '',
-      kind: 'variable',
-      parent: '',
-      icon: FALLBACK_ICON,
-      color: 'terracotta',
-    },
+    defaultValues: { name: '', kind: 'variable', parent: '', icon: '', color: '' },
   })
 
   const onSubmit = handleSubmit(async (values) => {
@@ -223,6 +228,7 @@ export function CategoriesPage() {
           <SelectField label="Catégorie parente" options={parentOptions} {...register('parent')} />
           <ChoiceGrid
             legend="Icône"
+            hint={`Sans choix, l'étiquette neutre ${FALLBACK_ICON}.`}
             options={ICONS.map((icon) => ({
               value: icon,
               label: icon,
@@ -232,10 +238,11 @@ export function CategoriesPage() {
           />
           <ChoiceGrid
             legend="Couleur"
+            hint="Sans choix, elle est dérivée du nom."
             options={HUES.map((hue) => ({
               value: hue,
               label: HUE_LABELS[hue],
-              swatch: <span className={`size-6 rounded-full ${hueClassOf(hue, '')}`} />,
+              swatch: <span className={`size-6 rounded-full ${hueClass(hue)}`} />,
             }))}
             {...register('color')}
           />

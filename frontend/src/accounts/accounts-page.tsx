@@ -9,7 +9,7 @@ import { Disclosure } from '@/components/disclosure'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
 import { ChoiceGrid } from '@/components/choice-grid'
-import { HUES, HUE_LABELS, hueClassOf } from '@/lib/appearance'
+import { ACCOUNT_TYPE_ICONS, HUES, HUE_LABELS, hueClass, hueClassOf } from '@/lib/appearance'
 import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, type Account } from '@/lib/collections'
 import {
   useAccountBalances,
@@ -25,8 +25,10 @@ const schema = z.object({
   name: z.string().min(1, 'Nom requis').max(60, '60 caractères maximum'),
   type: z.enum(ACCOUNT_TYPES),
   // CPT-02. The column has been on the collection since step 3 and nothing had
-  // ever written to it.
-  color: z.enum(HUES),
+  // ever written to it. Empty is the ordinary case: an account whose owner
+  // chose no colour is given one derived from its name, so a pre-selected hue
+  // would have answered for them and painted every account alike.
+  color: z.enum(HUES).or(z.literal('')),
   // Delegated to the domain rather than re-validated here: parseAmount owns
   // what a franc amount is, including the exactly-representable bound that a
   // hand-rolled regex silently dropped.
@@ -56,7 +58,7 @@ export function AccountsPage() {
     z.infer<typeof schema>
   >({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', type: 'banque', initialBalance: '', color: 'terracotta' },
+    defaultValues: { name: '', type: 'banque', initialBalance: '', color: '' },
   })
 
   const onSubmit = handleSubmit(async (values) => {
@@ -117,12 +119,16 @@ export function AccountsPage() {
             error={formState.errors.initialBalance?.message}
             {...register('initialBalance')}
           />
+          {/* No icon picker, and that is CPT-02 to the letter: an account's
+              icon is deduced from its type. Two ways to say the same thing
+              could only disagree. */}
           <ChoiceGrid
             legend="Couleur"
+            hint="Sans choix, elle est dérivée du nom."
             options={HUES.map((hue) => ({
               value: hue,
               label: HUE_LABELS[hue],
-              swatch: <span className={`size-6 rounded-full ${hueClassOf(hue, '')}`} />,
+              swatch: <span className={`size-6 rounded-full ${hueClass(hue)}`} />,
             }))}
             {...register('color')}
           />
@@ -144,28 +150,35 @@ export function AccountsPage() {
             const balance = balanceOf(account)
 
             return (
-              // The button on its own line: the colour bar took the width that
-              // kept "Compte courant BOA" whole, and a name reduced to
-              // "Compte …" tells nobody which account they are archiving.
+              // Name alone on the first line, balance and button on the
+              // second. Measured at 390px: the type icon and the balance
+              // together left "Compte courant BOA" as "Compte couran…", and a
+              // truncated name tells nobody which account they are archiving.
+              // The balance loses nothing by moving — it is the widest thing
+              // in the row and the only one that never truncates.
               <li key={account.id} className="space-y-2 p-3">
                 <div className="flex items-center gap-3">
-                  {/* Decoration. The name is immediately beside it, so the
-                      colour never has to say on its own which account this is. */}
+                  {/* Decoration, both of them: the hue is the account's own,
+                      the icon is deduced from its type (CPT-02). The name is
+                      immediately beside it, so neither ever has to say on its
+                      own which account this is. */}
                   <span
                     aria-hidden="true"
-                    className={`h-8 w-1.5 shrink-0 rounded-full ${hueClassOf(account.color, account.name)}`}
-                  />
+                    className={`grid size-9 shrink-0 place-items-center rounded-field text-lg ${hueClassOf(account.color, account.name)}`}
+                  >
+                    {ACCOUNT_TYPE_ICONS[account.type]}
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{account.name}</span>
                     <span className="block text-sm text-muted">
                       {ACCOUNT_TYPE_LABELS[account.type]}
                     </span>
                   </span>
-                  <span className="shrink-0 tabular-nums">
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="tabular-nums">
                     {balance === undefined ? '—' : formatAmount(balance)}
                   </span>
-                </div>
-                <div className="flex justify-end">
                   <button
                     type="button"
                     onClick={() => archive(account.id)}

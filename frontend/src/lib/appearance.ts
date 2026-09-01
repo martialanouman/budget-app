@@ -1,13 +1,17 @@
 /**
- * What a category or an account looks like in a list: a colour, and for a
- * category an icon (CAT-04, CPT-02).
+ * What a category or an account looks like in a list: a colour, and an icon —
+ * chosen for a category (CAT-04), deduced from the type for an account
+ * (CPT-02).
  *
- * Both are stored, both may be empty, and nothing back-filled the rows that
- * existed before the migration. So every read goes through here, and an absent
- * value is answered by one derived from the name rather than by a blank —
- * a colourless dot in a column of coloured ones reads as a defect, not as a
+ * The stored values may be empty, and empty is ordinary rather than exceptional:
+ * nothing back-filled the rows that predate the migration, and nothing is
+ * pre-selected in the forms either. So every read goes through here, and an
+ * absent value is answered by one derived from the name rather than by a blank
+ * — a colourless dot in a column of coloured ones reads as a defect, not as a
  * default.
  */
+import { type AccountType } from './collections.ts'
+
 export const HUES = [
   'terracotta',
   'ambre',
@@ -66,8 +70,12 @@ export function hueFor(name: string): Hue {
   return HUES[sum % HUES.length] as Hue
 }
 
+/** The class for a hue that is already known to be one — a swatch in a picker. */
+export const hueClass = (hue: Hue): string => HUE_CLASS[hue]
+
+/** The class for a stored value that may be anything, including nothing. */
 export const hueClassOf = (stored: string | undefined, name: string): string =>
-  HUE_CLASS[stored && isHue(stored) ? stored : hueFor(name)]
+  hueClass(stored && isHue(stored) ? stored : hueFor(name))
 
 /**
  * A restricted grid rather than a free emoji field. An arbitrary character can
@@ -106,3 +114,19 @@ export const FALLBACK_ICON = '🏷️'
 
 export const iconOf = (stored: string | undefined): string =>
   stored && (ICONS as readonly string[]).includes(stored) ? stored : FALLBACK_ICON
+
+/**
+ * An account's icon is deduced from its type and is never chosen (CPT-02).
+ * There are five types and they are a closed set, so the type already says
+ * everything an icon could: offering the choice would only let the two
+ * disagree.
+ *
+ * Read like ACCOUNT_TYPE_LABELS, which sits beside it in the same row.
+ */
+export const ACCOUNT_TYPE_ICONS: Record<AccountType, string> = {
+  banque: '🏦',
+  mobile_money: '📱',
+  especes: '💵',
+  epargne: '🐷',
+  autre: FALLBACK_ICON,
+}
