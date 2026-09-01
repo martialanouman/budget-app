@@ -15,6 +15,7 @@ import { DebtDetailPage } from '@/debts/debt-detail-page.tsx'
 import { DebtsPage } from '@/debts/debts-page.tsx'
 import { ForgotPasswordPage } from '@/auth/forgot-password-page.tsx'
 import { ResetPasswordPage } from '@/auth/reset-password-page.tsx'
+import { ConfirmEmailChangePage } from '@/auth/confirm-email-change-page.tsx'
 import { SignInPage } from '@/auth/sign-in-page.tsx'
 import { SignUpPage } from '@/auth/sign-up-page.tsx'
 import { CategoriesPage } from '@/categories/categories-page.tsx'
@@ -70,6 +71,26 @@ const resetPasswordRoute = createRoute({
     const { token } = resetPasswordRoute.useSearch()
 
     return <ResetPasswordPage token={token} />
+  },
+})
+
+// Public, and it has to be: the link is opened from the NEW address, quite
+// possibly in a browser that has never carried a session for this account.
+const confirmEmailChangeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/confirm-email-change',
+  validateSearch: (search: Record<string, unknown>) => ({
+    token: typeof search['token'] === 'string' ? search['token'] : '',
+  }),
+  beforeLoad: ({ search }) => {
+    if (!search.token) {
+      throw redirect({ to: '/sign-in' })
+    }
+  },
+  component: function ConfirmEmailChange() {
+    const { token } = confirmEmailChangeRoute.useSearch()
+
+    return <ConfirmEmailChangePage token={token} />
   },
 })
 
@@ -141,6 +162,7 @@ const routeTree = rootRoute.addChildren([
   signUpRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
+  confirmEmailChangeRoute,
   protectedRoute.addChildren([
     homeRoute,
     transactionsRoute,

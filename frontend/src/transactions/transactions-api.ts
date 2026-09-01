@@ -106,7 +106,11 @@ export function useEarliestMonth() {
     queryFn: async () => {
       const first = await transactions().getList<Transaction>(1, 1, { sort: 'date' })
 
-      return first.items[0]?.date.slice(0, 7)
+      // `null` and not `undefined` for an account with no history yet:
+      // TanStack Query refuses undefined as data and puts the query into an
+      // error state instead — quietly, since the screen falls back to offering
+      // no months either way.
+      return first.items[0]?.date.slice(0, 7) ?? null
     },
   })
 }

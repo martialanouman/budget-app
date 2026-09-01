@@ -5,6 +5,7 @@ import { FormError, SubmitButton } from '@/components/form-feedback'
 import { TextField } from '@/components/text-field'
 import { useAuth } from '@/auth/auth.ts'
 import { useCloseAccount, useExportData, useSaveName } from './profile-api.ts'
+import { SecuritySection } from './security-section.tsx'
 
 /** What the `users.name` column holds; the field refuses more rather than the server. */
 const NAME_MAX_LENGTH = 255
@@ -88,6 +89,8 @@ export function ProfilePage() {
           <SubmitButton pending={saveName.isPending}>Enregistrer mon nom</SubmitButton>
         </form>
       </section>
+
+      <SecuritySection />
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Mes données</h2>

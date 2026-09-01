@@ -121,3 +121,24 @@ it('offers every month the history covers, and no others', async () => {
   await expect.element(screen.getByRole('option', { name: 'juin 2026' })).toBeInTheDocument()
   await expect.element(screen.getByRole('option', { name: 'mai 2026' })).not.toBeInTheDocument()
 })
+
+// A brand-new account has no oldest month, and the query that looks for one
+// returned undefined — which TanStack Query refuses as data, failing the query
+// rather than resolving it. Nothing showed, because the screen offers no
+// months either way; the console said so and the query sat in error.
+it('opens on an account with no history at all', async () => {
+  await createSignedInUser('infinite')
+  await pb.collection('accounts').create({
+    user: currentUserId(),
+    name: 'Compte courant',
+    type: 'banque',
+    initial_balance: 0,
+  })
+
+  const { screen, client } = await renderApp('/transactions')
+
+  await expect.element(screen.getByText('Aucune transaction.')).toBeVisible()
+  await expect.element(screen.getByRole('option', { name: 'Tous les mois' })).toBeInTheDocument()
+
+  expect(client.getQueryState(['transactions', 'earliest'])?.status).toBe('success')
+})

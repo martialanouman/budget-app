@@ -32,7 +32,21 @@ export const resetPasswordSchema = z
   .object({ password: newPassword, passwordConfirm: z.string() })
   .refine((values) => values.password === values.passwordConfirm, mismatch)
 
+// The current password is only checked for presence: whether it is right is
+// the server's to say, and a client that guessed would be wrong or telling.
+export const changePasswordSchema = z
+  .object({
+    current: z.string().min(1, 'Mot de passe actuel requis'),
+    password: newPassword,
+    passwordConfirm: z.string(),
+  })
+  .refine((values) => values.password === values.passwordConfirm, mismatch)
+
+export const changeEmailSchema = z.object({ email })
+
 export type SignInValues = z.infer<typeof signInSchema>
 export type SignUpValues = z.infer<typeof signUpSchema>
 export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>
 export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>
+export type ChangePasswordValues = z.infer<typeof changePasswordSchema>
+export type ChangeEmailValues = z.infer<typeof changeEmailSchema>

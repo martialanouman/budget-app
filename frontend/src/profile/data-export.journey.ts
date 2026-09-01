@@ -79,6 +79,9 @@ it('hands the owner everything they put in', async () => {
   // The account block is an allow-list, so a field added to the screen and not
   // to the hook leaves the export quietly missing something the owner typed.
   expect(data.account.name).toBe('Aya Konaté')
+  // A security setting the owner chose belongs in "everything about me". The
+  // same allow-list already swallowed `name` one change ago.
+  expect(data.account).toHaveProperty('mfa_enabled')
   expect(data.accounts.map((one) => one.name)).toContain('Compte de Banque Atlantique')
   expect(data.transactions.map((one) => one.amount)).toContain(12_000)
   expect(data.budgets.map((one) => one.cap_amount)).toContain(80_000)

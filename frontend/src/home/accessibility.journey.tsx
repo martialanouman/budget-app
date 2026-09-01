@@ -74,6 +74,19 @@ it('passes an automated WCAG AA pass on the dashboard', async () => {
   expect(await violations()).toEqual([])
 })
 
+// The account screen grew from two sections to six, three of them forms with
+// password fields that look alike. Labels that collide, or a toggle without a
+// state, are exactly what an automated pass catches and a reading does not.
+it('passes an automated WCAG AA pass on the account screen', async () => {
+  await createSignedInUser('a11y')
+
+  const { screen } = await renderApp('/profile')
+
+  await expect.element(screen.getByLabelText('Mot de passe actuel')).toBeVisible()
+
+  expect(await violations()).toEqual([])
+})
+
 // TRX-01's form is the screen used every day; it is the one that must not
 // have a field a screen reader cannot name.
 it('passes an automated WCAG AA pass on the entry form', async () => {

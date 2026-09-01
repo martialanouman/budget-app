@@ -87,6 +87,7 @@ export default tseslint.config(
         onRecordCreateRequest: 'readonly',
         onRecordUpdate: 'readonly',
         onRecordUpdateRequest: 'readonly',
+        onRecordAuthWithOTPRequest: 'readonly',
         onRecordDelete: 'readonly',
         onRecordDeleteRequest: 'readonly',
         onRecordAfterCreateSuccess: 'readonly',
