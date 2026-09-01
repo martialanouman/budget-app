@@ -34,6 +34,10 @@ export type Category = {
   kind: CategoryKind
   parent: string
   active: boolean
+  // CAT-04. Both may be empty: nothing back-filled the categories that existed
+  // before the migration, so every read goes through lib/appearance.ts.
+  icon: string
+  color: string
 }
 
 /**

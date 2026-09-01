@@ -7,6 +7,8 @@ import { AppShell } from '@/components/app-shell'
 import { Disclosure } from '@/components/disclosure'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
+import { ChoiceGrid } from '@/components/choice-grid'
+import { FALLBACK_ICON, HUES, HUE_LABELS, ICONS, hueClassOf, iconOf } from '@/lib/appearance'
 import {
   CATEGORY_KINDS,
   CATEGORY_KIND_LABELS,
@@ -26,6 +28,10 @@ const schema = z.object({
   name: z.string().min(1, 'Nom requis').max(60, '60 caractères maximum'),
   kind: z.enum(CATEGORY_KINDS),
   parent: z.string(),
+  // CAT-04. Both are chosen from a closed set, so the enum is the validation:
+  // an emoji field open to anything would have to be validated for something.
+  icon: z.enum(ICONS),
+  color: z.enum(HUES),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -65,42 +71,61 @@ function CategoryRow({
   onToggle: (category: Category) => void
   onDelete: (category: Category) => void
 }) {
+  // The buttons sit on their own line rather than beside the name. Adding the
+  // icon left "Alimentation" as "Alim…" on a 390px screen — the same squeeze
+  // that the transactions rows hit when they gained a second button, and the
+  // same answer.
   return (
-    <div className="flex items-center gap-3">
-      <span className="min-w-0 flex-1">
+    <div className="space-y-2">
+      <div className="flex items-center gap-3">
+        {/* Decoration, both of them. The name is right beside it, so neither the
+            icon nor the hue is ever the only thing naming this category — the
+            same reason the envelope bars can carry a colour at all. */}
         <span
-          className={
-            category.active ? 'block truncate font-medium' : 'block truncate font-medium text-muted'
-          }
+          aria-hidden="true"
+          className={`grid size-9 shrink-0 place-items-center rounded-field text-lg ${hueClassOf(category.color, category.name)}`}
         >
-          {category.name}
+          {iconOf(category.icon)}
         </span>
-        <span className="block text-sm text-muted">
-          {CATEGORY_KIND_LABELS[category.kind]}
-          {category.active ? '' : ' — désactivée'}
+        <span className="min-w-0 flex-1">
+          <span
+            className={
+              category.active
+                ? 'block truncate font-medium'
+                : 'block truncate font-medium text-muted'
+            }
+          >
+            {category.name}
+          </span>
+          <span className="block text-sm text-muted">
+            {CATEGORY_KIND_LABELS[category.kind]}
+            {category.active ? '' : ' — désactivée'}
+          </span>
+          {held ? <span className="block text-sm text-muted">{held}</span> : null}
         </span>
-        {held ? <span className="block text-sm text-muted">{held}</span> : null}
-      </span>
-      <button
-        type="button"
-        onClick={() => onToggle(category)}
-        aria-label={`${category.active ? 'Désactiver' : 'Réactiver'} ${category.name}`}
-        className="shrink-0 min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-      >
-        {category.active ? 'Désactiver' : 'Réactiver'}
-      </button>
-      {/* Offered only when it will work. A button that fails teaches the
-          obstacle at the costliest moment — after the user has acted. */}
-      {deletable ? (
+      </div>
+      <div className="flex justify-end gap-2">
         <button
           type="button"
-          onClick={() => onDelete(category)}
-          aria-label={`Supprimer ${category.name}`}
-          className="shrink-0 min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          onClick={() => onToggle(category)}
+          aria-label={`${category.active ? 'Désactiver' : 'Réactiver'} ${category.name}`}
+          className="min-h-11 shrink-0 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
-          Supprimer
+          {category.active ? 'Désactiver' : 'Réactiver'}
         </button>
-      ) : null}
+        {/* Offered only when it will work. A button that fails teaches the
+            obstacle at the costliest moment — after the user has acted. */}
+        {deletable ? (
+          <button
+            type="button"
+            onClick={() => onDelete(category)}
+            aria-label={`Supprimer ${category.name}`}
+            className="min-h-11 shrink-0 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          >
+            Supprimer
+          </button>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -114,7 +139,13 @@ export function CategoriesPage() {
 
   const { register, handleSubmit, reset, formState } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', kind: 'variable', parent: '' },
+    defaultValues: {
+      name: '',
+      kind: 'variable',
+      parent: '',
+      icon: FALLBACK_ICON,
+      color: 'terracotta',
+    },
   })
 
   const onSubmit = handleSubmit(async (values) => {
@@ -190,6 +221,24 @@ export function CategoriesPage() {
             {...register('kind')}
           />
           <SelectField label="Catégorie parente" options={parentOptions} {...register('parent')} />
+          <ChoiceGrid
+            legend="Icône"
+            options={ICONS.map((icon) => ({
+              value: icon,
+              label: icon,
+              swatch: <span className="text-xl">{icon}</span>,
+            }))}
+            {...register('icon')}
+          />
+          <ChoiceGrid
+            legend="Couleur"
+            options={HUES.map((hue) => ({
+              value: hue,
+              label: HUE_LABELS[hue],
+              swatch: <span className={`size-6 rounded-full ${hueClassOf(hue, '')}`} />,
+            }))}
+            {...register('color')}
+          />
           <SubmitButton pending={formState.isSubmitting}>Créer la catégorie</SubmitButton>
         </form>
       </Disclosure>

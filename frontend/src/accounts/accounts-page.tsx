@@ -8,6 +8,8 @@ import { AppShell } from '@/components/app-shell'
 import { Disclosure } from '@/components/disclosure'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
+import { ChoiceGrid } from '@/components/choice-grid'
+import { HUES, HUE_LABELS, hueClassOf } from '@/lib/appearance'
 import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, type Account } from '@/lib/collections'
 import {
   useAccountBalances,
@@ -22,6 +24,9 @@ const schema = z.object({
   // reaches the user as a generic failure.
   name: z.string().min(1, 'Nom requis').max(60, '60 caractères maximum'),
   type: z.enum(ACCOUNT_TYPES),
+  // CPT-02. The column has been on the collection since step 3 and nothing had
+  // ever written to it.
+  color: z.enum(HUES),
   // Delegated to the domain rather than re-validated here: parseAmount owns
   // what a franc amount is, including the exactly-representable bound that a
   // hand-rolled regex silently dropped.
@@ -51,7 +56,7 @@ export function AccountsPage() {
     z.infer<typeof schema>
   >({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', type: 'banque', initialBalance: '' },
+    defaultValues: { name: '', type: 'banque', initialBalance: '', color: 'terracotta' },
   })
 
   const onSubmit = handleSubmit(async (values) => {
@@ -112,6 +117,15 @@ export function AccountsPage() {
             error={formState.errors.initialBalance?.message}
             {...register('initialBalance')}
           />
+          <ChoiceGrid
+            legend="Couleur"
+            options={HUES.map((hue) => ({
+              value: hue,
+              label: HUE_LABELS[hue],
+              swatch: <span className={`size-6 rounded-full ${hueClassOf(hue, '')}`} />,
+            }))}
+            {...register('color')}
+          />
           <SubmitButton pending={formState.isSubmitting}>Créer le compte</SubmitButton>
         </form>
       </Disclosure>
@@ -130,24 +144,37 @@ export function AccountsPage() {
             const balance = balanceOf(account)
 
             return (
-              <li key={account.id} className="flex items-center gap-3 p-3">
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{account.name}</span>
-                  <span className="block text-sm text-muted">
-                    {ACCOUNT_TYPE_LABELS[account.type]}
+              // The button on its own line: the colour bar took the width that
+              // kept "Compte courant BOA" whole, and a name reduced to
+              // "Compte …" tells nobody which account they are archiving.
+              <li key={account.id} className="space-y-2 p-3">
+                <div className="flex items-center gap-3">
+                  {/* Decoration. The name is immediately beside it, so the
+                      colour never has to say on its own which account this is. */}
+                  <span
+                    aria-hidden="true"
+                    className={`h-8 w-1.5 shrink-0 rounded-full ${hueClassOf(account.color, account.name)}`}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{account.name}</span>
+                    <span className="block text-sm text-muted">
+                      {ACCOUNT_TYPE_LABELS[account.type]}
+                    </span>
                   </span>
-                </span>
-                <span className="tabular-nums">
-                  {balance === undefined ? '—' : formatAmount(balance)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => archive(account.id)}
-                  aria-label={`Archiver ${account.name}`}
-                  className="shrink-0 min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-                >
-                  Archiver
-                </button>
+                  <span className="shrink-0 tabular-nums">
+                    {balance === undefined ? '—' : formatAmount(balance)}
+                  </span>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => archive(account.id)}
+                    aria-label={`Archiver ${account.name}`}
+                    className="min-h-11 shrink-0 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  >
+                    Archiver
+                  </button>
+                </div>
               </li>
             )
           })}

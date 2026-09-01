@@ -9,6 +9,8 @@ export type CategoryDraft = {
   name: string
   kind: CategoryKind
   parent?: string
+  icon: string
+  color: string
 }
 
 export function useCategories() {
@@ -40,6 +42,8 @@ export function useCreateCategory() {
       kind: draft.kind,
       parent: draft.parent ?? '',
       active: true,
+      icon: draft.icon,
+      color: draft.color,
     }),
   )
 }
