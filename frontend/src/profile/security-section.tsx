@@ -158,7 +158,7 @@ function EmailForm() {
 }
 
 const TOGGLE =
-  'min-h-11 rounded-md border border-line px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60'
+  'min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60'
 
 /**
  * Asymmetric on purpose. Turning the factor ON adds protection, so a click is

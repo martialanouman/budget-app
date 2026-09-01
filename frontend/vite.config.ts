@@ -33,8 +33,15 @@ export default defineConfig({
         lang: 'fr',
         start_url: '/',
         display: 'standalone',
+        // background_color is the splash: the light page. theme_color is the
+        // chrome, and the rule is the one index.html states — it matches the
+        // top of the page, which is the app bar, which is --k-surface. A
+        // manifest holds one value, so it holds the light one; the two
+        // media-scoped metas take over per theme once the page has loaded.
+        // These were the accent for one commit, which put a brown title bar
+        // on an installed app whose tab was white.
         background_color: '#faf7f2',
-        theme_color: '#8a4423',
+        theme_color: '#ffffff',
         icons: [
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },

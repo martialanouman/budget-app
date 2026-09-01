@@ -14,6 +14,25 @@
     <meta name="theme-color" content="#201c17" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Suivi de budget personnel en francs CFA" />
     <title>Kalpe</title>
+    <!-- Blocking, inline, and before the stylesheet is applied — which is the
+         only place that can win this race. The entry module also applies the
+         preference, but it is deferred behind the bundle: a browser set to
+         light, on an account that chose dark, painted the whole page light
+         first and swapped once the bundle parsed.
+         The key and the two values are repeated from lib/theme.ts because
+         nothing can be imported here. They are the only duplication, and a
+         wrong one costs a flash, never a wrong theme: the module corrects it
+         a moment later. -->
+    <script>
+      try {
+        var choice = localStorage.getItem('kalpe:theme')
+        if (choice === 'dark' || choice === 'light') {
+          document.documentElement.setAttribute('data-theme', choice)
+        }
+      } catch (error) {
+        /* Private browsing raises on access; the system preference then decides. */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -144,7 +144,7 @@ export function AccountsPage() {
                   type="button"
                   onClick={() => archive(account.id)}
                   aria-label={`Archiver ${account.name}`}
-                  className="shrink-0 min-h-11 rounded-md border border-line px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="shrink-0 min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
                   Archiver
                 </button>
@@ -165,7 +165,7 @@ export function AccountsPage() {
                   type="button"
                   onClick={() => restore(account.id)}
                   aria-label={`Restaurer ${account.name}`}
-                  className="shrink-0 min-h-11 rounded-md border border-line px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="shrink-0 min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
                   Restaurer
                 </button>

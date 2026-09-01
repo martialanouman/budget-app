@@ -57,7 +57,7 @@ function Envelope({
           type="button"
           onClick={onRemove}
           aria-label={`Supprimer l’enveloppe ${budget.expand?.category?.name ?? ''}`}
-          className="min-h-11 shrink-0 rounded-md border border-line px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="min-h-11 shrink-0 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
           Supprimer
         </button>
@@ -171,7 +171,7 @@ export function BudgetsPage() {
             // screen; two words on it, because the full phrase and the heading
             // both wrapped onto two lines side by side on a phone.
             aria-label="Dupliquer le mois précédent"
-            className="min-h-11 shrink-0 rounded-md border border-line px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60"
+            className="min-h-11 shrink-0 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60"
           >
             Dupliquer
           </button>

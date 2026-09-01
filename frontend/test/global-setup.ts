@@ -73,8 +73,8 @@ async function pointPocketBaseAtMailpit() {
       meta: {
         appName: 'Kalpe',
         appUrl: POCKETBASE_URL,
-        senderName: 'Budget',
-        senderAddress: 'no-reply@budget.test',
+        senderName: 'Kalpe',
+        senderAddress: 'no-reply@kalpe.test',
       },
       smtp: {
         enabled: true,

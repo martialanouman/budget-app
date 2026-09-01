@@ -301,7 +301,7 @@ export function TransactionsPage() {
                             type="button"
                             onClick={() => setEditing(entry)}
                             aria-label={`Modifier ${describes}`}
-                            className="min-h-11 shrink-0 rounded-md border border-line px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                            className="min-h-11 shrink-0 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                           >
                             Modifier
                           </button>
@@ -320,7 +320,7 @@ export function TransactionsPage() {
                                   ? `Confirmer la suppression ${describes}`
                                   : `Supprimer ${describes}`
                               }
-                              className="shrink-0 min-h-11 rounded-md border border-line px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 aria-pressed:border-danger aria-pressed:text-danger"
+                              className="shrink-0 min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 aria-pressed:border-danger aria-pressed:text-danger"
                               aria-pressed={confirming === entry.id}
                             >
                               {confirming === entry.id ? 'Confirmer' : 'Supprimer'}
@@ -345,7 +345,7 @@ export function TransactionsPage() {
               type="button"
               onClick={() => void fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="min-h-11 w-full rounded-md border border-line bg-surface px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60"
+              className="min-h-11 w-full rounded-md border border-line-strong bg-surface px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60"
             >
               {isFetchingNextPage ? 'Chargement…' : 'Charger plus'}
             </button>

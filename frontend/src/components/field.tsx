@@ -49,4 +49,4 @@ export function Field({
  * interface already holds to; the fields were the one place that did not.
  */
 export const CONTROL_CLASS =
-  'min-h-11 rounded-field border border-line bg-surface px-3 py-2 text-base text-ink outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30 aria-invalid:border-danger'
+  'min-h-11 rounded-field border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30 aria-invalid:border-danger'

@@ -36,9 +36,9 @@ Application hébergée classique en deux blocs :
 | Build | Vite | 8.2 | Développement rapide, build optimisé |
 | UI / styles | Tailwind CSS, en tokens `@theme` | 4.3 | Palette, typographie et rayons ; deux thèmes |
 | Composants | Maison, sur primitives natives | — | `<dialog>` pour les feuilles, `<details>` pour les replis. **shadcn/ui et Radix ont été envisagés le 09/08/2026 et jamais installés** : la plateforme fournit déjà le piège de focus, la touche Échap, l'inertion et le calque supérieur |
-| Icônes | lucide-react | 1.38 | Décoratives, toujours `aria-hidden` et doublées d'un mot |
+| Icônes | lucide-react | 1.31.0 | Décoratives, toujours `aria-hidden` et doublées d'un mot |
 | Typographie | Sora, Instrument Serif | — | Servies **localement** depuis `frontend/public/fonts/` : une origine unique en production, et du texte qui s'affiche même si un tiers tombe |
-| Graphiques | Recharts | 3.10.1 | **L'anneau de répartition, et lui seul.** Les barres de progression sont maison (`components/meter.tsx`), les courbes sur douze mois restent à faire. Déclaré le 09/08/2026, réellement installé le 01/09/2026 |
+| Graphiques | Recharts | 3.10.1 | **Pas installé.** Déclaré le 09/08/2026, toujours absent de `package.json` au 01/09/2026 : la répartition est rendue par les barres classées de `components/meter.tsx`. Retenu pour l'anneau de `RAP-02`, avec sa couche d'accessibilité désactivée — depuis la 3.0 elle pose `role="application"` sur le SVG, ce qui sort un lecteur d'écran du mode navigation |
 | État serveur | TanStack Query | 5.101 | Cache des appels API, invalidation après mutation |
 | Routage | TanStack Router | 1.170 | Navigation SPA, routes typées (cohérent avec TanStack Query) |
 | Formulaires | React Hook Form + Zod | 7.85 / 4.4 | Validation côté client (montants > 0, dates…) |
@@ -97,7 +97,7 @@ Toutes les collections portent un champ `user` (relation vers `users`) et des r�
 |------------|-------------------|
 | `users` (auth) | email, password (géré par PocketBase), **name**, **mfa_enabled** (bool), settings (json). `mfa_enabled` est une colonne et **jamais un chemin dans le JSON `settings`** : un filtre de règle sur un chemin JSON ne ramène rien, mesuré |
 | `accounts` | name, type (select : banque, mobile_money, especes, epargne, autre), initial_balance (number, `onlyInt`), color, archived (bool). `initial_balance` est `onlyInt` : l'invariant XOF tient jusqu'au stockage, pas seulement dans le domaine |
-| `categories` | name, parent (relation categories, nullable), kind (select : fixe, variable), active (bool), **icon**, **color** (`CAT-04`) |
+| `categories` | name, parent (relation categories, nullable), kind (select : fixe, variable), active (bool). `icon` et `color` sont **exigés par `CAT-04` et pas encore en base** : aucune migration ne les crée à ce jour |
 | `transactions` | account (rel, **requis**), category (rel, optionnelle), type (select : **depense, revenu, virement_sortant, virement_entrant**), amount (number, XOF entiers, **toujours positif** — le type porte le sens), date, note, **transfer_group** (texte), **split_group** (texte), created/updated. `receipt` et `recurring_rule` n'existent pas (§8 des specs fonctionnelles) |
 | `recurring_rules` | label, amount, type, account (rel), category (rel), frequency (select : hebdo, mensuel, annuel), day, next_occurrence, active  **Jamais créée** : conception retenue, implémentation reportée (§8 des specs fonctionnelles). |
 | `categorization_rules` | pattern (texte contenu dans le libellé), category (rel), priority  **Jamais créée** : conception retenue, implémentation reportée (§8 des specs fonctionnelles). |
@@ -200,7 +200,7 @@ côté client** — aucun besoin serveur.
 - Mots de passe : bcrypt (intégré PocketBase), longueur minimale 10 caractères
 - Règles d'accès par collection : isolation stricte par utilisateur (`user = @request.auth.id`)
 - Limitation de débit sur les endpoints d'authentification : fournie par PocketBase mais **livrée désactivée**, donc activée au démarrage par `apply_env_settings.pb.js`. Ses règles par défaut plafonnent l'authentification à deux tentatives par trois secondes — mesuré le 29/08/2026, la deuxième reçoit un 429
-- Interface admin PocketBase : **non exposée**, atteinte par un tunnel SSH vers la boucle locale du serveur (voir §2.3). Protéger `/_/` ne suffit pas : la console est une page, `/api/collections/_superusers/auth-with-password` est la porte, et un attaquant qui connaît l'API ne visite jamais la page
+- Interface admin PocketBase : **exposée à ce jour**. Le retrait vit sur la branche `console-behind-ssh-tunnel`, **non fusionnée** : `deploy/compose.yml` déclare un routeur Traefik sur `Host(${APP_DOMAIN})` sans middleware de blocage, donc `/_/` et `/api/collections/_superusers/auth-with-password` répondent depuis Internet. La cible est décrite au §2.3. Protéger `/_/` ne suffira pas : la console est une page, ce point d'authentification est la porte, et un attaquant qui connaît l'API ne visite jamais la page. Ce que la limitation de débit ci-dessous couvre en attendant
 - Export RGPD : endpoint d'export JSON/CSV de toutes les collections de l'utilisateur ; suppression en cascade à la suppression du compte
 - Aucune donnée bancaire sensible (pas de numéros de compte réels requis)
 

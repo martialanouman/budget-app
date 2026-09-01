@@ -99,30 +99,36 @@ export function setThemePreference(preference: ThemePreference) {
 }
 
 /**
+ * Applies the stored preference and starts following the other tabs.
+ *
+ * Both belong here rather than in `subscribe`. A tab that never renders the
+ * settings screen never calls the hook, so a listener installed by `subscribe`
+ * would not exist there — and that is the tab the change has to reach: choosing
+ * dark on the settings screen left a dashboard open elsewhere on the light
+ * palette until it was reloaded.
+ *
  * Called before React renders, so a stored "dark" is on the root element by the
- * first paint. Doing it in an effect would show one frame of the wrong theme.
+ * time the application paints. The stylesheet still paints first and knows only
+ * the system preference, which is why index.html carries a blocking snippet
+ * that writes the same attribute — this is the second of the two.
  */
 export function installTheme() {
   apply(readThemePreference())
+
+  window.addEventListener('storage', (event) => {
+    // `null` is a whole-storage clear, which counts. Any other key does not.
+    if (event.key !== STORAGE_KEY && event.key !== null) return
+
+    apply(readThemePreference())
+    announce()
+  })
 }
 
 const subscribe = (onStoreChange: () => void) => {
   listeners.add(onStoreChange)
 
-  // Another tab is another store. Without this, choosing dark in one tab left
-  // the others on light until they were reloaded.
-  const onStorage = (event: StorageEvent) => {
-    if (event.key !== STORAGE_KEY && event.key !== null) return
-
-    apply(readThemePreference())
-    onStoreChange()
-  }
-
-  window.addEventListener('storage', onStorage)
-
   return () => {
     listeners.delete(onStoreChange)
-    window.removeEventListener('storage', onStorage)
   }
 }
 
