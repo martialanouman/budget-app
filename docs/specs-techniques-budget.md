@@ -30,16 +30,19 @@ Application hébergée classique en deux blocs :
 
 ### 2.1 Frontend
 
-| Brique | Choix | Version vérifiée (09/08/2026) | Rôle |
-|--------|-------|-------------------------------|------|
+| Brique | Choix | Version vérifiée | Rôle |
+|--------|-------|------------------|------|
 | Framework | React + TypeScript | 19.2 | UI, typage strict des montants et entités |
 | Build | Vite | 8.2 | Développement rapide, build optimisé |
-| UI / styles | Tailwind CSS + shadcn/ui | 4.3 | Composants mobile-first (formulaires, tableaux, dialogues) |
-| Graphiques | Recharts | 3.10 | Camemberts, courbes 12 mois, barres de progression |
+| UI / styles | Tailwind CSS, en tokens `@theme` | 4.3 | Palette, typographie et rayons ; deux thèmes |
+| Composants | Maison, sur primitives natives | — | `<dialog>` pour les feuilles, `<details>` pour les replis. **shadcn/ui et Radix ont été envisagés le 09/08/2026 et jamais installés** : la plateforme fournit déjà le piège de focus, la touche Échap, l'inertion et le calque supérieur |
+| Icônes | lucide-react | 1.38 | Décoratives, toujours `aria-hidden` et doublées d'un mot |
+| Typographie | Sora, Instrument Serif | — | Servies **localement** depuis `frontend/public/fonts/` : une origine unique en production, et du texte qui s'affiche même si un tiers tombe |
+| Graphiques | Recharts | 3.10.1 | **L'anneau de répartition, et lui seul.** Les barres de progression sont maison (`components/meter.tsx`), les courbes sur douze mois restent à faire. Déclaré le 09/08/2026, réellement installé le 01/09/2026 |
 | État serveur | TanStack Query | 5.101 | Cache des appels API, invalidation après mutation |
 | Routage | TanStack Router | 1.170 | Navigation SPA, routes typées (cohérent avec TanStack Query) |
 | Formulaires | React Hook Form + Zod | 7.85 / 4.4 | Validation côté client (montants > 0, dates…) |
-| Dates | date-fns (locale fr) | 4.4 | Calculs d'échéances, mois budgétaires |
+| Dates | `Intl.DateTimeFormat('fr-FR')` | natif | Nommer un mois et un jour (`lib/dates.ts`). **date-fns a été déclaré le 09/08/2026 et jamais installé** : il n'entrera que le jour où il faudra vraiment calculer sur des dates, pas seulement les écrire |
 | Montants | Intl.NumberFormat('fr-FR', {currency:'XOF'}) | natif | Affichage 150 000 F CFA, sans décimales |
 | PWA | vite-plugin-pwa | 1.3 | Manifest + icône ; cache statique uniquement (pas de données hors ligne) |
 | SDK API | pocketbase (client JS officiel) | 0.27 | Auth + CRUD typé vers le backend |
@@ -57,7 +60,18 @@ Application hébergée classique en deux blocs :
 
 > **Note SMTP.** Les cinq ports de Resend ne se valent pas : 465 et 2465, en TLS implicite, expirent sans répondre ; 25, 587 et 2587, en STARTTLS, fonctionnent. Mesuré depuis deux réseaux le 29/08/2026. Un délai d'attente ne ressemble à rien jusqu'à ce que le mail n'arrive jamais.
 
-> **Notes de version.** PocketBase est en pré-1.0 : figer la version en production et lire les notes de migration avant chaque montée. Litestream 0.5 utilise le nouveau format LTX (suivre la documentation 0.5+, pas les anciens tutoriels 0.3). Tailwind 4 se configure en CSS (plus de `tailwind.config.js`) — les versions récentes de shadcn/ui le supportent nativement.
+> **Notes de version.** PocketBase est en pré-1.0 : figer la version en production et lire les notes de migration avant chaque montée. Litestream 0.5 utilise le nouveau format LTX (suivre la documentation 0.5+, pas les anciens tutoriels 0.3). Tailwind 4 se configure en CSS (plus de `tailwind.config.js`).
+> **Les deux thèmes, et la règle qui les tient.** La palette vit en variables CSS, jamais en classes `dark:`. Le jeu clair est défini sur `:root` nu ; le sombre le redéfinit sous `@media (prefers-color-scheme: dark)` gardé par `:root:not([data-theme='light'])`, puis une seconde fois sous `:root[data-theme='dark']` pour que le choix explicite l'emporte dans les deux sens. **Aucune couleur n'a sa seule définition dans un bloc `@media` ou `[data-theme]`** : une couleur qui n'existe que dans le thème sombre disparaît du thème clair sans que rien ne le signale.
+>
+> **Le contraste n'est vérifié par aucun test, et ne le sera pas.** `axe-core` range le contraste en « incomplet » dès qu'il ne peut pas résoudre le fond avec certitude — vérifié non discriminant sur un paragraphe volontairement illisible. **Toute couleur ajoutée ou modifiée se mesure donc à la main, dans les deux thèmes**, contre les 4,5:1 qu'exige WCAG AA pour du texte courant. Trois paires de la maquette de septembre 2026 échouaient à cette mesure et ont été corrigées avant d'entrer :
+>
+> | Paire | Maquette | Retenu |
+> |-------|----------|--------|
+> | Ambre sur ambre doux — le badge « 80 % » | `#B4791C`, **3,24:1** | `#906116`, **4,72:1** |
+> | Ambre sur blanc | `#B4791C`, **3,69:1** | `#906116`, **5,37:1** |
+> | Texte secondaire sur `surface-2` — l'en-tête de jour | `#7A6E66`, **4,29:1** | `#756A62`, **4,56:1** |
+>
+> Le thème sombre passait partout sans retouche (5,66:1 au plus bas). Mesures du 01/09/2026.
 
 ### 2.3 Hébergement & exploitation
 
@@ -81,42 +95,112 @@ Toutes les collections portent un champ `user` (relation vers `users`) et des r�
 
 | Collection | Champs principaux |
 |------------|-------------------|
-| `users` (auth) | email, password (géré par PocketBase), settings (json : format date, préférences notifications) |
-| `accounts` | name, type (select : banque, mobile_money, especes, epargne, autre), initial_balance (number), color, archived (bool) |
-| `categories` | name, parent (relation categories, nullable), kind (select : fixe, variable), active (bool) |
-| `transactions` | account (rel), category (rel), type (select : depense, revenu, virement), amount (number, XOF entiers), date, note, transfer_ref (rel transactions, nullable), split_parent (rel transactions, nullable), receipt (file), recurring_rule (rel, nullable) |
-| `recurring_rules` | label, amount, type, account (rel), category (rel), frequency (select : hebdo, mensuel, annuel), day, next_occurrence, active |
-| `categorization_rules` | pattern (texte contenu dans le libellé), category (rel), priority |
-| `budgets` | month (texte `YYYY-MM`), category (rel), cap_amount, carry_over (bool) |
+| `users` (auth) | email, password (géré par PocketBase), **name**, **mfa_enabled** (bool), settings (json). `mfa_enabled` est une colonne et **jamais un chemin dans le JSON `settings`** : un filtre de règle sur un chemin JSON ne ramène rien, mesuré |
+| `accounts` | name, type (select : banque, mobile_money, especes, epargne, autre), initial_balance (number, `onlyInt`), color, archived (bool). `initial_balance` est `onlyInt` : l'invariant XOF tient jusqu'au stockage, pas seulement dans le domaine |
+| `categories` | name, parent (relation categories, nullable), kind (select : fixe, variable), active (bool), **icon**, **color** (`CAT-04`) |
+| `transactions` | account (rel, **requis**), category (rel, optionnelle), type (select : **depense, revenu, virement_sortant, virement_entrant**), amount (number, XOF entiers, **toujours positif** — le type porte le sens), date, note, **transfer_group** (texte), **split_group** (texte), created/updated. `receipt` et `recurring_rule` n'existent pas (§8 des specs fonctionnelles) |
+| `recurring_rules` | label, amount, type, account (rel), category (rel), frequency (select : hebdo, mensuel, annuel), day, next_occurrence, active  **Jamais créée** : conception retenue, implémentation reportée (§8 des specs fonctionnelles). |
+| `categorization_rules` | pattern (texte contenu dans le libellé), category (rel), priority  **Jamais créée** : conception retenue, implémentation reportée (§8 des specs fonctionnelles). |
+| `budgets` | month (texte `YYYY-MM`), category (rel), cap_amount, carry_over (bool), **carried_amount** (écrit par le serveur, jamais par le client). Index unique `(user, month, category)` : une seconde enveloppe couperait le plafond en deux et tous les totaux mentiraient |
 | `debts` | creditor, kind (select : pret_bancaire, credit_conso, familiale, tontine, decouvert, autre), direction (select : je_dois, on_me_doit), initial_amount, remaining_amount, interest_rate (nullable), monthly_payment, due_day, start_date, status (select : active, soldee) |
 | `debt_payments` | debt (rel), transaction (rel, nullable), amount, principal_part, interest_part, date |
-| `savings_goals` | name, target_amount, target_date (nullable), status |
-| `savings_contributions` | goal (rel), transaction (rel, nullable), amount, date |
-| `notifications` | type (select : echeance_dette, recurrente, depassement_budget, rappel_saisie), payload (json), due_at, read (bool) |
+| `savings_goals` | name, target_amount, target_date (nullable), status  **Jamais créée** : conception retenue, implémentation reportée (§8 des specs fonctionnelles). |
+| `savings_contributions` | goal (rel), transaction (rel, nullable), amount, date  **Jamais créée** : conception retenue, implémentation reportée (§8 des specs fonctionnelles). |
+| `notifications` | type (select : echeance_dette, recurrente, depassement_budget, rappel_saisie), payload (json), **subject** (texte indexé, clé de déduplication), due_at, read (bool). Dédupliquer sur le `payload` obligerait à relire toutes les notifications de l'utilisateur à chaque saisie : **un champ `json` relu n'est pas un objet JS**, et un filtre sur un chemin JSON ne ramène rien |
 
 **Convention montants** : entiers en XOF (pas de décimales) — élimine tout problème d'arrondi flottant.
 
 **Soldes et cumuls** : calculés à la volée (somme des transactions) ; SQLite indexé sur `(user, account, date)` et `(user, category, date)` reste instantané même avec des dizaines de milliers de lignes.
 
+**Les view collections portent les agrégats.** Ce sont elles qui rendent tenable la règle
+ci-dessus : la somme se fait dans SQLite, jamais en tirant l'historique dans le navigateur.
+Elles sont en lecture seule et **n'émettent aucun événement realtime** — la fraîcheur passe
+par l'invalidation TanStack Query après mutation, pas par une souscription.
+
+| View | Ce qu'elle rend |
+|------|-----------------|
+| `account_balances` | Solde par compte : solde initial ± transactions, le signe venant du `type` |
+| `budget_spending` | Dépensé par enveloppe, par mois et par catégorie |
+| `monthly_summary` | Revenus et dépenses du mois, pour le reste à vivre |
+| `category_usage` | Ce qui retient une catégorie : transactions, enveloppes, sous-catégories |
+
+**Toute colonne calculée d'une view porte un `CAST(... AS INT)`.** Sans lui, PocketBase rend
+l'agrégat en valeur JSON et `getInt()` y lit 0 — mesuré à l'étape 5, où le hook d'alerte de
+budget ne se déclenchait jamais.
+
+**Une seule exception à la règle des cumuls : `debts.remaining_amount`, qui est stocké.**
+Elle tient à une condition — ce champ n'est **jamais ajusté**, il est **rejoué** depuis
+l'historique complet des remboursements à chaque écriture. Décrémenter puis ré-incrémenter
+serait le choix évident et le mauvais : corriger un remboursement ancien change ce que tous
+les suivants ont remboursé, leurs intérêts ayant été calculés sur un capital qui vient de
+bouger.
+
 ## 4. Logique métier côté serveur (hooks PocketBase)
 
-| Hook / cron | Déclencheur | Action |
-|-------------|-------------|--------|
-| `onRecordCreate(debt_payments)` | Saisie d'un remboursement | Décrémente `debts.remaining_amount` ; passe `status = soldee` si ≤ 0 |
-| `onRecordDelete/Update(debt_payments)` | Correction | Recalcule `remaining_amount` depuis l'historique |
-| Cron quotidien 06:00 | Chaque jour | Génère les transactions récurrentes arrivées à échéance ; crée les notifications J-3/J-1/J des dettes ; envoie les e-mails |
-| Cron mensuel (le 1er) | Début de mois | Applique les reports de budget (`carry_over`) ; notification « clôture du mois + rapport disponible » |
-| `onRecordCreate(transactions)` | Nouvelle dépense | Vérifie le budget de la catégorie ; crée une notification à 80 % / 100 % |
+Quatorze fichiers dans `pb_hooks/`, plus les modules de `pb_hooks/jobs/` qu'ils requièrent.
+PocketBase ne charge que les `*.pb.js` : un module partagé n'est pas un hook.
 
-Les simulateurs (remboursement anticipé, boule de neige vs avalanche) sont du **calcul pur côté client** — aucun besoin serveur.
+### Écriture atomique
 
+| Fichier | Rôle |
+|---------|------|
+| `transfers.pb.js` | Route serveur écrivant les **deux** jambes d'un virement dans une seule transaction SQLite. Deux écritures client laisseraient un débit sans crédit sur une coupure |
+| `splits.pb.js` | Idem pour une transaction scindée : plusieurs lignes ordinaires partageant un `split_group` |
+
+### Garde-fous
+
+| Fichier | Rôle |
+|---------|------|
+| `guard_owned_relations.pb.js` | Vérifie la propriété des relations **à la création comme à la mise à jour**, pour `transactions` et `budgets`. PocketBase n'applique `account.user = @request.auth.id` qu'à la création : le trou a été mesuré deux fois |
+| `guard_category_deletion.pb.js` | Refuse la suppression d'une catégorie que retiennent des transactions, des enveloppes ou des sous-catégories. **Compte avant `e.next()`** : `budgets.category` cascade, un contrôle placé après aurait déjà détruit les enveloppes |
+| `limit_entry_changes.pb.js` | La fenêtre de 30 jours de `TRX-05`, en modification comme en suppression. Le délai court depuis `created`, jamais depuis `date` |
+| `keep_transfer_pairs.pb.js` | Fait tomber les deux jambes d'un virement ensemble. Le partenaire n'est cherché qu'**après** `e.next()`, sinon la boucle ne se refermerait pas |
+| `otp_is_a_second_factor_only.pb.js` | Refuse tout `authWithOTP` sans `mfaId`. Activer `otp` ouvre sinon une connexion **sans mot de passe** pour tout le monde : l'OTP de PocketBase est une méthode d'authentification à part entière, et `mfa.rule` n'empêche pas la première méthode d'être le code lui-même |
+
+### Valeurs dérivées et notifications
+
+| Fichier / cron | Déclencheur | Action |
+|----------------|-------------|--------|
+| `replay_debt_balance.pb.js` | Création, modification ou suppression d'un `debt_payment` | **Rejoue** `remaining_amount` et `status` depuis l'historique complet — il ne décrémente pas. Tourne **dans** l'écriture (`onRecordCreate`), pour qu'un rejeu qui échoue emporte l'écriture |
+| `notify_budget_thresholds.pb.js` | Écriture d'une transaction **ou d'une enveloppe** | Réconcilie : quels seuils cette enveloppe atteint-elle maintenant. Crée ce qui manque, retire les alertes non lues qui ne se justifient plus. Poser un plafond sur une catégorie déjà dépensée doit alerter, pas attendre la dépense suivante |
+| `carry_over_budgets.pb.js` | Cron le 1er du mois, **et** création d'une enveloppe | Applique `carry_over`. Le second chemin n'est pas redondant : un mois dupliqué le 3 ne recevrait jamais le report appliqué le 1er |
+| `remind_debt_dues.pb.js` | Cron quotidien 06:00 | Rappels J-3 / J-1 / J, clés par `(date, dette, décalage)` — c'est ce qui rend le cron rejouable après une panne sans sonner deux fois. Le rappel le plus proche marque comme lus les précédents. **Il ne génère aucune transaction récurrente** : la collection n'existe pas |
+
+### Service
+
+| Fichier | Rôle |
+|---------|------|
+| `seed_default_categories.pb.js` | Les catégories par défaut de `CAT-01`, à l'inscription. Guardé **par catégorie** : une qui échoue ne doit pas coûter toutes les suivantes, et l'échec ne doit jamais faire échouer l'inscription |
+| `export.pb.js` | L'export RGPD de `USR-04`. L'identité vient de la **session**, jamais d'un paramètre, et le bloc `account` est construit **champ par champ** : une liste blanche ne peut pas laisser passer un champ ajouté plus tard |
+| `apply_env_settings.pb.js` | Rejoue SMTP, `APP_URL`, `APP_NAME` et la **limitation de débit** depuis l'environnement à chaque démarrage. Le SMTP de PocketBase vit en base : un conteneur démarrant sur un volume vide servirait sinon avec le mail coupé |
+
+### Deux règles d'écriture qui ne sont pas du style
+
+**Chaque handler est sérialisé et exécuté comme un programme isolé.** Il ne voit *rien* de la
+portée du fichier : une `const` déclarée au-dessus du handler y sera `undefined`, et l'erreur
+ne se manifeste qu'à l'exécution du hook. Les constantes vont donc dans le handler, et le
+code partagé passe par un `require()` **à l'intérieur**.
+
+**Hook de modèle ou hook de requête, ce n'est pas indifférent.** PocketBase exécute les hooks
+de **modèle** (`onRecordDelete`) pour les enregistrements supprimés **en cascade**, jamais les
+hooks de **requête** (`onRecordDeleteRequest`). Un garde-fou branché sur le mauvais des deux
+rend la fermeture de compte impossible, ou laisse passer une suppression interne qu'il devait
+couvrir. Ce dépôt l'a payé quatre fois — catégories, transactions, et `USR-04` deux fois.
+
+**Un hook accessoire n'échoue jamais aux dépens de l'utilisateur.** Une erreur levée dans
+`onRecordAfterCreateSuccess` revient au client en HTTP 400 **sur l'enregistrement lui-même** :
+alertes et reports enveloppent donc leur corps dans un `try/catch` qui journalise. Une
+notification impossible ne doit pas coûter la saisie qu'on vient de faire.
+
+Les simulateurs (remboursement anticipé, boule de neige vs avalanche) restent du **calcul pur
+côté client** — aucun besoin serveur.
 ## 5. Sécurité
 
 - HTTPS obligatoire (HSTS), cookies/token gérés par le SDK PocketBase
 - Mots de passe : bcrypt (intégré PocketBase), longueur minimale 10 caractères
 - Règles d'accès par collection : isolation stricte par utilisateur (`user = @request.auth.id`)
-- Limitation de débit sur les endpoints d'authentification (intégrée PocketBase)
-- Interface admin PocketBase : accessible uniquement via une URL protégée + mot de passe fort (voire filtrage IP)
+- Limitation de débit sur les endpoints d'authentification : fournie par PocketBase mais **livrée désactivée**, donc activée au démarrage par `apply_env_settings.pb.js`. Ses règles par défaut plafonnent l'authentification à deux tentatives par trois secondes — mesuré le 29/08/2026, la deuxième reçoit un 429
+- Interface admin PocketBase : **non exposée**, atteinte par un tunnel SSH vers la boucle locale du serveur (voir §2.3). Protéger `/_/` ne suffit pas : la console est une page, `/api/collections/_superusers/auth-with-password` est la porte, et un attaquant qui connaît l'API ne visite jamais la page
 - Export RGPD : endpoint d'export JSON/CSV de toutes les collections de l'utilisateur ; suppression en cascade à la suppression du compte
 - Aucune donnée bancaire sensible (pas de numéros de compte réels requis)
 

@@ -53,7 +53,7 @@ Particulier souhaitant reprendre le contrôle de ses finances : suivi quotidien 
 | Réf. | Exigence |
 |------|----------|
 | CPT-01 | L'utilisateur peut créer plusieurs comptes : compte bancaire, mobile money, espèces, épargne, autre. |
-| CPT-02 | Chaque compte a un nom, un type, un solde initial et une couleur/icône. Tous les comptes sont en XOF. |
+| CPT-02 | Chaque compte a un nom, un type, un solde initial et une couleur. Tous les comptes sont en XOF. La couleur est choisie par l'utilisateur ; à défaut elle est dérivée du nom, de sorte qu'aucun compte n'en soit dépourvu. L'icône du compte est déduite de son type et ne se choisit pas. |
 | CPT-03 | Le solde de chaque compte est calculé automatiquement (solde initial ± transactions). |
 | CPT-04 | L'utilisateur peut archiver un compte sans perdre l'historique. |
 | CPT-05 | Un virement entre deux comptes est saisi en une seule opération (débit + crédit liés), sans compter comme une dépense. |
@@ -70,6 +70,7 @@ Particulier souhaitant reprendre le contrôle de ses finances : suivi quotidien 
 | TRX-06 | Import de relevés au format CSV/Excel : correspondance des colonnes assistée, détection des doublons, catégorisation automatique par règles (ex. « libellé contient 'ORANGE' → Téléphonie »). |
 | TRX-07 | Possibilité de joindre une photo de reçu à une transaction. |
 | TRX-08 | Scinder une transaction en plusieurs catégories (ex. courses au supermarché : alimentation + hygiène). |
+| TRX-09 | Le montant se saisit sur un pavé numérique de l'application plutôt que sur le clavier du système : le franc n'a pas de décimale, et un clavier numérique de téléphone en propose une. Le pavé n'est **jamais la seule voie** — la saisie reste possible au clavier physique et aux technologies d'assistance, et le montant en cours est annoncé. |
 
 ### 2.3 Module Catégories
 
@@ -78,6 +79,7 @@ Particulier souhaitant reprendre le contrôle de ses finances : suivi quotidien 
 | CAT-01 | Jeu de catégories par défaut à la création du compte (logement, alimentation, transport, santé, loisirs, éducation, famille, dettes, épargne…). |
 | CAT-02 | Création, renommage, fusion et désactivation de catégories et sous-catégories. |
 | CAT-03 | Distinction entre charges fixes (loyer, abonnements) et dépenses variables, utilisée dans les rapports. |
+| CAT-04 | Chaque catégorie porte une icône et une couleur, choisies par l'utilisateur. À défaut elles sont dérivées du nom : une catégorie sans ornement resterait indistincte dans une liste, or c'est l'icône qui rend une ligne de transaction reconnaissable d'un coup d'œil sur un téléphone. Les catégories créées à l'inscription en reçoivent. |
 
 ### 2.4 Module Budget mensuel
 
@@ -116,10 +118,13 @@ Particulier souhaitant reprendre le contrôle de ses finances : suivi quotidien 
 | Réf. | Exigence |
 |------|----------|
 | RAP-01 | Tableau de bord d'accueil : solde total, dépenses du mois vs budget, prochaines échéances (dettes + récurrentes), reste à vivre, top 5 des catégories de dépense. |
-| RAP-02 | Graphiques : répartition des dépenses par catégorie (mois en cours), évolution revenus/dépenses sur 12 mois, évolution de l'endettement total. |
+| RAP-02 | Graphiques : répartition des dépenses par catégorie (mois en cours), évolution revenus/dépenses sur 12 mois, évolution de l'endettement total. La répartition du mois est un **anneau accompagné d'une légende chiffrée et ordonnée**, et c'est la légende qui porte la lecture : comparer des angles est la comparaison la plus difficile qui soit, et l'anneau lui-même est masqué aux technologies d'assistance. Les deux évolutions sur douze mois restent à faire (§8). |
 | RAP-03 | Comparaison mois par mois d'une catégorie (ex. alimentation sur 6 mois). |
 | RAP-04 | Rapport mensuel de synthèse consultable et exportable (PDF). |
 | RAP-05 | Export des données en CSV/Excel sur une période choisie. |
+| RAP-06 | Série de saisie : nombre de jours consécutifs, jusqu'à aujourd'hui, comptant au moins une transaction. Tenir ses comptes est une habitude avant d'être un calcul, et c'est le seul chiffre du tableau de bord qui parle du geste plutôt que de l'argent. |
+| RAP-07 | Une phrase de conseil sur le tableau de bord, calculée par des règles explicites à partir du reste à vivre et des jours restants dans le mois. Aucun texte n'est engendré à l'exécution : les formulations sont écrites, et l'on choisit entre elles. |
+| RAP-08 | Conseil du mois : un rapprochement entre le mois courant et le précédent, sur un poste où l'utilisateur a fait mieux ou moins bien. Suppose RAP-03. |
 
 ### 2.8 Module Notifications & rappels
 
@@ -143,6 +148,7 @@ Particulier souhaitant reprendre le contrôle de ses finances : suivi quotidien 
 | USR-07 | Modification du mot de passe depuis le compte : mot de passe actuel, nouveau mot de passe et confirmation. L'ancien est exigé par le serveur, pas seulement par l'écran. La session reste ouverte. |
 | USR-08 | Modification de l'adresse e-mail avec confirmation : un lien est envoyé à la **nouvelle** adresse, et le changement ne prend effet qu'une fois ce lien ouvert. L'adresse actuelle reste active jusque-là, et la confirmation ferme toutes les sessions. |
 | USR-09 | Double authentification optionnelle, activable par l'utilisateur pour son seul compte. Le second facteur est un **code à usage unique envoyé par e-mail**. Le code ne vaut **jamais** comme connexion à lui seul : il complète une authentification commencée par le mot de passe, jamais ne la remplace. La **désactiver exige le mot de passe** ; l'activer non. L'authentification par application (TOTP, Google Authenticator) est écartée en v1 : PocketBase n'expose aucun point d'extension pour un facteur tiers, et son moteur de hooks n'offre pas HMAC-SHA1 — la construire signifierait réécrire l'émission de jetons sur le chemin de connexion. |
+| USR-10 | Thème clair ou sombre. La préférence du système décide par défaut ; un réglage explicite la remplace et **est retenu d'une session à l'autre**. Un thème imposé sans recours est un défaut d'accessibilité pour qui a réglé son appareil exprès. |
 
 ---
 
@@ -226,3 +232,34 @@ Particulier souhaitant reprendre le contrôle de ses finances : suivi quotidien 
 | 3 | Dettes informelles | Minoritaires : le champ taux d'intérêt reste facultatif mais les échéanciers avec intérêts sont pleinement supportés. |
 | 4 | Hébergement | **Application hébergée uniquement** : données côté serveur, accessibles depuis n'importe quel appareil. Le mode local est abandonné (risque de perte de données en changeant de PC). |
 | 5 | Stack technique | React + TypeScript (TanStack Router/Query) / PocketBase (SQLite) — détaillée dans le document *Spécifications techniques*. |
+
+---
+
+## 8. À spécifier
+
+Ce qui est écarté d'une livraison mais n'est pas abandonné. Chaque ligne dit **pourquoi**
+c'est reporté et **ce qu'une spécification devra trancher** : sans cette seconde colonne,
+un registre n'est qu'une liste de regrets. Un point qui descend ici y descend au moment où
+il est écarté, pas à la fin.
+
+| Sujet | Pourquoi c'est reporté | Ce qu'une spécification devra trancher |
+|-------|------------------------|----------------------------------------|
+| **Onboarding en cinq étapes** | Le §3.1 le décrit comme parcours mais aucune exigence ne le porte, et rien n'en est écrit. Écarté de la refonte de septembre 2026 : ce n'est pas une entrée de navigation. | Obligatoire ou sautable ; ce qu'il advient d'un abandon à mi-parcours ; si les plafonds proposés à la dernière étape sont calculés depuis les revenus saisis ou simplement suggérés. |
+| **Objectifs d'épargne** (`EPG-01` à `EPG-03`) | v1.1. La refonte pose l'entrée de navigation et un écran d'attente ; aucune collection n'existe. | Si un objectif est un compte d'épargne ou une enveloppe ; si un versement est une transaction ordinaire ou une écriture propre ; ce que devient un objectif atteint, et un objectif abandonné. |
+| **Rapports** (`RAP-03`, `RAP-04` PDF, `RAP-05` CSV, et les deux évolutions sur douze mois de `RAP-02`) | v1.1. Entrée de navigation et écran d'attente posés par la refonte. | La profondeur d'historique couverte et son coût en requêtes ; si le PDF se fabrique côté client ou serveur ; ce qu'un export CSV contient face à l'export RGPD (`USR-04`) qui existe déjà et fait presque la même chose. |
+| **Évolution de l'endettement sur douze mois** | Partie de `RAP-02`. Demande de rejouer le capital restant mois par mois depuis l'historique des remboursements — ce n'est pas de l'habillage. | Si cet historique se recalcule à la demande ou se matérialise. La seconde réponse rouvrirait la règle « aucun cumul dénormalisé », dont `debts.remaining_amount` est aujourd'hui la seule exception, et sous condition. |
+| **Simulateurs boule de neige / avalanche** (`DET-06`, `DET-07`) | v1.2. La maquette de septembre 2026 les dessine ; écartés du périmètre de la refonte. | Ce que « coût total » recouvre exactement ; si la stratégie suggérée se contente d'informer ou réordonne réellement les remboursements. |
+| **Transactions récurrentes** (`TRX-03`) | v1.1. Aucune collection ne les porte, alors que `transactions.recurring_rule` existe déjà et que `NOT-01` promet leurs rappels : la moitié du câblage attend depuis l'étape 4. | Génération d'avance ou le jour même ; ce qui arrive à une occurrence modifiée à la main puis à la règle qui l'a produite ; comment une série s'arrête sans effacer son passé. |
+| **Import CSV et règles de catégorisation** (`TRX-06`) | v1.1, jamais commencé. | Les formats acceptés ; la détection des doublons ; si une règle de catégorisation s'applique rétroactivement à l'historique ou seulement aux lignes à venir. |
+| **Reçus joints** (`TRX-07`) | v1.1. La refonte livre la puce « Note » de la maquette sans sa moitié « reçu ». | Le stockage et la taille maximale ; ce que devient la pièce jointe à l'export RGPD et à la fermeture de compte ; si elle est répliquée par Litestream, qui ne réplique que SQLite. |
+| **Verrouillage par code PIN** (`USR-05`) | Écarté à l'étape 1 : côté client il ne protège pas le jeton d'authentification, donc c'est un verrou cosmétique. La même objection a fait écarter un TOTP maison en `USR-09`. | S'il est assumé comme un confort et documenté comme tel, ou s'il exige un vrai chemin serveur — auquel cas ce n'est plus un PIN. |
+| **Rappel de saisie** (`NOT-03`) et **notifications de récurrentes** | Les deux types existent dans le modèle `notifications` ; le centre de notifications ne leur donne aucune formulation, donc ils ne s'affichent jamais. `RAP-06`, la série de saisie, occupe exactement le même terrain. | Le N de « aucune saisie depuis N jours », sa valeur par défaut, et surtout si la série de saisie et le rappel doivent être la même mécanique vue de deux côtés plutôt que deux comptages qui se contrediront. |
+| **Préférences de canal des notifications** (`NOT-04`) | L'écran Paramètres annonce « in-app + e-mail » sans que rien ne soit réglable. | Quelles notifications se coupent séparément ; ce qu'un utilisateur qui coupe tout continue de recevoir malgré lui, car la réinitialisation de mot de passe n'est pas négociable. |
+| **Confirmation des actions destructives** | Hétérogène : double clic pour une transaction, rien pour une enveloppe, un remboursement ni l'archivage d'un compte, saisie de l'adresse e-mail pour fermer le compte. Uniformiser est un changement de comportement, que la refonte de septembre 2026 s'est interdit. | À partir de quel enjeu une suppression se confirme, et sous quelle forme — l'échelle doit être unique, sinon elle ne s'apprend pas. |
+| **Session périmée ou révoquée** | Rien n'appelle `authRefresh()` : un nom modifié ailleurs reste périmé dans l'en-tête, et une session révoquée côté serveur affiche encore `0 F CFA` au lieu de renvoyer à la connexion. Défaut connu, jamais corrigé. | Où réfuter la session : au démarrage, à chaque navigation, ou sur le premier 401 rencontré. Le choix touche la garde d'accès, d'où le report. |
+
+### Corrections en attente, sans décision à prendre
+
+- **`verificationTemplate`** est encore en anglais et pointe vers la console d'administration de PocketBase, exactement le défaut que deux migrations ont déjà corrigé pour la réinitialisation de mot de passe et le changement d'adresse. Rien à concevoir : à corriger.
+- **`manifest.webmanifest` est servi en `text/plain`** en production — la table MIME de Go ignore cette extension et l'image Alpine n'a pas d'`/etc/mime.types`. Mesuré dans le conteneur réel le 29/08/2026. Rien à concevoir : à corriger dans l'image.
+- **Les spécifications techniques décrivaient un schéma inexistant** jusqu'au 01/09/2026 (collections jamais créées, champs de `transactions` qui n'ont jamais existé, cinq hooks listés sur quatorze). Corrigé — mais la dérive s'était installée sans que rien ne la signale, et rien ne l'empêche de recommencer.
