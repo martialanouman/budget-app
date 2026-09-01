@@ -9,7 +9,7 @@ import { SecondFactorRequired, completeSignIn, requestSignInCode, signIn } from 
 import { type SignInValues, signInSchema } from './auth-schemas.ts'
 
 /** What the first half of the sign-in leaves behind for the second. */
-type Challenge = { mfaId: string; otpId: string }
+type Challenge = { mfaId: string; otpId: string; email: string }
 
 export function SignInPage() {
   const navigate = useNavigate()
@@ -30,7 +30,7 @@ export function SignInPage() {
       // password that works.
       if (cause instanceof SecondFactorRequired) {
         try {
-          setChallenge({ mfaId: cause.mfaId, otpId: await requestSignInCode(email) })
+          setChallenge({ mfaId: cause.mfaId, otpId: await requestSignInCode(email), email })
         } catch {
           setServerError('Impossible d’envoyer le code. Réessayez dans un instant.')
         }
@@ -101,18 +101,42 @@ function SecondFactorForm({
   onSignedIn: () => Promise<unknown>
   onGiveUp: () => void
 }) {
+  const [otpId, setOtpId] = useState(challenge.otpId)
   const [code, setCode] = useState('')
   const [serverError, setServerError] = useState<string>()
+  const [resent, setResent] = useState(false)
   const [pending, setPending] = useState(false)
 
   const submit = async () => {
     setServerError(undefined)
     setPending(true)
     try {
-      await completeSignIn(challenge.otpId, code, challenge.mfaId)
+      await completeSignIn(otpId, code, challenge.mfaId)
       await onSignedIn()
     } catch {
       setServerError('Ce code est incorrect ou expiré.')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  /**
+   * A code lives minutes, and fetching one's mail can take longer than that.
+   * Without this, an expired code left only "back to sign-in" — which throws
+   * the challenge away and makes the owner retype their password to be sent
+   * another. The `mfaId` outlives the code, so the same challenge can carry a
+   * second one.
+   */
+  const resend = async () => {
+    setServerError(undefined)
+    setResent(false)
+    setPending(true)
+    try {
+      setOtpId(await requestSignInCode(challenge.email))
+      setCode('')
+      setResent(true)
+    } catch {
+      setServerError('Impossible d’envoyer un nouveau code. Réessayez dans un instant.')
     } finally {
       setPending(false)
     }
@@ -149,7 +173,20 @@ function SecondFactorForm({
           value={code}
           onChange={(event) => setCode(event.target.value)}
         />
+        {resent ? (
+          <p role="status" className="text-sm text-slate-600">
+            Un nouveau code vient d’être envoyé.
+          </p>
+        ) : null}
         <SubmitButton pending={pending}>Valider le code</SubmitButton>
+        <button
+          type="button"
+          onClick={() => void resend()}
+          disabled={pending}
+          className="w-full text-sm underline underline-offset-4 disabled:opacity-60"
+        >
+          Renvoyer un code
+        </button>
       </form>
     </AuthLayout>
   )

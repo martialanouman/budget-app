@@ -26,6 +26,9 @@ const CHANGE_BODY =
 
 const DEFAULT_OTP_SUBJECT = 'OTP for {APP_NAME}'
 
+const DEFAULT_OTP_BODY =
+  "<p>Hello,</p>\n<p>Your one-time password is: <strong>{OTP}</strong></p>\n<p><i>If you didn't ask for the one-time password, you can ignore this email.</i></p>\n<p>\n  Thanks,<br/>\n  {APP_NAME} team\n</p>"
+
 const OTP_SUBJECT = 'Votre code de connexion {APP_NAME}'
 
 const OTP_BODY =
@@ -71,6 +74,7 @@ migrate(
 
     users.otp.enabled = false
     users.otp.emailTemplate.subject = DEFAULT_OTP_SUBJECT
+    users.otp.emailTemplate.body = DEFAULT_OTP_BODY
 
     users.mfa.enabled = false
     users.mfa.rule = ''

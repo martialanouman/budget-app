@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { FormError, SubmitButton } from '@/components/form-feedback'
@@ -9,7 +10,13 @@ import {
   changeEmailSchema,
   changePasswordSchema,
 } from '@/auth/auth-schemas.ts'
-import { changePassword, requestEmailChange, setSecondFactor, useAuth } from '@/auth/auth.ts'
+import {
+  changePassword,
+  disableSecondFactor,
+  enableSecondFactor,
+  requestEmailChange,
+  useAuth,
+} from '@/auth/auth.ts'
 
 /**
  * The three things one does to one's own credentials, each in its own form so
@@ -30,6 +37,7 @@ export function SecuritySection() {
 }
 
 function PasswordForm() {
+  const navigate = useNavigate()
   const [serverError, setServerError] = useState<string>()
   const [done, setDone] = useState(false)
   const { register, handleSubmit, reset, formState } = useForm<ChangePasswordValues>({
@@ -40,7 +48,16 @@ function PasswordForm() {
     setServerError(undefined)
     setDone(false)
     try {
-      await changePassword(current, password, passwordConfirm)
+      // An account with a second factor cannot be signed back in from here —
+      // the code is not in hand — so the session ends and the sign-in screen
+      // is where it ends. Reporting a failure over a password that did change
+      // is what this replaces.
+      if (!(await changePassword(current, password, passwordConfirm))) {
+        await navigate({ to: '/sign-in' })
+
+        return
+      }
+
       reset()
       setDone(true)
     } catch {
@@ -140,18 +157,29 @@ function EmailForm() {
   )
 }
 
+const TOGGLE =
+  'min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60'
+
+/**
+ * Asymmetric on purpose. Turning the factor ON adds protection, so a click is
+ * enough; turning it OFF removes it, and removal is the thing an intruder
+ * wants. Asking nothing made this the weakest part of what it guards — a
+ * borrowed phone or a lifted token was enough, and silently.
+ */
 function SecondFactorToggle() {
   const { mfaEnabled } = useAuth()
+  const [password, setPassword] = useState('')
   const [serverError, setServerError] = useState<string>()
   const [pending, setPending] = useState(false)
 
-  const toggle = async () => {
+  const run = async (act: () => Promise<unknown>, failure: string) => {
     setServerError(undefined)
     setPending(true)
     try {
-      await setSecondFactor(!mfaEnabled)
+      await act()
+      setPassword('')
     } catch {
-      setServerError('Le changement a échoué. Vérifiez votre connexion et réessayez.')
+      setServerError(failure)
     } finally {
       setPending(false)
     }
@@ -166,19 +194,44 @@ function SecondFactorToggle() {
           : 'Ajoutez un code envoyé par e-mail à chaque connexion, en plus du mot de passe.'}
       </p>
       <FormError message={serverError} />
-      {/* aria-pressed rather than a checkbox: it is a switch that acts at once,
-          not a field waiting to be submitted with something else. */}
-      <button
-        type="button"
-        onClick={() => void toggle()}
-        disabled={pending}
-        aria-pressed={mfaEnabled}
-        className="min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60"
-      >
-        {mfaEnabled
-          ? 'Désactiver la double authentification'
-          : 'Activer la double authentification'}
-      </button>
+      {mfaEnabled ? (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            void run(
+              () => disableSecondFactor(password),
+              'Le mot de passe est incorrect. La double authentification reste active.',
+            )
+          }}
+          className="space-y-3"
+        >
+          <TextField
+            label="Mot de passe, pour désactiver"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <button type="submit" disabled={pending} aria-pressed className={TOGGLE}>
+            Désactiver la double authentification
+          </button>
+        </form>
+      ) : (
+        <button
+          type="button"
+          onClick={() =>
+            void run(
+              enableSecondFactor,
+              'Le changement a échoué. Vérifiez votre connexion et réessayez.',
+            )
+          }
+          disabled={pending}
+          aria-pressed={false}
+          className={TOGGLE}
+        >
+          Activer la double authentification
+        </button>
+      )}
     </section>
   )
 }

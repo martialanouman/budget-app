@@ -91,12 +91,26 @@ export async function confirmPasswordReset(
  * the current one on the record itself — the screen asks for it because the
  * server does, not merely as a courtesy.
  *
- * The same tokenKey rotation applies, so the session this was called from is
- * dead the moment it succeeds. Rather than throw somebody back to the sign-in
- * screen for having done an ordinary thing correctly, we sign them straight
- * back in with the password they just chose.
+ * Returns whether the session survived. It usually does: the tokenKey rotation
+ * kills it, so we sign straight back in with the password just chosen rather
+ * than throw somebody out for having done an ordinary thing correctly.
+ *
+ * It cannot survive for an account with a second factor, because the sign-in
+ * that would restore it is the very call the factor intercepts, and no code is
+ * in hand here to answer with. That case used to surface as
+ * "le changement a échoué" over a password that had in fact been changed.
+ *
+ * Whatever the reason a re-authentication does not land — a second factor, a
+ * dropped connection, the rate limiter — the store is emptied. The SDK writes
+ * the updated record back beside the token the rotation has already killed,
+ * and `authStore.isValid` reads only the JWT's expiry, so leaving it be would
+ * park the owner inside an application answering 401 to everything.
  */
-export async function changePassword(current: string, password: string, passwordConfirm: string) {
+export async function changePassword(
+  current: string,
+  password: string,
+  passwordConfirm: string,
+): Promise<boolean> {
   const record = pb.authStore.record
 
   if (!record) throw new Error('No account is signed in.')
@@ -104,7 +118,20 @@ export async function changePassword(current: string, password: string, password
   const email = record.email as string
 
   await users().update(record.id, { oldPassword: current, password, passwordConfirm })
-  await users().authWithPassword(email, password)
+
+  try {
+    await users().authWithPassword(email, password)
+
+    return true
+  } catch (cause) {
+    pb.authStore.clear()
+
+    // A second factor is not a failure — the password did change, and saying
+    // otherwise is the lie this returns false to avoid. Anything else is.
+    if ((cause as { response?: { mfaId?: string } }).response?.mfaId) return false
+
+    throw cause
+  }
 }
 
 /**
@@ -125,13 +152,42 @@ export async function confirmEmailChange(token: string, password: string) {
   pb.authStore.clear()
 }
 
-/** The second factor, on or off, for this account alone (`options.mfa.rule`). */
-export async function setSecondFactor(enabled: boolean) {
+/** Turning the second factor on: adding protection needs no proof of identity. */
+export async function enableSecondFactor() {
   const record = pb.authStore.record
 
   if (!record) throw new Error('No account is signed in.')
 
-  await users().update(record.id, { mfa_enabled: enabled })
+  await users().update(record.id, { mfa_enabled: true })
+}
+
+/**
+ * Turning it off does need proof, and the password is it.
+ *
+ * A single click on a live session removed the protection — which made the
+ * toggle the weakest part of the very thing it guards: a borrowed phone or a
+ * lifted token was enough, silently. The sibling address change in the same
+ * screen demands the password at confirmation; this now matches it.
+ *
+ * The check is `authWithPassword`, so it is the server that says whether the
+ * password is right. For an account that still has its second factor the call
+ * comes back owing a code — which is not a failure here: it can only happen
+ * once the password has been accepted, so it proves exactly what was asked.
+ */
+export async function disableSecondFactor(password: string) {
+  const record = pb.authStore.record
+
+  if (!record) throw new Error('No account is signed in.')
+
+  const email = record.email as string
+
+  try {
+    await users().authWithPassword(email, password)
+  } catch (cause) {
+    if (!(cause as { response?: { mfaId?: string } }).response?.mfaId) throw cause
+  }
+
+  await users().update(record.id, { mfa_enabled: false })
 }
 
 const subscribe = (onStoreChange: () => void) => pb.authStore.onChange(onStoreChange)

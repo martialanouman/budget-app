@@ -11,20 +11,23 @@ const MAILPIT_URL = import.meta.env.VITE_MAILPIT_URL ?? 'http://127.0.0.1:8026'
 const MAIL_TIMEOUT_MS = 10_000
 
 /** Filtered by subject: authAlert mails the same address on a new sign-in. */
-async function waitForCode(recipient: string) {
+async function waitForCode(recipient: string, accept: (code: string) => boolean = () => true) {
   const deadline = Date.now() + MAIL_TIMEOUT_MS
   const query = `to:${recipient} subject:"code de connexion"`
 
   while (Date.now() < deadline) {
-    const search = await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(query)}`)
+    // Newest first, so a resend is read rather than the code it replaced.
+    const search = await fetch(
+      `${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(query)}&sort=-created`,
+    )
     const { messages } = (await search.json()) as { messages: { ID: string }[] }
 
-    if (messages.length > 0) {
-      const message = await fetch(`${MAILPIT_URL}/api/v1/message/${messages[0]!.ID}`)
+    for (const found of messages) {
+      const message = await fetch(`${MAILPIT_URL}/api/v1/message/${found.ID}`)
       const { HTML } = (await message.json()) as { HTML: string }
       const code = /<strong>(\d+)<\/strong>/u.exec(HTML)
 
-      if (code) return code[1]!
+      if (code && accept(code[1]!)) return code[1]!
     }
 
     await new Promise((resolve) => setTimeout(resolve, 200))
@@ -95,4 +98,39 @@ it('still refuses a wrong password outright', async () => {
   await screen.getByRole('button', { name: 'Se connecter' }).click()
 
   await expect.element(screen.getByText('E-mail ou mot de passe incorrect.')).toBeVisible()
+})
+
+/**
+ * A code lives minutes, and fetching one's mail can take longer. Without a
+ * resend, an expired code left only "back to sign-in", which throws the
+ * challenge away and asks for the password again — mailing another code each
+ * time, against the rate limit production enables.
+ *
+ * The second code is the one that must work: it proves the new otpId replaced
+ * the old rather than sitting beside it.
+ */
+it('sends another code without asking for the password again', async () => {
+  const email = await createSignedInUser('mfaui')
+  await pb.collection('users').update(currentUserId()!, { mfa_enabled: true })
+  pb.authStore.clear()
+
+  const { screen } = await renderApp('/sign-in')
+
+  await screen.getByLabelText('Adresse e-mail').fill(email)
+  await screen.getByLabelText('Mot de passe').fill(PASSWORD)
+  await screen.getByRole('button', { name: 'Se connecter' }).click()
+
+  await expect.element(screen.getByLabelText('Code reçu par e-mail')).toBeVisible()
+
+  const first = await waitForCode(email)
+
+  await screen.getByRole('button', { name: 'Renvoyer un code' }).click()
+  await expect.element(screen.getByText('Un nouveau code vient d’être envoyé.')).toBeVisible()
+
+  const second = await waitForCode(email, (candidate) => candidate !== first)
+
+  await screen.getByLabelText('Code reçu par e-mail').fill(second)
+  await screen.getByRole('button', { name: 'Valider le code' }).click()
+
+  await expect.element(screen.getByRole('heading', { name: 'Où j’en suis' })).toBeVisible()
 })

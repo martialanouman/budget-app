@@ -29,6 +29,7 @@ routerAdd(
         id: e.auth.id,
         email: e.auth.get('email'),
         name: e.auth.get('name'),
+        mfa_enabled: e.auth.get('mfa_enabled'),
         verified: e.auth.get('verified'),
         settings: e.auth.get('settings'),
         created: String(e.auth.get('created')),

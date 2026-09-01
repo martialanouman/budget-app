@@ -72,3 +72,24 @@ it('turns the second factor on and says so', async () => {
     .element(screen.getByRole('button', { name: 'Désactiver la double authentification' }))
     .toHaveAttribute('aria-pressed', 'true')
 })
+
+// The account with a second factor cannot be signed back in from this screen,
+// so the session ends and the sign-in screen is where it ends. What this
+// replaces is worse than the redirection: it used to announce a failure over a
+// password that had in fact been changed.
+it('sends the owner to sign in again when a code is owed', async () => {
+  await createSignedInUser('sec')
+  await pb.collection('users').update(pb.authStore.record!.id, { mfa_enabled: true })
+
+  const { screen } = await renderApp('/profile')
+
+  await screen.getByLabelText('Mot de passe actuel').fill(PASSWORD)
+  await screen.getByLabelText('Nouveau mot de passe', { exact: true }).fill(NEW_PASSWORD)
+  await screen.getByLabelText('Confirmer le nouveau mot de passe').fill(NEW_PASSWORD)
+  await screen.getByRole('button', { name: 'Changer mon mot de passe' }).click()
+
+  await expect.element(screen.getByRole('heading', { name: 'Connexion' })).toBeVisible()
+  await expect
+    .element(screen.getByText(/Vérifiez votre mot de passe actuel/u))
+    .not.toBeInTheDocument()
+})
