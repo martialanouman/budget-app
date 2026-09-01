@@ -10,11 +10,11 @@ import { type ReactNode } from 'react'
  */
 export function Disclosure({ summary, children }: { summary: string; children: ReactNode }) {
   return (
-    <details className="rounded-md border border-slate-200 bg-white">
+    <details className="rounded-card border border-line bg-surface">
       <summary className="flex min-h-11 cursor-pointer items-center px-3">
-        <h2 className="text-lg font-medium">{summary}</h2>
+        <h2 className="text-lg font-semibold">{summary}</h2>
       </summary>
-      <div className="border-t border-slate-200 p-3">{children}</div>
+      <div className="border-t border-line p-3">{children}</div>
     </details>
   )
 }

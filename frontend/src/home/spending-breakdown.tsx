@@ -40,7 +40,7 @@ export function SpendingBreakdown({
           <li key={row.id} className="space-y-1">
             <div className="flex items-baseline justify-between gap-3">
               <span>{nameOf(row.category)}</span>
-              <span className="text-sm tabular-nums text-slate-600">
+              <span className="text-sm tabular-nums text-muted">
                 {formatAmount(toMoney(row.spent))}
               </span>
             </div>

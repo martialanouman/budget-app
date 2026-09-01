@@ -52,7 +52,7 @@ export function ConfirmEmailChangePage({ token }: { token: string }) {
         noValidate
       >
         <FormError message={serverError} />
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           Saisissez votre mot de passe pour confirmer cette adresse. Vous devrez ensuite vous
           reconnecter avec elle.
         </p>

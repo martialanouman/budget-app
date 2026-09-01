@@ -11,7 +11,7 @@ import { SecuritySection } from './security-section.tsx'
 const NAME_MAX_LENGTH = 255
 
 const DESTRUCTIVE =
-  'w-full rounded-md bg-red-700 px-4 py-2.5 text-base font-medium text-white outline-none focus-visible:ring-2 focus-visible:ring-red-700/40 disabled:opacity-50'
+  'w-full rounded-md bg-danger px-4 py-2.5 text-base font-medium text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-danger/40 disabled:opacity-50'
 
 export function ProfilePage() {
   const { email, name } = useAuth()
@@ -82,7 +82,7 @@ export function ProfilePage() {
               only evidence the click landed was the header — and none at all
               for a screen reader (WCAG 2.1 SC 4.1.3, which is AA). */}
           {saveName.isSuccess ? (
-            <p role="status" className="text-sm text-slate-600">
+            <p role="status" className="text-sm text-muted">
               Votre nom a été enregistré.
             </p>
           ) : null}
@@ -94,7 +94,7 @@ export function ProfilePage() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Mes données</h2>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           Un fichier contenant l’intégralité de ce que vous avez saisi : comptes, catégories,
           transactions, budgets, dettes, remboursements et notifications.
         </p>
@@ -102,7 +102,7 @@ export function ProfilePage() {
           <FormError message="Le téléchargement a échoué. Vérifiez votre connexion et réessayez." />
         ) : null}
         {exportData.isSuccess ? (
-          <p role="status" className="text-sm text-slate-600">
+          <p role="status" className="text-sm text-muted">
             Vos données ont été téléchargées.
           </p>
         ) : null}
@@ -113,15 +113,15 @@ export function ProfilePage() {
             exportData.mutate()
           }}
           disabled={exportData.isPending}
-          className="min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60"
+          className="min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60"
         >
           Télécharger mes données
         </button>
       </section>
 
-      <section className="space-y-3 rounded-md border border-red-200 bg-red-50 p-4">
-        <h2 className="text-lg font-medium text-red-900">Fermer mon compte</h2>
-        <p className="text-sm text-red-900">
+      <section className="space-y-3 rounded-md border border-danger bg-danger-soft p-4">
+        <h2 className="text-lg font-medium text-danger">Fermer mon compte</h2>
+        <p className="text-sm text-danger">
           Tout est supprimé définitivement : comptes, transactions, budgets, dettes et historique.
           Cette action est irréversible. Téléchargez vos données avant, si vous voulez les garder.
         </p>

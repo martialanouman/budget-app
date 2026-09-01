@@ -30,8 +30,8 @@ export function DebtDetailPage({ debtId }: { debtId: string }) {
 
   return (
     <AppShell title={debt.data.creditor}>
-      <section className="rounded-md border border-slate-200 bg-white p-3">
-        <p className="text-sm text-slate-600">
+      <section className="rounded-md border border-line bg-surface p-3">
+        <p className="text-sm text-muted">
           {DEBT_DIRECTION_LABELS[debt.data.direction]} · {DEBT_KIND_LABELS[debt.data.kind]}
           {debt.data.interest_rate > 0
             ? ` · ${debt.data.interest_rate} % par an`
@@ -39,7 +39,7 @@ export function DebtDetailPage({ debtId }: { debtId: string }) {
         </p>
         <h2 className="text-lg font-medium">Capital restant dû</h2>
         <p className="text-2xl tabular-nums">{formatAmount(owedOn(debt.data))}</p>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           Mensualité {formatAmount(toMoney(debt.data.monthly_payment))} le {debt.data.due_day} du
           mois
           {end
@@ -68,7 +68,7 @@ export function DebtDetailPage({ debtId }: { debtId: string }) {
               : 'Aucune échéance : la mensualité ne couvre pas les intérêts.'}
           </p>
         ) : null}
-        <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+        <ul className="divide-y divide-line rounded-md border border-line bg-surface">
           {schedule.map((instalment) => (
             <li key={instalment.number} className="flex justify-between gap-3 p-3 text-sm">
               <span>
@@ -89,12 +89,12 @@ export function DebtDetailPage({ debtId }: { debtId: string }) {
         {deletePayment.isError ? <FormError message="La suppression a échoué." /> : null}
         {payments.isSuccess && payments.data.length === 0 ? <p>Aucun remboursement.</p> : null}
 
-        <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+        <ul className="divide-y divide-line rounded-md border border-line bg-surface">
           {(payments.data ?? []).map((payment) => (
             <li key={payment.id} className="flex items-center gap-3 p-3 text-sm">
               <span className="min-w-0 flex-1">
                 {dayLabel(payment.date)}
-                <span className="block text-slate-600 tabular-nums">
+                <span className="block text-muted tabular-nums">
                   {`${formatAmount(toMoney(payment.principal_part))} de capital · ${formatAmount(toMoney(payment.interest_part))} d’intérêts`}
                 </span>
               </span>
@@ -103,7 +103,7 @@ export function DebtDetailPage({ debtId }: { debtId: string }) {
                 type="button"
                 onClick={() => deletePayment.mutate(payment.id)}
                 aria-label={`Supprimer le remboursement du ${dayLabel(payment.date)}`}
-                className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+                className="shrink-0 min-h-11 rounded-md border border-line-strong px-3 outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
                 Supprimer
               </button>

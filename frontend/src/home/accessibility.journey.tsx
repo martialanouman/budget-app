@@ -14,10 +14,11 @@ import { pb } from '@/lib/pocketbase'
  *
  * What it does not: colour contrast lands in axe's "incomplete" bucket
  * whenever it cannot resolve the background with certainty — a deliberately
- * unreadable paragraph went unreported. The palette was therefore checked by
- * hand: slate-600 on slate-50 sits at 7.2:1, amber-700 at 4.6:1, red-700 at
- * 5.9:1, all above the 4.5:1 that AA asks of body text. Keyboard order and
- * focus visibility remain a human's job on a real device.
+ * unreadable paragraph went unreported. The palette is therefore checked by
+ * hand, and the ratios that stand live in docs/specs-techniques-budget.md §2.1
+ * rather than here: the figures this docstring used to carry outlived by two
+ * days the stylesheet they described. Keyboard order and focus visibility
+ * remain a human's job on a real device.
  */
 async function violations() {
   const results = await axe.run(document.body, {

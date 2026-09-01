@@ -74,7 +74,7 @@ function PasswordForm() {
       <form onSubmit={(event) => void onSubmit(event)} className="space-y-3" noValidate>
         <FormError message={serverError} />
         {done ? (
-          <p role="status" className="text-sm text-slate-600">
+          <p role="status" className="text-sm text-muted">
             Votre mot de passe a été modifié.
           </p>
         ) : null}
@@ -128,7 +128,7 @@ function EmailForm() {
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-medium">Adresse e-mail</h2>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         Votre adresse actuelle est {email}. La nouvelle ne prendra effet qu’une fois le lien de
         confirmation ouvert depuis celle-ci.
       </p>
@@ -137,7 +137,7 @@ function EmailForm() {
         {/* Names the address on purpose: a link sent to a mistyped address is
             silence, and the only way to notice the typo is to read it back. */}
         {sentTo ? (
-          <p role="status" className="text-sm text-slate-600">
+          <p role="status" className="text-sm text-muted">
             Un lien de confirmation a été envoyé à {sentTo}. Votre adresse actuelle reste active
             jusque-là.
           </p>
@@ -158,7 +158,7 @@ function EmailForm() {
 }
 
 const TOGGLE =
-  'min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 disabled:opacity-60'
+  'min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60'
 
 /**
  * Asymmetric on purpose. Turning the factor ON adds protection, so a click is
@@ -188,7 +188,7 @@ function SecondFactorToggle() {
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-medium">Double authentification</h2>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         {mfaEnabled
           ? 'À chaque connexion, un code vous est envoyé par e-mail en plus du mot de passe.'
           : 'Ajoutez un code envoyé par e-mail à chaque connexion, en plus du mot de passe.'}

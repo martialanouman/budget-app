@@ -70,24 +70,22 @@ function CategoryRow({
       <span className="min-w-0 flex-1">
         <span
           className={
-            category.active
-              ? 'block truncate font-medium'
-              : 'block truncate font-medium text-slate-400'
+            category.active ? 'block truncate font-medium' : 'block truncate font-medium text-muted'
           }
         >
           {category.name}
         </span>
-        <span className="block text-sm text-slate-600">
+        <span className="block text-sm text-muted">
           {CATEGORY_KIND_LABELS[category.kind]}
           {category.active ? '' : ' — désactivée'}
         </span>
-        {held ? <span className="block text-sm text-slate-600">{held}</span> : null}
+        {held ? <span className="block text-sm text-muted">{held}</span> : null}
       </span>
       <button
         type="button"
         onClick={() => onToggle(category)}
         aria-label={`${category.active ? 'Désactiver' : 'Réactiver'} ${category.name}`}
-        className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+        className="shrink-0 min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
       >
         {category.active ? 'Désactiver' : 'Réactiver'}
       </button>
@@ -98,7 +96,7 @@ function CategoryRow({
           type="button"
           onClick={() => onDelete(category)}
           aria-label={`Supprimer ${category.name}`}
-          className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+          className="shrink-0 min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
           Supprimer
         </button>
@@ -203,7 +201,7 @@ export function CategoriesPage() {
         {listMutationFailed ? (
           <FormError message="L'opération sur cette catégorie a échoué. Vérifiez votre connexion et réessayez." />
         ) : null}
-        <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+        <ul className="divide-y divide-line rounded-md border border-line bg-surface">
           {roots.map((category) => (
             <li key={category.id} className="p-3">
               <CategoryRow
@@ -213,7 +211,7 @@ export function CategoriesPage() {
                 onDelete={remove}
               />
               {childrenOf(category.id).length > 0 ? (
-                <ul className="mt-3 ml-4 space-y-3 border-l border-slate-200 pl-3">
+                <ul className="mt-3 ml-4 space-y-3 border-l border-line pl-3">
                   {childrenOf(category.id).map((child) => (
                     <li key={child.id}>
                       <CategoryRow

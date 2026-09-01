@@ -125,7 +125,7 @@ export function AccountsPage() {
         ) : null}
         {balances.isError ? <FormError message="Les soldes n'ont pas pu être chargés." /> : null}
         {accounts.isSuccess && active.length === 0 ? <p>Aucun compte pour le moment.</p> : null}
-        <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+        <ul className="divide-y divide-line rounded-md border border-line bg-surface">
           {active.map((account) => {
             const balance = balanceOf(account)
 
@@ -133,7 +133,7 @@ export function AccountsPage() {
               <li key={account.id} className="flex items-center gap-3 p-3">
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{account.name}</span>
-                  <span className="block text-sm text-slate-600">
+                  <span className="block text-sm text-muted">
                     {ACCOUNT_TYPE_LABELS[account.type]}
                   </span>
                 </span>
@@ -144,7 +144,7 @@ export function AccountsPage() {
                   type="button"
                   onClick={() => archive(account.id)}
                   aria-label={`Archiver ${account.name}`}
-                  className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+                  className="shrink-0 min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
                   Archiver
                 </button>
@@ -157,15 +157,15 @@ export function AccountsPage() {
       {archived.length > 0 ? (
         <section className="space-y-2">
           <h2 className="text-lg font-medium">Comptes archivés</h2>
-          <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+          <ul className="divide-y divide-line rounded-md border border-line bg-surface">
             {archived.map((account) => (
               <li key={account.id} className="flex items-center gap-3 p-3">
-                <span className="min-w-0 flex-1 truncate text-slate-600">{account.name}</span>
+                <span className="min-w-0 flex-1 truncate text-muted">{account.name}</span>
                 <button
                   type="button"
                   onClick={() => restore(account.id)}
                   aria-label={`Restaurer ${account.name}`}
-                  className="shrink-0 min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+                  className="shrink-0 min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
                   Restaurer
                 </button>

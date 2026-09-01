@@ -3,11 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <!-- Mirrors the manifest's theme_color. Declared only there, the browser
-         chrome stayed white outside the installed app. -->
-    <meta name="theme-color" content="#0f172a" />
+    <!-- The browser chrome should match the top of the page, which is the app
+         bar, which is --k-surface. Two media-scoped values cover the default
+         case, where the system preference decides; an explicit choice in the
+         settings replaces them at runtime (see lib/theme.ts), because a media
+         query cannot know about a choice stored in this browser.
+         Declared only in the manifest, this stayed white outside the installed
+         app — hence the duplication. -->
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#201c17" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Suivi de budget personnel en francs CFA" />
-    <title>Budget</title>
+    <title>Kalpe</title>
+    <!-- Blocking, inline, and before the stylesheet is applied — which is the
+         only place that can win this race. The entry module also applies the
+         preference, but it is deferred behind the bundle: a browser set to
+         light, on an account that chose dark, painted the whole page light
+         first and swapped once the bundle parsed.
+         The key and the two values are repeated from lib/theme.ts because
+         nothing can be imported here. They are the only duplication, and a
+         wrong one costs a flash, never a wrong theme: the module corrects it
+         a moment later. -->
+    <script>
+      try {
+        var choice = localStorage.getItem('kalpe:theme')
+        if (choice === 'dark' || choice === 'light') {
+          document.documentElement.setAttribute('data-theme', choice)
+        }
+      } catch (error) {
+        /* Private browsing raises on access; the system preference then decides. */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -18,6 +18,9 @@ services:
       # the mail sends users to localhost. APP_DOMAIN is the same host without
       # the scheme, because Traefik matches on the bare Host header.
       APP_URL: ${APP_URL}
+      # Interpolated into every mail template. Defaults to Kalpe in the hook,
+      # so an unset value gives the right name rather than an empty one.
+      APP_NAME: ${APP_NAME:-Kalpe}
 
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}

@@ -4,11 +4,16 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // The launcher icon, drawn in code rather than committed as an opaque blob:
-// three rising bars on the app's own slate, which is also what the interface
+// three rising bars on the app's own accent, which is also what the interface
 // uses for its own bars. No dependency, and the source of the pixels is right
 // here if the mark ever changes.
-const BACKGROUND = [15, 23, 42] // slate-900, the header and button colour
-const INK = [248, 250, 252] // slate-50
+//
+// The two colours are --k-accent and --k-on-accent, the same pair the primary
+// button uses. They are repeated here rather than read from the stylesheet:
+// this script runs in Node, with no CSS to parse, so the price of drawing the
+// mark in code is that a palette change has to be carried to both places.
+const BACKGROUND = [138, 68, 35] // #8A4423, --k-accent
+const INK = [255, 249, 243] // #FFF9F3, --k-on-accent
 
 const crcTable = Array.from({ length: 256 }, (_, index) => {
   let value = index

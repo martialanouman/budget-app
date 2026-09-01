@@ -40,18 +40,18 @@ export function Sheet({
       // Escape and the backdrop close the dialog on their own; this is what
       // tells React the state it holds is now out of date.
       onClose={onClose}
-      className="mt-auto mr-auto mb-0 ml-auto max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] backdrop:bg-slate-900/50 sm:my-auto sm:rounded-2xl sm:pb-4"
+      className="mt-auto mr-auto mb-0 ml-auto max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-t-card bg-surface p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-ink backdrop:bg-scrim sm:my-auto sm:rounded-card sm:pb-4"
     >
       {open ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <h2 id={titleId} className="text-lg font-medium">
+            <h2 id={titleId} className="text-lg font-semibold">
               {title}
             </h2>
             <button
               type="button"
               onClick={onClose}
-              className="min-h-11 shrink-0 rounded-md border border-slate-300 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+              className="min-h-11 shrink-0 rounded-full border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               Fermer
             </button>

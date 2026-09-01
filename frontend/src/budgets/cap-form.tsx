@@ -75,7 +75,7 @@ export function CapForm({
           error={formState.errors.cap?.message}
           {...register('cap')}
         />
-        <label className="flex items-center gap-2 text-sm text-slate-700">
+        <label className="flex items-center gap-2 text-sm text-ink">
           <input type="checkbox" className="size-4" {...register('carryOver')} />
           Reporter le solde non dépensé sur le mois suivant
         </label>
