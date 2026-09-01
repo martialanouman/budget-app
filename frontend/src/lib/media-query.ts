@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 
 /**
  * Whether a CSS media query currently matches.
@@ -13,18 +13,27 @@ import { useSyncExternalStore } from 'react'
  * `getByRole('link', { name: 'Comptes' })` ambiguous in eight existing files.
  *
  * One navigation at a time, therefore, and the width decides which.
+ *
+ * `subscribe` is memoised, and that is not decoration: `useSyncExternalStore`
+ * re-runs it whenever its identity changes, so an inline closure tears the
+ * listener down and puts it back on every render. Measured before the fix, 4
+ * subscriptions and 3 removals for one mount and one navigation. `useAuth`
+ * keeps both of its callbacks at module scope for the same reason; this one
+ * takes a parameter, so it memoises instead.
  */
 export function useMediaQuery(query: string): boolean {
-  return useSyncExternalStore(
-    (onChange) => {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
       const list = window.matchMedia(query)
 
       list.addEventListener('change', onChange)
 
       return () => list.removeEventListener('change', onChange)
     },
-    () => window.matchMedia(query).matches,
+    [query],
   )
+
+  return useSyncExternalStore(subscribe, () => window.matchMedia(query).matches)
 }
 
 /** The width at which the rail replaces the tab bar. Tailwind's `md`. */

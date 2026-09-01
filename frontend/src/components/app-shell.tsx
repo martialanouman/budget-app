@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import {
   ArrowLeftRight,
   ChartNoAxesColumn,
@@ -89,26 +89,20 @@ function SignOutButton({ className }: { className: string }) {
 /**
  * The four destinations the tab bar does not carry, behind one button.
  *
- * It closes on navigation, and not as a courtesy: a `<dialog>` holds the focus
- * trap and the inert background, so a menu that survived the navigation it just
- * performed would cover the screen it was asked to reveal and lock the keyboard
- * out of it.
+ * It closes on the click, and that is the whole mechanism. A `<dialog>` holds
+ * the focus trap and the inert background, so a menu left open over the screen
+ * it was asked to reveal locks the keyboard out of it — including when the link
+ * leads where we already are, which is the case a first version got wrong.
  *
- * The location is what closes it, rather than a click handler on each link:
- * the browser's back button also navigates, and it would otherwise leave the
- * dialog sitting over a page nobody can reach. And the closing is an adjustment
- * during render rather than an effect — the React compiler refuses a `setState`
- * in an effect, the same wall the profile name draft met, and the same answer.
+ * Navigating away needs no help: every screen renders its own `AppShell`, so a
+ * route change unmounts this component and `open` is born false again. An
+ * earlier version watched `useLocation` for that, which could never fire — the
+ * state it guarded had already gone with the unmount. Should the shell ever be
+ * lifted into a layout route, that stops being true; the back-button journey is
+ * what would say so.
  */
 function ShellMenu() {
   const [open, setOpen] = useState(false)
-  const { pathname } = useLocation()
-  const [lastSeenPath, setLastSeenPath] = useState(pathname)
-
-  if (pathname !== lastSeenPath) {
-    setLastSeenPath(pathname)
-    setOpen(false)
-  }
 
   return (
     <>
@@ -128,6 +122,7 @@ function ShellMenu() {
               <li key={item.to}>
                 <Link
                   to={item.to}
+                  onClick={() => setOpen(false)}
                   className="flex min-h-14 items-center gap-3 text-ink outline-none focus-visible:ring-2 focus-visible:ring-accent/40 aria-[current=page]:font-semibold"
                 >
                   <item.Icon aria-hidden="true" size={20} strokeWidth={1.75} />
@@ -147,6 +142,38 @@ const railLink =
   'flex min-h-11 items-center gap-3 rounded-md px-3 text-sm text-muted outline-none focus-visible:ring-2 focus-visible:ring-accent/40 aria-[current=page]:bg-surface-2 aria-[current=page]:font-semibold aria-[current=page]:text-ink'
 
 /**
+ * One group of rail links. Named, because the border between the two groups is
+ * the only thing that separates them and a border says nothing out loud: a
+ * screen reader would otherwise meet nine links in a row with no hint that the
+ * last four are of a different kind.
+ */
+function RailGroup({
+  items,
+  label,
+  className,
+}: {
+  items: readonly { to: string; label: string; Icon: typeof House }[]
+  label: string
+  className?: string
+}) {
+  return (
+    <ul aria-label={label} className={`space-y-1 ${className ?? ''}`}>
+      {items.map((item) => (
+        <li key={item.to}>
+          {/* Without the exact match, "/" prefix-matches every route and the
+              home entry reads as the current page from anywhere in the app. The
+              others want the prefix: /debts/$debtId keeps Dettes lit. */}
+          <Link to={item.to} activeOptions={{ exact: item.to === '/' }} className={railLink}>
+            <item.Icon aria-hidden="true" size={20} strokeWidth={1.75} />
+            {item.label}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/**
  * All nine destinations at once, from 768px up. Below it the bar and the menu
  * split them; above it there is room for the lot, so the menu earns nothing and
  * a bar fixed to the bottom of a desktop window is a phone stretched wide.
@@ -156,26 +183,12 @@ function Rail() {
     <div className="sticky top-0 flex h-dvh w-60 shrink-0 flex-col gap-4 overflow-y-auto border-r border-line bg-surface p-3">
       <p className="px-3 text-lg font-semibold text-ink">Kalpe</p>
       <nav aria-label="Navigation principale" className="flex-1">
-        <ul className="space-y-1">
-          {TABS.map((item) => (
-            <li key={item.to}>
-              <Link to={item.to} activeOptions={{ exact: item.to === '/' }} className={railLink}>
-                <item.Icon aria-hidden="true" size={20} strokeWidth={1.75} />
-                {item.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <ul className="mt-4 space-y-1 border-t border-line pt-4">
-          {ELSEWHERE.map((item) => (
-            <li key={item.to}>
-              <Link to={item.to} className={railLink}>
-                <item.Icon aria-hidden="true" size={20} strokeWidth={1.75} />
-                {item.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <RailGroup items={TABS} label="Au quotidien" />
+        <RailGroup
+          items={ELSEWHERE}
+          label="Réglages et à venir"
+          className="mt-4 border-t border-line pt-4"
+        />
       </nav>
       <div className="space-y-2 border-t border-line px-3 pt-3">
         <AccountIdentity />

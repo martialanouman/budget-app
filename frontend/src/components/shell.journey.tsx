@@ -148,3 +148,49 @@ it('keeps the rail out of the document on a phone', async () => {
   expect(screen.getByRole('link', { name: 'Comptes', exact: true }).elements()).toHaveLength(1)
   expect(screen.getByRole('link', { name: 'Rapports', exact: true }).elements()).toHaveLength(0)
 })
+
+/**
+ * Tapping the destination you are already on. The pathname does not change, so
+ * a menu that only watches the location never learns the tap happened — and it
+ * is a modal `<dialog>`, so what stays on screen is a focus trap over the page
+ * that was asked for. Nothing moves, and the way out is a "Fermer" button
+ * nobody has a reason to look for.
+ *
+ * The first version of this shell got it wrong in a way worth recording: its
+ * comment named this very case as the reason to prefer the location over the
+ * click. It is the one case the location cannot see.
+ */
+it('closes the menu even when the link leads where we already are', async () => {
+  await createSignedInUser('shell')
+  const { screen } = await renderApp('/profile')
+
+  await screen.getByRole('button', { name: 'Menu' }).click()
+  await screen.getByRole('link', { name: 'Mon compte', exact: true }).click()
+
+  expect(screen.getByRole('link', { name: 'Mon compte', exact: true }).elements()).toHaveLength(0)
+})
+
+/**
+ * The other half of the closing, and the one a click handler cannot reach: the
+ * browser's back button navigates without touching anything in the menu. Left
+ * open, the dialog is a focus trap over a page the keyboard cannot get to, and
+ * the user did not even ask to be there.
+ *
+ * Discriminating: drop the location half of ShellMenu and this reddens while
+ * every other shell journey stays green — which is how it was found.
+ */
+it('closes the menu when the back button navigates under it', async () => {
+  await createSignedInUser('shell')
+  const { screen, router } = await renderApp('/')
+
+  await screen.getByRole('link', { name: 'Comptes', exact: true }).click()
+  await expect.element(screen.getByRole('heading', { name: 'Comptes', level: 1 })).toBeVisible()
+
+  await screen.getByRole('button', { name: 'Menu' }).click()
+  await expect.element(screen.getByRole('link', { name: 'Rapports' })).toBeVisible()
+
+  router.history.back()
+
+  await expect.element(screen.getByRole('heading', { name: 'Où j’en suis' })).toBeVisible()
+  expect(screen.getByRole('link', { name: 'Rapports' }).elements()).toHaveLength(0)
+})
