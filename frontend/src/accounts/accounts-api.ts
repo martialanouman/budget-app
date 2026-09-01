@@ -10,6 +10,7 @@ export type AccountDraft = {
   name: string
   type: AccountType
   initialBalance: number
+  color: string
 }
 
 export function useAccounts() {
@@ -51,6 +52,9 @@ export function useCreateAccount() {
       name: draft.name,
       type: draft.type,
       initial_balance: draft.initialBalance,
+      // CPT-02, and the field has been in the collection since step 3 without
+      // a single write reaching it.
+      color: draft.color,
       archived: false,
     }),
   )

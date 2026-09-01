@@ -78,6 +78,27 @@
   --k-shadow: 0 1px 2px rgb(31 26 23 / 0.05), 0 12px 32px -18px rgb(31 26 23 / 0.25);
 }
 
+/* The eight a category or an account can be given (CAT-04, CPT-02).
+   One value per hue, shared by both themes — deliberately, not to save typing.
+   A hue clears 3:1 against white when its luminance is at most 0.300, and 3:1
+   against the dark surface from 0.136 up; the window is real, so these all sit
+   inside it. Measured on 01/09/2026, worst cases 3.23:1 on white and 3.31:1 on
+   the dark surface.
+   The luminances are spread across that window rather than equal, so the hues
+   keep some separation in greyscale — 1.59:1 between the extremes. That is
+   modest, and it is why the colour is never the only carrier: every dot sits
+   beside the name it belongs to. */
+:root {
+  --k-hue-terracotta: #df7031;
+  --k-hue-ambre: #a4721c;
+  --k-hue-olive: #6d8f1e;
+  --k-hue-vert: #32865c;
+  --k-hue-sarcelle: #3199a1;
+  --k-hue-indigo: #5a6ebd;
+  --k-hue-prune: #b566dc;
+  --k-hue-framboise: #bb426a;
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
@@ -144,6 +165,15 @@
   --color-line: var(--k-line);
   --color-line-strong: var(--k-line-strong);
   --color-scrim: var(--k-scrim);
+
+  --color-hue-terracotta: var(--k-hue-terracotta);
+  --color-hue-ambre: var(--k-hue-ambre);
+  --color-hue-olive: var(--k-hue-olive);
+  --color-hue-vert: var(--k-hue-vert);
+  --color-hue-sarcelle: var(--k-hue-sarcelle);
+  --color-hue-indigo: var(--k-hue-indigo);
+  --color-hue-prune: var(--k-hue-prune);
+  --color-hue-framboise: var(--k-hue-framboise);
 
   --color-accent: var(--k-accent);
   --color-accent-soft: var(--k-accent-soft);
