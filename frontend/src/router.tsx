@@ -23,6 +23,8 @@ import { ProfilePage } from '@/profile/profile-page.tsx'
 import { NotFoundPage } from '@/components/not-found-page'
 import { TransactionsPage } from '@/transactions/transactions-page.tsx'
 import { HomePage } from '@/home/home-page.tsx'
+import { SavingsPage } from '@/savings/savings-page.tsx'
+import { ReportsPage } from '@/reports/reports-page.tsx'
 import { pb } from '@/lib/pocketbase'
 import { createQueryClient } from '@/lib/query-client'
 
@@ -151,6 +153,21 @@ const profileRoute = createRoute({
   component: ProfilePage,
 })
 
+// EPG and RAP are deferred to v1.1 (§8), and the navigation names them anyway:
+// an entry that appears only once the feature ships lets someone conclude the
+// product does not do savings, and the address answers "Page introuvable".
+const savingsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/savings',
+  component: SavingsPage,
+})
+
+const reportsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/reports',
+  component: ReportsPage,
+})
+
 const transactionsRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/transactions',
@@ -172,6 +189,8 @@ const routeTree = rootRoute.addChildren([
     debtDetailRoute,
     accountsRoute,
     categoriesRoute,
+    savingsRoute,
+    reportsRoute,
   ]),
 ])
 
