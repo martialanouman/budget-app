@@ -138,6 +138,17 @@ function ShellMenu() {
   )
 }
 
+/**
+ * Typed from the two lists rather than restating their shape. `to: string`
+ * compiles and quietly switches off the router's check that the path leads
+ * somewhere — measured: with it, a bad path in ELSEWHERE was reported only at
+ * the menu's own map, and not here at all. Nothing had slipped through, because
+ * both lists are still rendered by a direct map elsewhere; but the menu's markup
+ * is the third near-copy of this list and the obvious next thing to extract,
+ * which would have left no validating site at all.
+ */
+type Destination = (typeof TABS)[number] | (typeof ELSEWHERE)[number]
+
 const railLink =
   'flex min-h-11 items-center gap-3 rounded-md px-3 text-sm text-muted outline-none focus-visible:ring-2 focus-visible:ring-accent/40 aria-[current=page]:bg-surface-2 aria-[current=page]:font-semibold aria-[current=page]:text-ink'
 
@@ -152,12 +163,12 @@ function RailGroup({
   label,
   className,
 }: {
-  items: readonly { to: string; label: string; Icon: typeof House }[]
+  items: readonly Destination[]
   label: string
   className?: string
 }) {
   return (
-    <ul aria-label={label} className={`space-y-1 ${className ?? ''}`}>
+    <ul aria-label={label} className={className ? `space-y-1 ${className}` : 'space-y-1'}>
       {items.map((item) => (
         <li key={item.to}>
           {/* Without the exact match, "/" prefix-matches every route and the
