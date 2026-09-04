@@ -5,10 +5,14 @@ import { Field } from './field.tsx'
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0'] as const
 
 /**
- * Nine hundred and ninety-nine billion francs: past any amount a household
- * enters, and far short of the integer ceiling. The cap is on the display as
- * much as on the arithmetic — a figure that keeps growing pushes the field out
- * of the sheet, and nothing would say why.
+ * As far as the keypad will build: nine hundred and ninety-nine billion francs,
+ * past any amount a household enters.
+ *
+ * It binds the keys and nothing else. A cap on what is typed would rewrite the
+ * amount rather than refuse it — the very thing `tidy` exists to prevent — and
+ * it would buy nothing: the input keeps its width and scrolls its own text
+ * (measured: neither the field nor the sheet grows), and `toMoney` already
+ * refuses anything past the exact-integer range.
  */
 const MAX_DIGITS = 12
 
@@ -25,8 +29,15 @@ const tidy = (value: string) =>
   /^\d*$/u.test(value)
     ? // "05" is worth five francs and reads like a mistake. Leading zeros go,
       // except the lone one of an amount just started.
-      value.replace(/^0+(?=\d)/u, '').slice(0, MAX_DIGITS)
+      value.replace(/^0+(?=\d)/u, '')
     : value
+
+/** A key press, which does nothing at all once the amount is as long as the keypad builds. */
+const pressed = (value: string, key: string) => {
+  const next = tidy(value + key)
+
+  return next.length > MAX_DIGITS ? value : next
+}
 
 const KEY_CLASS =
   'min-h-12 rounded-field border border-line-strong bg-surface text-lg tabular-nums text-ink outline-none active:bg-surface-2 focus-visible:ring-2 focus-visible:ring-accent/40'
@@ -58,12 +69,20 @@ function announce(value: string): string {
  * appears to do nothing; the grouped, currency-formatted figure lives in the
  * status line instead, which is also where it is announced.
  *
- * The keypad stands rather than folding away with the focus. Folding it would
- * have bought no room where it matters — the category sits below it either way,
- * and reaching the category is what would have closed the keypad — while making
- * the amount unreachable until something first focused the field. Nothing does:
- * measured, `showModal()` focuses the sheet's own "Fermer" button, and React
- * renders no `autofocus` attribute for the dialog to prefer.
+ * The keypad stands rather than folding away with the focus, and folding would
+ * genuinely have bought room: it is 218px of the 806 the sheet holds against a
+ * 760px window, so a keypad that closed when the category took focus would have
+ * left no scrolling at all. Two things cost more than that scroll.
+ *
+ * It would have to be opened by focusing the field, and nothing focuses it:
+ * measured, `showModal()` gives focus to the sheet's own "Fermer" button, and
+ * React renders no `autofocus` attribute for the dialog to prefer. So the
+ * amount would wait behind a tap on a control that looks like an ordinary
+ * field.
+ *
+ * And it would fold while the category's native picker is open — a system
+ * overlay that hides the page moving 218px underneath it. A jump under the
+ * thumb costs a mis-tap; a scroll is a gesture someone chose to make.
  *
  * It takes no ref, so react-hook-form cannot move focus here when the amount is
  * refused: the compiler's rule against reading a ref during render rejects the
@@ -115,7 +134,7 @@ export function AmountField({
               <button
                 key={key}
                 type="button"
-                onClick={() => onChange(tidy(value + key))}
+                onClick={() => onChange(pressed(value, key))}
                 className={KEY_CLASS}
               >
                 {key}

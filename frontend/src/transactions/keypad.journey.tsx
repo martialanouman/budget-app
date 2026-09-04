@@ -125,3 +125,51 @@ it('drops a leading zero rather than carrying it', async () => {
 
   await expect.element(screen.getByLabelText('Montant', { exact: true })).toHaveValue('5000')
 })
+
+/**
+ * The same rule as the comma, one line further down: nothing rewrites an amount
+ * into a different one. A first version capped every path at twelve digits, so
+ * a thirteenth typed digit vanished and the amount lost a factor of ten — in
+ * silence, and recorded.
+ *
+ * What cannot be held is refused instead, which is what `toMoney` already does
+ * past the exact-integer range.
+ */
+it('keeps every digit that was typed, and refuses what it cannot hold', async () => {
+  await createSignedInUser('kp')
+  await anAccount(150_000)
+
+  const { screen } = await renderApp('/')
+
+  await screen.getByRole('button', { name: 'Nouvelle transaction' }).click()
+  await screen.getByLabelText('Montant', { exact: true }).fill('12345678901234567890')
+
+  await expect
+    .element(screen.getByLabelText('Montant', { exact: true }))
+    .toHaveValue('12345678901234567890')
+
+  await screen.getByLabelText('Catégorie', { exact: true }).selectOptions('Alimentation')
+  await screen.getByRole('button', { name: 'Enregistrer' }).click()
+
+  await expect.element(screen.getByText('Montant en francs, supérieur à zéro')).toBeVisible()
+  expect(await pb.collection('transactions').getFullList()).toEqual([])
+})
+
+/**
+ * The keypad's own stop, which is the other half: the key does nothing and no
+ * digit appears, so there is nothing silent about it.
+ */
+it('stops the keypad at twelve digits', async () => {
+  await createSignedInUser('kp')
+  await anAccount(150_000)
+
+  const { screen } = await renderApp('/')
+
+  await screen.getByRole('button', { name: 'Nouvelle transaction' }).click()
+  await screen.getByLabelText('Montant', { exact: true }).fill('999999999999')
+  await screen.getByRole('button', { name: '7', exact: true }).click()
+
+  await expect
+    .element(screen.getByLabelText('Montant', { exact: true }))
+    .toHaveValue('999999999999')
+})
