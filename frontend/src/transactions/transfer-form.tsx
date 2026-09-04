@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { parseAmount } from '@budget/domain'
-import { useForm } from 'react-hook-form'
+import { useController, useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { AmountField } from '@/components/amount-field'
 import { FormError, SubmitButton } from '@/components/form-feedback'
 import { Disclosure } from '@/components/disclosure'
 import { SelectField } from '@/components/select-field'
@@ -47,7 +48,7 @@ export function TransferForm({
   failed: boolean
   onTransfer: (request: TransferRequest) => Promise<unknown>
 }) {
-  const { register, handleSubmit, reset, formState } = useForm<
+  const { control, register, handleSubmit, reset, formState } = useForm<
     FormInput,
     unknown,
     z.infer<typeof schema>
@@ -60,6 +61,8 @@ export function TransferForm({
       date: today,
     },
   })
+
+  const amount = useController({ control, name: 'amount' })
 
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -78,11 +81,11 @@ export function TransferForm({
         {failed ? (
           <FormError message="Le virement a échoué. Aucun mouvement n'a été enregistré." />
         ) : null}
-        <TextField
+        <AmountField
           label="Montant à transférer"
-          inputMode="numeric"
           error={formState.errors.amount?.message}
-          {...register('amount')}
+          value={amount.field.value}
+          onChange={amount.field.onChange}
         />
         <SelectField
           label="Depuis le compte"

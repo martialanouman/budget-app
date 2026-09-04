@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { parseAmount } from '@budget/domain'
-import { useForm } from 'react-hook-form'
+import { useController, useForm } from 'react-hook-form'
 import { todayLocally } from '@/lib/dates.ts'
 import { z } from 'zod'
+import { AmountField } from '@/components/amount-field'
 import { FormError, SubmitButton } from '@/components/form-feedback'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
@@ -68,7 +69,7 @@ export function QuickEntryForm({
   onRecorded?: (() => void) | undefined
 }) {
   const correcting = entry !== undefined
-  const { register, handleSubmit, reset, formState } = useForm<
+  const { control, register, handleSubmit, reset, formState } = useForm<
     FormInput,
     unknown,
     z.infer<typeof schema>
@@ -99,6 +100,10 @@ export function QuickEntryForm({
         },
   })
 
+  // Controlled rather than registered: the keypad writes the value, and only a
+  // re-render tells it what it has written.
+  const amount = useController({ control, name: 'amount' })
+
   const onSubmit = handleSubmit(async (values) => {
     try {
       await onRecord(values)
@@ -128,12 +133,11 @@ export function QuickEntryForm({
           }
         />
       ) : null}
-      <TextField
+      <AmountField
         label="Montant"
-        inputMode="numeric"
-        autoFocus
         error={formState.errors.amount?.message}
-        {...register('amount')}
+        value={amount.field.value}
+        onChange={amount.field.onChange}
       />
       <SelectField
         label="Type"
