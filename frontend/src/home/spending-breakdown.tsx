@@ -109,7 +109,7 @@ export function SpendingBreakdown({
           <Ring slices={slices} />
           <ol
             aria-label="Répartition des dépenses"
-            className="w-full min-w-0 flex-1 divide-y divide-line rounded-md border border-line bg-surface"
+            className="w-full min-w-0 flex-1 divide-y divide-line rounded-card border border-line bg-surface"
           >
             {slices.map((slice) => (
               <li key={slice.key} className="flex items-center gap-3 p-3">

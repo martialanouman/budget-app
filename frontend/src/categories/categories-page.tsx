@@ -31,6 +31,7 @@ import {
   useDeleteCategory,
   useSetCategoryActive,
 } from './categories-api.ts'
+import { SECONDARY_BUTTON_CLASS } from '@/components/secondary-button.ts'
 
 const schema = z.object({
   name: z.string().min(1, 'Nom requis').max(60, '60 caractères maximum'),
@@ -120,7 +121,7 @@ function CategoryRow({
           type="button"
           onClick={() => onToggle(category)}
           aria-label={`${category.active ? 'Désactiver' : 'Réactiver'} ${category.name}`}
-          className="min-h-11 shrink-0 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className={SECONDARY_BUTTON_CLASS}
         >
           {category.active ? 'Désactiver' : 'Réactiver'}
         </button>
@@ -131,7 +132,7 @@ function CategoryRow({
             type="button"
             onClick={() => onDelete(category)}
             aria-label={`Supprimer ${category.name}`}
-            className="min-h-11 shrink-0 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className={SECONDARY_BUTTON_CLASS}
           >
             Supprimer
           </button>
@@ -257,7 +258,7 @@ export function CategoriesPage() {
         {listMutationFailed ? (
           <FormError message="L'opération sur cette catégorie a échoué. Vérifiez votre connexion et réessayez." />
         ) : null}
-        <ul className="divide-y divide-line rounded-md border border-line bg-surface">
+        <ul className="divide-y divide-line rounded-card border border-line bg-surface">
           {roots.map((category) => (
             <li key={category.id} className="p-3">
               <CategoryRow

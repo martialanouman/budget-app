@@ -18,6 +18,7 @@ import {
   useCreateAccount,
   useRestoreAccount,
 } from './accounts-api.ts'
+import { SECONDARY_BUTTON_CLASS } from '@/components/secondary-button.ts'
 
 const schema = z.object({
   // Mirrors the max: 60 on accounts.name; without it the server's rejection
@@ -145,7 +146,7 @@ export function AccountsPage() {
         ) : null}
         {balances.isError ? <FormError message="Les soldes n'ont pas pu être chargés." /> : null}
         {accounts.isSuccess && active.length === 0 ? <p>Aucun compte pour le moment.</p> : null}
-        <ul className="divide-y divide-line rounded-md border border-line bg-surface">
+        <ul className="divide-y divide-line rounded-card border border-line bg-surface">
           {active.map((account) => {
             const balance = balanceOf(account)
 
@@ -183,7 +184,7 @@ export function AccountsPage() {
                     type="button"
                     onClick={() => archive(account.id)}
                     aria-label={`Archiver ${account.name}`}
-                    className="min-h-11 shrink-0 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                    className={SECONDARY_BUTTON_CLASS}
                   >
                     Archiver
                   </button>
@@ -197,7 +198,7 @@ export function AccountsPage() {
       {archived.length > 0 ? (
         <section className="space-y-2">
           <h2 className="text-lg font-medium">Comptes archivés</h2>
-          <ul className="divide-y divide-line rounded-md border border-line bg-surface">
+          <ul className="divide-y divide-line rounded-card border border-line bg-surface">
             {archived.map((account) => (
               <li key={account.id} className="flex items-center gap-3 p-3">
                 <span className="min-w-0 flex-1 truncate text-muted">{account.name}</span>
@@ -205,7 +206,7 @@ export function AccountsPage() {
                   type="button"
                   onClick={() => restore(account.id)}
                   aria-label={`Restaurer ${account.name}`}
-                  className="shrink-0 min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className={SECONDARY_BUTTON_CLASS}
                 >
                   Restaurer
                 </button>

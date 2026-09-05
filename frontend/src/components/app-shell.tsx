@@ -16,6 +16,7 @@ import { signOut, useAuth } from '@/auth/auth.ts'
 import { Sheet } from '@/components/sheet'
 import { WIDE_SCREEN, useMediaQuery } from '@/lib/media-query.ts'
 import { EntrySheet } from '@/transactions/entry-sheet.tsx'
+import { SECONDARY_BUTTON_CLASS } from '@/components/secondary-button.ts'
 
 /**
  * The five destinations someone opens the app for. A tab bar that holds
@@ -109,7 +110,7 @@ function ShellMenu() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex min-h-11 shrink-0 items-center gap-2 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        className={`${SECONDARY_BUTTON_CLASS} flex items-center gap-2`}
       >
         <MenuIcon aria-hidden="true" size={18} strokeWidth={1.75} />
         Menu
@@ -132,7 +133,7 @@ function ShellMenu() {
             ))}
           </ul>
         </nav>
-        <SignOutButton className="min-h-11 w-full rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40" />
+        <SignOutButton className={`${SECONDARY_BUTTON_CLASS} w-full`} />
       </Sheet>
     </>
   )
@@ -150,7 +151,7 @@ function ShellMenu() {
 type Destination = (typeof TABS)[number] | (typeof ELSEWHERE)[number]
 
 const railLink =
-  'flex min-h-11 items-center gap-3 rounded-md px-3 text-sm text-muted outline-none focus-visible:ring-2 focus-visible:ring-accent/40 aria-[current=page]:bg-surface-2 aria-[current=page]:font-semibold aria-[current=page]:text-ink'
+  'flex min-h-11 items-center gap-3 rounded-full px-3 text-sm text-muted outline-none focus-visible:ring-2 focus-visible:ring-accent/40 aria-[current=page]:bg-surface-2 aria-[current=page]:font-semibold aria-[current=page]:text-ink'
 
 /**
  * One group of rail links. Named, because the border between the two groups is
@@ -203,7 +204,7 @@ function Rail() {
       </nav>
       <div className="space-y-2 border-t border-line px-3 pt-3">
         <AccountIdentity />
-        <SignOutButton className="min-h-11 w-full rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40" />
+        <SignOutButton className={`${SECONDARY_BUTTON_CLASS} w-full`} />
       </div>
     </div>
   )

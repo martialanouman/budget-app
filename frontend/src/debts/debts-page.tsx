@@ -46,7 +46,7 @@ export function DebtsPage() {
 
   return (
     <AppShell title="Dettes">
-      <section className="rounded-md border border-line bg-surface p-3">
+      <section className="rounded-card border border-line bg-surface p-3">
         <h2 className="text-lg font-medium">Total dû</h2>
         <p className="text-2xl tabular-nums">{formatAmount(totalOwed(all))}</p>
         <p className="text-sm text-muted">
@@ -71,7 +71,7 @@ export function DebtsPage() {
         {debts.isError ? <FormError message="Impossible de charger vos dettes." /> : null}
         {debts.isSuccess && all.length === 0 ? <p>Aucune dette enregistrée.</p> : null}
 
-        <ul className="divide-y divide-line rounded-md border border-line bg-surface">
+        <ul className="divide-y divide-line rounded-card border border-line bg-surface">
           {all.map((debt) => (
             <DebtRow key={debt.id} debt={debt} />
           ))}

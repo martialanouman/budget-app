@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { WaitingPage } from '@/components/waiting-page'
+import { SECONDARY_BUTTON_CLASS } from '@/components/secondary-button.ts'
 
 /**
  * EPG-01 to EPG-03, deferred to v1.1: no collection carries a goal, and §8 of
@@ -20,10 +21,7 @@ export function SavingsPage() {
         "La date d'atteinte projetée au rythme actuel",
       ]}
     >
-      <Link
-        to="/accounts"
-        className="inline-block min-h-11 rounded-md border border-line-strong px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-      >
+      <Link to="/accounts" className={`${SECONDARY_BUTTON_CLASS} inline-block py-2`}>
         Voir mes Comptes
       </Link>
     </WaitingPage>

@@ -24,7 +24,7 @@ export function StreakCard({
   return (
     <section
       aria-labelledby={labelId}
-      className="flex items-center gap-3 rounded-md border border-line bg-surface p-3"
+      className="flex items-center gap-3 rounded-card border border-line bg-surface p-3"
     >
       <Flame
         aria-hidden="true"

@@ -165,7 +165,7 @@ export function QuickEntryForm({
       {/* Today and no note are right almost every time. Folded away they cost
           nothing to skip and stay one tap from being changed — which is the
           difference between a ten-second entry and a six-field one. */}
-      <details className="rounded-md border border-line bg-surface">
+      <details className="rounded-field border border-line bg-surface">
         <summary className="cursor-pointer px-3 py-3 text-sm font-medium text-ink">
           Date et note
         </summary>

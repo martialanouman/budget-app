@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { WaitingPage } from '@/components/waiting-page'
+import { SECONDARY_BUTTON_CLASS } from '@/components/secondary-button.ts'
 
 /**
  * RAP-03 to RAP-05 and the two twelve-month curves of RAP-02, deferred to v1.1
@@ -19,10 +20,7 @@ export function ReportsPage() {
         'Un export CSV sur une période choisie',
       ]}
     >
-      <Link
-        to="/"
-        className="inline-block min-h-11 rounded-md border border-line-strong px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-      >
+      <Link to="/" className={`${SECONDARY_BUTTON_CLASS} inline-block py-2`}>
         Voir la répartition du mois
       </Link>
     </WaitingPage>

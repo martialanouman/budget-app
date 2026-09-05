@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useId, useRef } from 'react'
+import { SECONDARY_BUTTON_CLASS } from './secondary-button.ts'
 
 /**
  * A modal sheet on a native `<dialog>`. The platform already gives the focus
@@ -48,11 +49,7 @@ export function Sheet({
             <h2 id={titleId} className="text-lg font-semibold">
               {title}
             </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="min-h-11 shrink-0 rounded-full border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-            >
+            <button type="button" onClick={onClose} className={SECONDARY_BUTTON_CLASS}>
               Fermer
             </button>
           </div>
