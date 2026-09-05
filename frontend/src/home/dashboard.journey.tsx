@@ -87,9 +87,13 @@ it('reflects an expense typed a moment ago', async () => {
   await expect.element(screen.getByText(xof('425 000'))).toBeVisible()
 })
 
-// RAP-01: where the money actually went, ranked. Five at most — a list of
-// twenty is not a glance.
-it('ranks the five categories that spent the most', async () => {
+// RAP-01: where the money actually went, ranked. Five named at most — a list of
+// twenty is not a glance — and the rest gathered rather than dropped, so the
+// ring beside the legend still adds up to the month (RAP-02).
+//
+// Seven categories against six rows is what makes the cap discriminating: with
+// six of each, six rows would prove nothing.
+it('names at most five categories and gathers the rest', async () => {
   await createSignedInUser('db')
   const account = await anAccount(1_000_000)
 
@@ -100,15 +104,21 @@ it('ranks the five categories that spent the most', async () => {
     ['Loisirs', 30_000],
     ['Famille', 20_000],
     ['Autre', 10_000],
+    ['Éducation', 5_000],
   ] as const) {
     await spend(account.id, await categoryNamed(name), amount)
   }
 
   const { screen } = await renderApp('/')
 
-  await expect.element(screen.getByText('Alimentation')).toBeVisible()
-  await expect.element(screen.getByText('Famille')).toBeVisible()
-  await expect.element(screen.getByText('Autre')).not.toBeInTheDocument()
+  const legend = screen.getByRole('list', { name: 'Répartition des dépenses' })
+
+  await expect.element(legend.getByRole('listitem').first()).toHaveTextContent(/Alimentation/u)
+  await expect
+    .element(legend.getByRole('listitem').nth(5))
+    .toHaveTextContent(new RegExp(`Autres catégories.*${xof('15 000').source}`, 'u'))
+
+  expect(legend.getByRole('listitem').elements()).toHaveLength(6)
 })
 
 // RAP-01 again: what falls due next, so nothing is missed by inattention.

@@ -118,6 +118,14 @@ export type AccountBalance = {
   balance: number
 }
 
+/** RAP-06's view: the run of consecutive days ending at the most recent entry. */
+export type EntryStreak = {
+  id: string
+  user: string
+  days: number
+  last_day: string
+}
+
 export type Budget = {
   id: string
   user: string
