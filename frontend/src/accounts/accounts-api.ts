@@ -13,6 +13,8 @@ export type AccountDraft = {
   color: string
 }
 
+export type AccountEdit = AccountDraft & { id: string }
+
 export function useAccounts() {
   return useQuery({
     queryKey: ['accounts'],
@@ -68,8 +70,16 @@ export function useRestoreAccount() {
   return useAccountMutation((id: string) => accounts().update(id, { archived: false }))
 }
 
-export function useRenameAccount() {
-  return useAccountMutation(({ id, name }: { id: string; name: string }) =>
-    accounts().update(id, { name }),
+/**
+ * CPT-02, on an account that already exists. The type travels with the name and
+ * the colour because the icon is deduced from it: correcting the type is the
+ * only way to correct the icon, which is never chosen.
+ *
+ * It replaces `useRenameAccount`, which had been here since step 3 without a
+ * single caller.
+ */
+export function useUpdateAccount() {
+  return useAccountMutation(({ id, name, type, color, initialBalance }: AccountEdit) =>
+    accounts().update(id, { name, type, color, initial_balance: initialBalance }),
   )
 }
