@@ -141,3 +141,41 @@ it('gathers everything past the top five into one slice', async () => {
 
   await expect.element(legend.getByRole('listitem').nth(5)).toHaveTextContent(/Autres/u)
 })
+
+/**
+ * The names come before the drawing. Without them every row falls back to
+ * "Sans catégorie" and every arc to the one hue that string derives, so five
+ * categories are rendered as one grey row repeated and the ring as a single
+ * solid colour — a picture that is not merely incomplete but wrong.
+ *
+ * "Aucun chiffre n'est affiché avant d'avoir été lu" is the policy the three
+ * figures above already hold; a label is no different, and the ring made the
+ * breach loud rather than quiet.
+ *
+ * The probe withholds the list rather than slowing it: a race between two real
+ * queries lasts a few milliseconds, and no assertion can be both stable and
+ * discriminating against it.
+ */
+it('draws nothing until the category names are in', async () => {
+  await createSignedInUser('blindcat')
+  const account = await anAccount()
+  const seeded = await pb
+    .collection('categories')
+    .getFullList<Category>({ headers: { 'X-Probe-Seed': '1' } })
+
+  await spend(account, seeded.find((one) => one.name === 'Alimentation')!.id, 120_000)
+  await spend(account, seeded.find((one) => one.name === 'Transport')!.id, 60_000)
+
+  const { screen } = await renderApp('/')
+
+  // Waited on a figure, never on a heading: the headings are static text and
+  // are on screen before a single query has answered, so asserting an absence
+  // after one of them asserts nothing at all. 1 000 000 opened, 180 000 spent.
+  await expect
+    .element(screen.getByRole('region', { name: 'Solde total' }).getByText(/820\s?000/u))
+    .toBeVisible()
+
+  expect(screen.getByRole('list', { name: 'Répartition des dépenses' }).elements()).toHaveLength(0)
+  expect(screen.getByText('Sans catégorie').elements()).toHaveLength(0)
+  expect(screen.getByText('Aucune dépense ce mois-ci.').elements()).toHaveLength(0)
+})

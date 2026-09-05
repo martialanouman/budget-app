@@ -245,7 +245,7 @@ export function HomePage() {
       <SpendingBreakdown
         spending={spending.data ?? []}
         categories={categories.data ?? []}
-        ready={spending.isSuccess}
+        ready={spending.isSuccess && categories.isSuccess}
       />
     </AppShell>
   )

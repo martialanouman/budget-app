@@ -47,7 +47,13 @@ export function SpendingBreakdown({
 }: {
   spending: BudgetSpending[]
   categories: Category[]
-  /** "No spending" is a claim, and it needs the figures to be in first. */
+  /**
+   * Both queries in — the amounts *and* the names. "Aucune dépense" is a claim
+   * that needs the figures, and every row here needs a name: without one it
+   * falls back to "Sans catégorie" and to the single hue that string derives,
+   * so five categories draw as one grey row repeated and the ring as one solid
+   * colour. That is not an incomplete picture but a wrong one.
+   */
   ready: boolean
 }) {
   const labelId = useId()
@@ -98,7 +104,7 @@ export function SpendingBreakdown({
 
       {ready && slices.length === 0 ? <p>Aucune dépense ce mois-ci.</p> : null}
 
-      {slices.length > 0 ? (
+      {ready && slices.length > 0 ? (
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
           <Ring slices={slices} />
           <ol

@@ -9,13 +9,38 @@ export function useEntryStreak() {
   })
 }
 
-/** The local calendar day before `date`, which is the only one a run may end on and still stand. */
+const twoDigits = (value: number) => String(value).padStart(2, '0')
+
+/**
+ * The calendar day before `date`, which is the only other day a run may end on
+ * and still be standing.
+ *
+ * Arithmetic on the string, with no UTC anywhere, and that is a correction. A
+ * first version built a Date at local noon, stepped back a day and read it
+ * through `toISOString()` — which converts to UTC. Measured under node with TZ
+ * set: correct at UTC, Abidjan, Auckland and São Paulo, and off by one past
+ * UTC+12, where `dayBefore('2026-09-05')` answered `2026-09-03`. A standing
+ * streak would have read "aucune série" in Kiritimati. `todayLocally` dodges
+ * the same trap by subtracting the offset before converting; this one dodges it
+ * by never converting.
+ *
+ * The month rollover still asks a Date for February's length, but builds and
+ * reads it with local accessors only — day zero of a month is the last day of
+ * the one before, which spares us a leap-year rule of our own.
+ *
+ * Not covered by a journey: the suite runs one browser and cannot vary its
+ * timezone per test, and a helper that re-derived the expected day would only
+ * restate the implementation.
+ */
 function dayBefore(date: string) {
-  const day = new Date(`${date}T12:00:00`)
+  const [year, month, day] = date.split('-').map(Number) as [number, number, number]
 
-  day.setDate(day.getDate() - 1)
+  if (day > 1) return `${year}-${twoDigits(month)}-${twoDigits(day - 1)}`
 
-  return day.toISOString().slice(0, 10)
+  const earlier = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 }
+  const lastDay = new Date(earlier.year, earlier.month, 0).getDate()
+
+  return `${earlier.year}-${twoDigits(earlier.month)}-${twoDigits(lastDay)}`
 }
 
 /**

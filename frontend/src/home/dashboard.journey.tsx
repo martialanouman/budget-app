@@ -287,3 +287,40 @@ it('leaves an archived account out of the headline total', async () => {
   await expect.element(screen.getByText(xof('600 000'))).toBeVisible()
   await expect.element(screen.getByText(xof('850 000'))).not.toBeInTheDocument()
 })
+
+/**
+ * Every figure on this screen is derived server-side — three views and a
+ * streak — and no realtime channel pushes any of them. So a write has to say
+ * which ones it invalidates, or the screen keeps answering with what it read
+ * before the user typed.
+ *
+ * Measured before the fix: recording twenty thousand francs from this very
+ * screen moved the balance and nothing else. "Dépenses du mois" still read
+ * 0 F CFA, "Reste à vivre" still read 0 F CFA, and the streak still said there
+ * was none — while the entry sat in the database.
+ *
+ * Starting from an empty month is what makes all three discriminating: a single
+ * seeded entry would already have opened the streak and filled the totals.
+ */
+it('moves every derived figure when an entry is made from the dashboard', async () => {
+  await createSignedInUser('db')
+  await anAccount(500_000)
+
+  const { screen } = await renderApp('/')
+
+  await expect.element(screen.getByText('Aucune série en cours')).toBeVisible()
+
+  await screen.getByRole('button', { name: 'Nouvelle transaction' }).click()
+  await screen.getByLabelText('Montant', { exact: true }).fill('20 000')
+  await screen.getByLabelText('Catégorie', { exact: true }).selectOptions('Alimentation')
+  await screen.getByRole('button', { name: 'Enregistrer' }).click()
+
+  await expect
+    .element(screen.getByRole('region', { name: 'Dépenses du mois' }).getByText(xof('20 000')))
+    .toBeVisible()
+  // No income this month, so what is left to live on is what was just spent.
+  await expect
+    .element(screen.getByRole('region', { name: 'Reste à vivre' }).getByText(xof('-20 000')))
+    .toBeVisible()
+  await expect.element(screen.getByText('1 jour d’affilée')).toBeVisible()
+})

@@ -83,6 +83,7 @@ export default tseslint.config(
         RelationField: 'readonly',
         SelectField: 'readonly',
         TextField: 'readonly',
+        onRecordsListRequest: 'readonly',
         onRecordCreate: 'readonly',
         onRecordCreateRequest: 'readonly',
         onRecordUpdate: 'readonly',

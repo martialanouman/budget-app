@@ -8,13 +8,22 @@ beforeEach(() => {
   pb.authStore.clear()
 })
 
-/** A local calendar day, counted back from today the way the user's clock does. */
+/**
+ * A local calendar day, counted back the way the user's clock does — built and
+ * read with local accessors only.
+ *
+ * `toISOString()` was the first version here too, which is why the timezone
+ * defect in `dayBefore` could not have been caught from this file: the seed and
+ * the code under test were wrong together.
+ */
 function daysAgo(count: number) {
   const day = new Date(`${todayLocally()}T12:00:00`)
 
   day.setDate(day.getDate() - count)
 
-  return day.toISOString().slice(0, 10)
+  const month = String(day.getMonth() + 1).padStart(2, '0')
+
+  return `${day.getFullYear()}-${month}-${String(day.getDate()).padStart(2, '0')}`
 }
 
 async function anAccountAndCategory() {
