@@ -102,6 +102,10 @@ export function AccountsPage() {
                     </span>
                   </span>
                 </div>
+                {/* 138px of balance and 180 of buttons in 332, measured at
+                    390px — one line, with 14 to spare. The eight-figure balance
+                    a business account could carry wraps to a second line rather
+                    than truncating the amount or the buttons. */}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="tabular-nums">
                     {balance === undefined ? '—' : formatAmount(balance)}

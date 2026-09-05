@@ -86,9 +86,13 @@ function CategoryRow({
           {held ? <span className="block text-sm text-muted">{held}</span> : null}
         </span>
       </div>
-      {/* Wrapping rather than shrinking: three of these do not fit on one line
-          on a phone, and "Désactiver" and "Supprimer" are too different to
-          press by mistake for the words to be traded for icons. */}
+      {/* The three fit on one line at 390px, measured: 86 + 102 + 102 and two
+          gaps, so 306px of buttons in the 332 the row offers. `flex-wrap` is
+          what those 26px of margin buy — a longer word in some future label
+          drops to a second line instead of pushing the row into a sideways
+          scroll. Keeping the words rather than trading them for icons is the
+          deliberate half: "Désactiver" and "Supprimer" are too different to
+          press by mistake. */}
       <div className="flex flex-wrap justify-end gap-2">
         {/* CAT-02 and CAT-04, which had no way in at all: the name, the nature
             and the ornament could only ever be set at creation. */}
