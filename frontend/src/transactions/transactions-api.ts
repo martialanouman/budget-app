@@ -8,6 +8,33 @@ import { pb } from '@/lib/pocketbase'
 const transactions = () => pb.collection('transactions')
 
 /**
+ * Everything a transaction write leaves stale.
+ *
+ * All of it is derived on the server — three views and the streak — and no
+ * realtime channel pushes any of it, so a key left out is a figure that keeps
+ * answering with what it read before the user typed.
+ *
+ * One list rather than three. The three modules that write transactions each
+ * kept their own and they had drifted: recording an expense from the dashboard
+ * moved the balance while "Dépenses du mois" stayed at zero, "Reste à vivre"
+ * stayed at zero and the streak stayed at none. Measured, then found again in
+ * review because the streak added a fourth key to a screen that already had
+ * three stale ones.
+ *
+ * Transfers touch neither the monthly totals nor the envelopes (CPT-05), so two
+ * of these keys are spare on that path. A spare refetch of one row costs less
+ * than a second list to keep in step.
+ */
+export const TRANSACTION_KEYS = [
+  ['transactions'],
+  ['account-balances'],
+  ['category-usage'],
+  ['monthly-summary'],
+  ['budget-spending'],
+  ['entry-streak'],
+] as const
+
+/**
  * Large enough that a phone screen is filled by the first page and most months
  * need only one, small enough that the whole history is never the price of
  * opening the screen. It also bounds what an invalidation costs: TanStack
@@ -121,11 +148,7 @@ export function useEarliestMonth() {
 // still offer to delete the category it landed on.
 const useTransactionMutation = <TVariables>(
   mutationFn: (variables: TVariables) => Promise<unknown>,
-) =>
-  useDerivedMutation<TVariables>(
-    [['transactions'], ['account-balances'], ['category-usage']],
-    mutationFn,
-  )
+) => useDerivedMutation<TVariables>(TRANSACTION_KEYS, mutationFn)
 
 export function useRecordTransaction() {
   return useTransactionMutation((draft: TransactionDraft) =>

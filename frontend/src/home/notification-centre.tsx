@@ -1,4 +1,5 @@
 import { daysUntil, formatAmount, toMoney } from '@budget/domain'
+import { Check } from 'lucide-react'
 import { type Category, type Notification } from '@/lib/collections'
 import { dayLabel, monthLabel, todayLocally } from '@/lib/dates.ts'
 
@@ -93,15 +94,18 @@ export function NotificationCentre({
             className="flex items-center gap-3 rounded-md border border-warning bg-warning-soft p-3"
           >
             <span className="flex-1 text-sm text-warning">{wording}</span>
-            {/* Short label, full accessible name: several buttons on the
-                page would otherwise read alike. */}
+            {/* A check rather than the words, and the words are the accessible
+                name. "Marquer comme lue" took nearly half the row at 390px and
+                folded every alert onto three lines — measured, not guessed.
+                Several of these buttons sit on the page at once, so the name
+                carries the wording that tells them apart. */}
             <button
               type="button"
               onClick={() => onDismiss(notification.id)}
               aria-label={`Marquer comme lue : ${wording}`}
-              className="min-h-11 rounded-md border border-warning px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-warning/40"
+              className="grid size-11 shrink-0 place-items-center rounded-md border border-warning outline-none focus-visible:ring-2 focus-visible:ring-warning/40"
             >
-              Marquer comme lue
+              <Check aria-hidden="true" size={18} strokeWidth={2} className="text-warning" />
             </button>
           </li>
         ))}

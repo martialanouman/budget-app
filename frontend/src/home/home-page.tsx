@@ -1,5 +1,5 @@
 import { formatAmount, toMoney } from '@budget/domain'
-import { useId } from 'react'
+import { type ReactNode, useId } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useAccountBalances, useAccounts } from '@/accounts/accounts-api.ts'
 import { useBudgetSpending, useBudgets } from '@/budgets/budgets-api.ts'
@@ -9,7 +9,10 @@ import { AppShell } from '@/components/app-shell'
 import { useDebts, useMonthPayments } from '@/debts/debts-api.ts'
 import { dayLabel, monthOf, todayLocally } from '@/lib/dates.ts'
 import { useMonthlySummary } from '@/lib/monthly-summary.ts'
+import { adviceFor, daysLeftInMonth } from './advice.ts'
 import { NotificationCentre } from './notification-centre.tsx'
+import { StreakCard } from './streak-card.tsx'
+import { runToday, useEntryStreak } from './entry-streak.ts'
 import { SpendingBreakdown } from './spending-breakdown.tsx'
 import { useDismissNotification, useNotifications } from './dashboard-api.ts'
 import { upcomingDues } from './upcoming-dues.ts'
@@ -36,12 +39,14 @@ const Figure = ({
   note,
   pending = false,
   primary = false,
+  children,
 }: {
   label: string
   value: string | undefined
   note?: string | undefined
   pending?: boolean
   primary?: boolean
+  children?: ReactNode
 }) => {
   const labelId = useId()
 
@@ -64,15 +69,16 @@ const Figure = ({
           <span className="sr-only">Chargement…</span>
           <span
             aria-hidden="true"
-            className={`block animate-pulse rounded bg-surface-2 ${primary ? 'h-9 w-56' : 'h-8 w-44'}`}
+            className={`block animate-pulse rounded bg-surface-2 ${primary ? 'h-9 w-56' : 'h-7 w-40'}`}
           />
         </p>
       ) : (
-        <p className={primary ? 'text-3xl font-semibold tabular-nums' : 'text-2xl tabular-nums'}>
+        <p className={primary ? 'text-3xl font-semibold tabular-nums' : 'text-xl tabular-nums'}>
           {value ?? UNKNOWN}
         </p>
       )}
       {note ? <p className="text-sm text-muted">{note}</p> : null}
+      {children}
     </section>
   )
 }
@@ -88,6 +94,7 @@ export function HomePage() {
   const categories = useCategories()
   const debts = useDebts()
   const payments = useMonthPayments(month)
+  const streak = useEntryStreak()
   const notifications = useNotifications()
   const dismiss = useDismissNotification()
 
@@ -126,23 +133,24 @@ export function HomePage() {
       : `sur ${formatAmount(budgeted)} d’enveloppes`
     : undefined
 
-  const remaining =
+  const remainingAmount =
     summary.isSuccess &&
     budgets.isSuccess &&
     spending.isSuccess &&
     debts.isSuccess &&
     payments.isSuccess
-      ? formatAmount(
-          remainingThisMonth({
-            income: summary.data.income,
-            spent: summary.data.spent,
-            budgets: budgets.data,
-            spending: spending.data,
-            debts: debts.data,
-            payments: payments.data,
-          }),
-        )
+      ? remainingThisMonth({
+          income: summary.data.income,
+          spent: summary.data.spent,
+          budgets: budgets.data,
+          spending: spending.data,
+          debts: debts.data,
+          payments: payments.data,
+        })
       : undefined
+
+  const remaining = remainingAmount === undefined ? undefined : formatAmount(remainingAmount)
+  const advice = adviceFor(remainingAmount, daysLeftInMonth(todayLocally()))
 
   const dues = upcomingDues(debts.data ?? []).slice(0, 3)
 
@@ -160,9 +168,29 @@ export function HomePage() {
           debts.isPending ||
           payments.isPending
         }
-        note="Revenus du mois, moins les dépenses réalisées, ce qui reste à payer sur les charges fixes et les échéances de dettes."
-      />
+        note="Revenus, moins les dépenses réalisées, les charges fixes et les échéances qui restent à payer."
+      >
+        {/* RAP-07. It sits inside the figure it is drawn from: a counsel about
+            an amount, printed away from that amount, asks the reader to carry
+            the number across the screen. */}
+        {advice ? (
+          <p
+            role="note"
+            aria-label="Conseil"
+            className="mt-3 rounded-field bg-accent-soft px-3 py-2 text-sm text-ink"
+          >
+            {advice}
+          </p>
+        ) : null}
+      </Figure>
 
+      {/* Smaller than the primary figure but still full width. Two half cards
+          were tried and measured: "12 645 000 F CFA" wants 172px and a half
+          card at 390px offers 147, so it spilled into its neighbour. The franc
+          has no small amounts — a household balance is seven digits as a matter
+          of course — and shrinking the type until it fits would leave a figure
+          the size of body text. The hierarchy is carried by the primary card's
+          border and its 3xl type instead. */}
       <Figure
         label="Solde total"
         value={totalBalance()}
@@ -175,6 +203,8 @@ export function HomePage() {
         pending={summary.isPending}
         note={againstBudget}
       />
+
+      <StreakCard run={runToday(streak.data, todayLocally())} pending={streak.isPending} />
 
       <NotificationCentre
         notifications={notifications.data ?? []}
@@ -215,7 +245,7 @@ export function HomePage() {
       <SpendingBreakdown
         spending={spending.data ?? []}
         categories={categories.data ?? []}
-        ready={spending.isSuccess}
+        ready={spending.isSuccess && categories.isSuccess}
       />
     </AppShell>
   )

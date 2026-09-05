@@ -73,9 +73,22 @@ export function hueFor(name: string): Hue {
 /** The class for a hue that is already known to be one — a swatch in a picker. */
 export const hueClass = (hue: Hue): string => HUE_CLASS[hue]
 
+/** The hue a row actually wears: the stored one when it is one, derived from the name otherwise. */
+export const hueOf = (stored: string | undefined, name: string): Hue =>
+  stored && isHue(stored) ? stored : hueFor(name)
+
 /** The class for a stored value that may be anything, including nothing. */
 export const hueClassOf = (stored: string | undefined, name: string): string =>
-  hueClass(stored && isHue(stored) ? stored : hueFor(name))
+  hueClass(hueOf(stored, name))
+
+/**
+ * The hue as a colour rather than a class, for the one place a class cannot go:
+ * an SVG stroke. Tailwind would have to generate `stroke-hue-<key>`, and it
+ * reads the source as text, so it never would. The custom property is resolved
+ * by the browser at paint time and answers for both themes, which is the whole
+ * reason the palette is tokens and not hexadecimals.
+ */
+export const huePaint = (hue: Hue): string => `var(--k-hue-${hue})`
 
 /**
  * A restricted grid rather than a free emoji field. An arbitrary character can

@@ -1,4 +1,5 @@
 import { useDerivedMutation } from '@/lib/mutations.ts'
+import { TRANSACTION_KEYS } from './transactions-api.ts'
 import { pb } from '@/lib/pocketbase'
 
 export type TransferRequest = {
@@ -19,5 +20,5 @@ export function transfer(request: TransferRequest) {
 }
 
 export function useTransfer() {
-  return useDerivedMutation([['transactions'], ['account-balances']], transfer)
+  return useDerivedMutation(TRANSACTION_KEYS, transfer)
 }

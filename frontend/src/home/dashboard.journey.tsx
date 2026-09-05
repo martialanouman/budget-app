@@ -87,9 +87,13 @@ it('reflects an expense typed a moment ago', async () => {
   await expect.element(screen.getByText(xof('425 000'))).toBeVisible()
 })
 
-// RAP-01: where the money actually went, ranked. Five at most — a list of
-// twenty is not a glance.
-it('ranks the five categories that spent the most', async () => {
+// RAP-01: where the money actually went, ranked. Five named at most — a list of
+// twenty is not a glance — and the rest gathered rather than dropped, so the
+// ring beside the legend still adds up to the month (RAP-02).
+//
+// Seven categories against six rows is what makes the cap discriminating: with
+// six of each, six rows would prove nothing.
+it('names at most five categories and gathers the rest', async () => {
   await createSignedInUser('db')
   const account = await anAccount(1_000_000)
 
@@ -100,15 +104,21 @@ it('ranks the five categories that spent the most', async () => {
     ['Loisirs', 30_000],
     ['Famille', 20_000],
     ['Autre', 10_000],
+    ['Éducation', 5_000],
   ] as const) {
     await spend(account.id, await categoryNamed(name), amount)
   }
 
   const { screen } = await renderApp('/')
 
-  await expect.element(screen.getByText('Alimentation')).toBeVisible()
-  await expect.element(screen.getByText('Famille')).toBeVisible()
-  await expect.element(screen.getByText('Autre')).not.toBeInTheDocument()
+  const legend = screen.getByRole('list', { name: 'Répartition des dépenses' })
+
+  await expect.element(legend.getByRole('listitem').first()).toHaveTextContent(/Alimentation/u)
+  await expect
+    .element(legend.getByRole('listitem').nth(5))
+    .toHaveTextContent(new RegExp(`Autres catégories.*${xof('15 000').source}`, 'u'))
+
+  expect(legend.getByRole('listitem').elements()).toHaveLength(6)
 })
 
 // RAP-01 again: what falls due next, so nothing is missed by inattention.
@@ -276,4 +286,41 @@ it('leaves an archived account out of the headline total', async () => {
 
   await expect.element(screen.getByText(xof('600 000'))).toBeVisible()
   await expect.element(screen.getByText(xof('850 000'))).not.toBeInTheDocument()
+})
+
+/**
+ * Every figure on this screen is derived server-side — three views and a
+ * streak — and no realtime channel pushes any of them. So a write has to say
+ * which ones it invalidates, or the screen keeps answering with what it read
+ * before the user typed.
+ *
+ * Measured before the fix: recording twenty thousand francs from this very
+ * screen moved the balance and nothing else. "Dépenses du mois" still read
+ * 0 F CFA, "Reste à vivre" still read 0 F CFA, and the streak still said there
+ * was none — while the entry sat in the database.
+ *
+ * Starting from an empty month is what makes all three discriminating: a single
+ * seeded entry would already have opened the streak and filled the totals.
+ */
+it('moves every derived figure when an entry is made from the dashboard', async () => {
+  await createSignedInUser('db')
+  await anAccount(500_000)
+
+  const { screen } = await renderApp('/')
+
+  await expect.element(screen.getByText('Aucune série en cours')).toBeVisible()
+
+  await screen.getByRole('button', { name: 'Nouvelle transaction' }).click()
+  await screen.getByLabelText('Montant', { exact: true }).fill('20 000')
+  await screen.getByLabelText('Catégorie', { exact: true }).selectOptions('Alimentation')
+  await screen.getByRole('button', { name: 'Enregistrer' }).click()
+
+  await expect
+    .element(screen.getByRole('region', { name: 'Dépenses du mois' }).getByText(xof('20 000')))
+    .toBeVisible()
+  // No income this month, so what is left to live on is what was just spent.
+  await expect
+    .element(screen.getByRole('region', { name: 'Reste à vivre' }).getByText(xof('-20 000')))
+    .toBeVisible()
+  await expect.element(screen.getByText('1 jour d’affilée')).toBeVisible()
 })

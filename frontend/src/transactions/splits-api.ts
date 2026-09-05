@@ -1,4 +1,5 @@
 import { useDerivedMutation } from '@/lib/mutations.ts'
+import { TRANSACTION_KEYS } from './transactions-api.ts'
 import { pb } from '@/lib/pocketbase'
 
 export type SplitRequest = {
@@ -18,8 +19,5 @@ export function splitTransaction(request: SplitRequest) {
 
 export function useSplitTransaction() {
   // Every part of a split carries a category, so this changes what holds them.
-  return useDerivedMutation(
-    [['transactions'], ['account-balances'], ['category-usage']],
-    splitTransaction,
-  )
+  return useDerivedMutation(TRANSACTION_KEYS, splitTransaction)
 }
