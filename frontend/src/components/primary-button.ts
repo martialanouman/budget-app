@@ -3,9 +3,10 @@
  * the one that closes an account.
  *
  * They were two hand-written copies differing only in their colour, and they
- * had already drifted three ways — 6px corners against a pill, medium against
- * semibold, and a disabled state at 50% against 60% — so the most dangerous
- * button of the application was also the only one shaped unlike the rest.
+ * had already drifted four ways — 6px corners against a pill, medium against
+ * semibold, a disabled state at 50% against 60%, and no `min-h-11` at all — so
+ * the most dangerous button of the application was also the only one shaped
+ * unlike the rest, and the only one without a guaranteed 44px target.
  *
  * A constant rather than a component, like `SECONDARY_BUTTON_CLASS` beside it:
  * one caller is a submit button that owns a pending state, the other a plain

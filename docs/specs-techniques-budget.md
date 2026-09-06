@@ -75,6 +75,10 @@ Application hébergée classique en deux blocs :
 > | Texte secondaire sur `surface-2` — l'en-tête de jour | `#7A6E66`, **4,29:1** | `#756A62`, **4,56:1** |
 >
 > Le thème sombre passait partout sans retouche (5,66:1 au plus bas). Mesures du 01/09/2026.
+>
+> **Une quatrième paire, trouvée en revue de la PR 7/7.** `--k-line-strong` est la limite de tout ce qui se presse ou se remplit, et sa mesure du 01/09/2026 avait porté sur **trois** fonds en concluant « au-dessus de 3:1 partout ». Il y en a **sept**, et il en échouait deux : **2,95:1** sur `--k-danger-soft` et **2,98:1** sur `--k-accent-soft`. Le premier était vivant — c'est le fond de la carte de fermeture de compte, qui porte le champ où l'on doit taper son adresse. Corrigé `#8B8680` → `#878280` : **3,10:1** sur danger-soft, **3,14:1** sur accent-soft, **3,79:1** sur `surface` (contre 3,61 avant), et tous les autres fonds y gagnent. Le thème sombre franchissait déjà les sept (3,17:1 au plus bas) et n'a pas bougé. Mesures du 06/09/2026.
+>
+> **La leçon vaut plus que la correction : une mesure de contraste énumère les fonds sur lesquels la couleur se pose, tous, et pas ceux auxquels on pense.** Sept fonds existent — `bg`, `surface`, `surface-2` et les quatre `*-soft` — et il suffit qu'un composant se pose une fois sur l'un d'eux.
 
 ### 2.3 Hébergement & exploitation
 

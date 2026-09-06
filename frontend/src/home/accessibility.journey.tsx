@@ -75,9 +75,10 @@ it('passes an automated WCAG AA pass on the dashboard', async () => {
   expect(await violations()).toEqual([])
 })
 
-// The account screen grew from two sections to six, three of them forms with
-// password fields that look alike. Labels that collide, or a toggle without a
-// state, are exactly what an automated pass catches and a reading does not.
+// The account screen grew from two sections to seven, three of them forms with
+// password fields that look alike, and one a radio group. Labels that collide,
+// or a toggle without a state, are exactly what an automated pass catches and a
+// reading does not.
 it('passes an automated WCAG AA pass on the account screen', async () => {
   await createSignedInUser('a11y')
 

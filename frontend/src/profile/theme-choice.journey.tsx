@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest'
 // assertion below would read the same colour whatever the control did.
 import '@/styles.css'
 import { createSignedInUser, renderApp } from '../../test/journey-harness.tsx'
-import { installTheme } from '@/lib/theme.ts'
+import { installTheme, setThemePreference } from '@/lib/theme.ts'
 import { pb } from '@/lib/pocketbase'
 
 const STORAGE_KEY = 'kalpe:theme'
@@ -21,9 +21,16 @@ const PAGE = { light: 'rgb(250, 247, 242)', dark: 'rgb(22, 19, 15)' }
 
 const pageColour = () => getComputedStyle(document.body).backgroundColor
 
+/**
+ * Back through the module rather than by emptying `localStorage` behind it.
+ * The applied preference is held in the module — that is what lets the control
+ * keep telling the truth when storage refuses — so clearing the key directly
+ * would leave the next test with the previous one's choice still applied. The
+ * product has no such path: a whole-storage clear reaches it as a `storage`
+ * event, which it follows.
+ */
 const forgetTheme = () => {
-  localStorage.removeItem(STORAGE_KEY)
-  document.documentElement.removeAttribute('data-theme')
+  setThemePreference('system')
 }
 
 beforeEach(() => {
@@ -80,4 +87,56 @@ it('follows a palette chosen in another tab', async () => {
   window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, newValue: 'dark' }))
 
   await expect.element(screen.getByRole('radio', { name: 'Sombre' })).toBeChecked()
+})
+
+/**
+ * A browser can refuse to remember, and two ordinary configurations do: Safari
+ * in private browsing and any browser set to block site data both raise on
+ * access, which `lib/theme.ts` already says in the comment above its reader.
+ *
+ * The choice still applies for the session — nothing about painting the page
+ * needs storage. What broke was the control: its snapshot asked storage what
+ * was *stored* rather than what was *applied*, so the page turned dark under a
+ * group still claiming « Système ». A control that misreports its own state is
+ * worse than one that cannot be used.
+ */
+it('keeps saying which palette is on when the browser refuses to remember it', async () => {
+  await createSignedInUser('theme')
+  const { screen } = await renderApp('/profile')
+
+  await expect.element(screen.getByRole('radio', { name: 'Système' })).toBeChecked()
+
+  // Saved and put back as property descriptors rather than as three detached
+  // methods: pulling `Storage.prototype.getItem` out by name is the very thing
+  // that loses its `this`, and the whole browser runs on this object while the
+  // refusal is in place.
+  const original = Object.getOwnPropertyDescriptors(Storage.prototype)
+  const refuse = {
+    value: () => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError')
+    },
+    writable: true,
+    configurable: true,
+  }
+
+  try {
+    Object.defineProperties(Storage.prototype, {
+      getItem: refuse,
+      setItem: refuse,
+      removeItem: refuse,
+    })
+
+    await screen.getByRole('radio', { name: 'Sombre' }).click()
+
+    // Both halves, because they are what came apart: the page did turn dark
+    // while the group went on claiming « Système ».
+    await expect.poll(pageColour).toBe(PAGE.dark)
+    await expect.element(screen.getByRole('radio', { name: 'Sombre' })).toBeChecked()
+  } finally {
+    Object.defineProperties(Storage.prototype, {
+      getItem: original.getItem,
+      setItem: original.setItem,
+      removeItem: original.removeItem,
+    })
+  }
 })
