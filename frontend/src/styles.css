@@ -55,9 +55,15 @@
   /* The boundary of something you can press or type into, which the hairline
      between two rows is not. Folding both onto one token cost the secondary
      buttons their only affordance — 1.32:1 against their own surface, below
-     the 3:1 WCAG 1.4.11 asks of a component's boundary. 3.61:1 here, and
-     above 3:1 on all three grounds. */
-  --k-line-strong: #8b8680;
+     the 3:1 WCAG 1.4.11 asks of a component's boundary.
+     Was #8B8680, measured against three grounds and claimed to clear them all.
+     There are seven, and it failed two: 2.95:1 on --k-danger-soft — which is
+     the ground the account-closing card puts a text field on, so the failure
+     was live — and 2.98:1 on --k-accent-soft. Darkened until the worst of the
+     seven clears: 3.10:1 on danger-soft, 3.14:1 on accent-soft, 3.79:1 on
+     surface. Remeasured 06/09/2026; the dark value clears all seven as it
+     stands, 3.17:1 at worst. */
+  --k-line-strong: #878280;
   /* Always dark, in both themes: it is what the sheet dims the page with.
      Following --k-ink turned it into a white wash under the dark palette. */
   --k-scrim: rgb(31 26 23 / 0.55);

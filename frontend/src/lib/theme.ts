@@ -41,6 +41,23 @@ export function readThemePreference(): ThemePreference {
 }
 
 /**
+ * What is applied right now, which is not always what is stored.
+ *
+ * Reading storage can raise outright, and the control that reads it then
+ * answers "system" while the page it sits on is painted dark — a control
+ * misreporting its own state, which is worse than one that cannot be used at
+ * all. Measured with storage refused: the attribute went to "dark" and the
+ * group went on showing « Système » checked.
+ *
+ * It is also what `getSnapshot` reads, and `getSnapshot` runs at least once per
+ * render: asking storage there was a synchronous call on every render of the
+ * screen for no gain. Measured before: three reads to mount the account screen,
+ * five after typing three letters into the name field, which is not this
+ * control's business.
+ */
+let applied: ThemePreference = readThemePreference()
+
+/**
  * index.html carries two media-scoped `theme-color` tags, which is the right
  * answer while the system decides. An explicit choice cannot be expressed as a
  * media query, so it gets a tag of its own with no media — inserted **first**,
@@ -67,6 +84,8 @@ function paintBrowserChrome(resolved: 'light' | 'dark', explicit: boolean) {
 }
 
 function apply(preference: ThemePreference) {
+  applied = preference
+
   const root = document.documentElement
 
   if (preference === 'system') {
@@ -132,6 +151,8 @@ const subscribe = (onStoreChange: () => void) => {
   }
 }
 
+const getSnapshot = () => applied
+
 export function useThemePreference() {
-  return useSyncExternalStore(subscribe, readThemePreference, () => 'system' as const)
+  return useSyncExternalStore(subscribe, getSnapshot, () => 'system' as const)
 }

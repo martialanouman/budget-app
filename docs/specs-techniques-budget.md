@@ -64,6 +64,8 @@ Application hébergée classique en deux blocs :
 > **Notes de version.** PocketBase est en pré-1.0 : figer la version en production et lire les notes de migration avant chaque montée. Litestream 0.5 utilise le nouveau format LTX (suivre la documentation 0.5+, pas les anciens tutoriels 0.3). Tailwind 4 se configure en CSS (plus de `tailwind.config.js`).
 > **Les deux thèmes, et la règle qui les tient.** La palette vit en variables CSS, jamais en classes `dark:`. Le jeu clair est défini sur `:root` nu ; le sombre le redéfinit sous `@media (prefers-color-scheme: dark)` gardé par `:root:not([data-theme='light'])`, puis une seconde fois sous `:root[data-theme='dark']` pour que le choix explicite l'emporte dans les deux sens. **Aucune couleur n'a sa seule définition dans un bloc `@media` ou `[data-theme]`** : une couleur qui n'existe que dans le thème sombre disparaît du thème clair sans que rien ne le signale.
 >
+> **Qui écrit `[data-theme]` (`USR-10`).** `frontend/src/lib/theme.ts` seul, et l'écran qui l'appelle est `frontend/src/profile/theme-section.tsx` — trois radios, « Système » par défaut, écrites au clic sans bouton d'enregistrement. Le réglage vit dans `localStorage` (`kalpe:theme`) et non sur le compte, et c'est une contrainte avant d'être un choix : la palette doit être juste sur l'écran de connexion, où il n'existe aucune session d'où lire une préférence. Deux endroits écrivent l'attribut — un extrait bloquant dans `index.html`, avant la feuille de style, puis `installTheme()` au démarrage de l'application — sans quoi la page peindrait le thème clair le temps d'un cadre. **La mécanique était livrée depuis la PR 1/7 et l'écran manquait jusqu'à la PR 7/7** : le choix explicite était inatteignable, donc la moitié `[data-theme]` de la palette aussi.
+>
 > **Le contraste n'est vérifié par aucun test, et ne le sera pas.** `axe-core` range le contraste en « incomplet » dès qu'il ne peut pas résoudre le fond avec certitude — vérifié non discriminant sur un paragraphe volontairement illisible. **Toute couleur ajoutée ou modifiée se mesure donc à la main, dans les deux thèmes**, contre les 4,5:1 qu'exige WCAG AA pour du texte courant. Trois paires de la maquette de septembre 2026 échouaient à cette mesure et ont été corrigées avant d'entrer :
 >
 > | Paire | Maquette | Retenu |
@@ -73,6 +75,10 @@ Application hébergée classique en deux blocs :
 > | Texte secondaire sur `surface-2` — l'en-tête de jour | `#7A6E66`, **4,29:1** | `#756A62`, **4,56:1** |
 >
 > Le thème sombre passait partout sans retouche (5,66:1 au plus bas). Mesures du 01/09/2026.
+>
+> **Une quatrième paire, trouvée en revue de la PR 7/7.** `--k-line-strong` est la limite de tout ce qui se presse ou se remplit, et sa mesure du 01/09/2026 avait porté sur **trois** fonds en concluant « au-dessus de 3:1 partout ». Il y en a **sept**, et il en échouait deux : **2,95:1** sur `--k-danger-soft` et **2,98:1** sur `--k-accent-soft`. Le premier était vivant — c'est le fond de la carte de fermeture de compte, qui porte le champ où l'on doit taper son adresse. Corrigé `#8B8680` → `#878280` : **3,10:1** sur danger-soft, **3,14:1** sur accent-soft, **3,79:1** sur `surface` (contre 3,61 avant), et tous les autres fonds y gagnent. Le thème sombre franchissait déjà les sept (3,17:1 au plus bas) et n'a pas bougé. Mesures du 06/09/2026.
+>
+> **La leçon vaut plus que la correction : une mesure de contraste énumère les fonds sur lesquels la couleur se pose, tous, et pas ceux auxquels on pense.** Sept fonds existent — `bg`, `surface`, `surface-2` et les quatre `*-soft` — et il suffit qu'un composant se pose une fois sur l'un d'eux.
 
 ### 2.3 Hébergement & exploitation
 

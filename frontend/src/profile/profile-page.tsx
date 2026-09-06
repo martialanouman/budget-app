@@ -6,13 +6,13 @@ import { TextField } from '@/components/text-field'
 import { useAuth } from '@/auth/auth.ts'
 import { useCloseAccount, useExportData, useSaveName } from './profile-api.ts'
 import { SecuritySection } from './security-section.tsx'
+import { SettingsSection } from './settings-section.tsx'
+import { ThemeSection } from './theme-section.tsx'
 import { SECONDARY_BUTTON_CLASS } from '@/components/secondary-button.ts'
+import { PRIMARY_BUTTON_CLASS } from '@/components/primary-button.ts'
 
 /** What the `users.name` column holds; the field refuses more rather than the server. */
 const NAME_MAX_LENGTH = 255
-
-const DESTRUCTIVE =
-  'w-full rounded-md bg-danger px-4 py-2.5 text-base font-medium text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-danger/40 disabled:opacity-50'
 
 export function ProfilePage() {
   const { email, name } = useAuth()
@@ -58,8 +58,7 @@ export function ProfilePage() {
 
   return (
     <AppShell title="Mon compte">
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium">Mon profil</h2>
+      <SettingsSection title="Mon profil">
         <form
           onSubmit={(event) => {
             event.preventDefault()
@@ -89,12 +88,13 @@ export function ProfilePage() {
           ) : null}
           <SubmitButton pending={saveName.isPending}>Enregistrer mon nom</SubmitButton>
         </form>
-      </section>
+      </SettingsSection>
+
+      <ThemeSection />
 
       <SecuritySection />
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium">Mes données</h2>
+      <SettingsSection title="Mes données">
         <p className="text-sm text-muted">
           Un fichier contenant l’intégralité de ce que vous avez saisi : comptes, catégories,
           transactions, budgets, dettes, remboursements et notifications.
@@ -118,10 +118,9 @@ export function ProfilePage() {
         >
           Télécharger mes données
         </button>
-      </section>
+      </SettingsSection>
 
-      <section className="space-y-3 rounded-md border border-danger bg-danger-soft p-4">
-        <h2 className="text-lg font-medium text-danger">Fermer mon compte</h2>
+      <SettingsSection title="Fermer mon compte" danger>
         <p className="text-sm text-danger">
           Tout est supprimé définitivement : comptes, transactions, budgets, dettes et historique.
           Cette action est irréversible. Téléchargez vos données avant, si vous voulez les garder.
@@ -140,11 +139,11 @@ export function ProfilePage() {
           type="button"
           onClick={() => void close()}
           disabled={!confirmed || closeAccount.isPending}
-          className={DESTRUCTIVE}
+          className={`${PRIMARY_BUTTON_CLASS} bg-danger focus-visible:ring-danger/40`}
         >
           Supprimer définitivement mon compte
         </button>
-      </section>
+      </SettingsSection>
     </AppShell>
   )
 }
