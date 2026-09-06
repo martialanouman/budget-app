@@ -8,7 +8,7 @@ const categories = () => pb.collection('categories')
 export type CategoryDraft = {
   name: string
   kind: CategoryKind
-  parent?: string
+  parent: string
   icon: string
   color: string
 }
@@ -34,13 +34,15 @@ export function useCategoryUsage() {
 const useCategoryMutation = <TVariables>(mutationFn: (variables: TVariables) => Promise<unknown>) =>
   useDerivedMutation<TVariables>([['categories'], ['category-usage']], mutationFn)
 
+export type CategoryEdit = CategoryDraft & { id: string }
+
 export function useCreateCategory() {
   return useCategoryMutation((draft: CategoryDraft) =>
     categories().create({
       user: pb.authStore.record?.id,
       name: draft.name,
       kind: draft.kind,
-      parent: draft.parent ?? '',
+      parent: draft.parent,
       active: true,
       icon: draft.icon,
       color: draft.color,
@@ -55,10 +57,17 @@ export function useSetCategoryActive() {
   )
 }
 
-export function useRenameCategory() {
-  return useCategoryMutation(({ id, name }: { id: string; name: string }) =>
-    categories().update(id, { name }),
-  )
+/**
+ * CAT-02 and CAT-04, on a category that already exists. One write for the name,
+ * the nature, the parent and the ornament: they are corrected on one form, and
+ * splitting the call would only let a half-saved row exist.
+ *
+ * It replaces `useRenameCategory`, which had been here since step 3 without a
+ * single caller — the third field or hook of this repository found in that
+ * state, after `useUpdateTransaction` and `accounts.color`.
+ */
+export function useUpdateCategory() {
+  return useCategoryMutation(({ id, ...fields }: CategoryEdit) => categories().update(id, fields))
 }
 
 // Only a category nothing points at; the server refuses the rest, and the page

@@ -1,29 +1,13 @@
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
-import { FormError, SubmitButton } from '@/components/form-feedback'
-import { ListSkeleton } from '@/components/list-skeleton'
+import { useState } from 'react'
 import { AppShell } from '@/components/app-shell'
 import { Disclosure } from '@/components/disclosure'
-import { SelectField } from '@/components/select-field'
-import { TextField } from '@/components/text-field'
-import { ChoiceGrid } from '@/components/choice-grid'
-import {
-  FALLBACK_ICON,
-  HUES,
-  HUE_LABELS,
-  ICONS,
-  hueClass,
-  hueClassOf,
-  iconOf,
-} from '@/lib/appearance'
-import {
-  CATEGORY_KINDS,
-  CATEGORY_KIND_LABELS,
-  type Category,
-  type CategoryKind,
-  type CategoryUsage,
-} from '@/lib/collections'
+import { FormError } from '@/components/form-feedback'
+import { ListSkeleton } from '@/components/list-skeleton'
+import { SECONDARY_BUTTON_CLASS } from '@/components/secondary-button.ts'
+import { hueClassOf, iconOf } from '@/lib/appearance'
+import { CATEGORY_KIND_LABELS, type Category, type CategoryUsage } from '@/lib/collections'
+import { CategoryForm } from './category-form.tsx'
+import { EditCategorySheet } from './edit-category-sheet.tsx'
 import {
   useCategories,
   useCategoryUsage,
@@ -31,21 +15,6 @@ import {
   useDeleteCategory,
   useSetCategoryActive,
 } from './categories-api.ts'
-
-const schema = z.object({
-  name: z.string().min(1, 'Nom requis').max(60, '60 caractères maximum'),
-  kind: z.enum(CATEGORY_KINDS),
-  parent: z.string(),
-  // CAT-04. Both are chosen from a closed set, so the enum is the validation:
-  // an emoji field open to anything would have to be validated for something.
-  // Empty is the fourth state and the ordinary one — nothing chosen is stored
-  // as nothing, so the fallback lives in lib/appearance.ts rather than being
-  // frozen into the row on the day it was created.
-  icon: z.enum(ICONS).or(z.literal('')),
-  color: z.enum(HUES).or(z.literal('')),
-})
-
-type FormValues = z.infer<typeof schema>
 
 const countLabel = (count: number, one: string, many: string) =>
   count === 0 ? undefined : `${count} ${count === 1 ? one : many}`
@@ -73,12 +42,14 @@ function CategoryRow({
   category,
   held,
   deletable,
+  onEdit,
   onToggle,
   onDelete,
 }: {
   category: Category
   held: string | undefined
   deletable: boolean
+  onEdit: (category: Category) => void
   onToggle: (category: Category) => void
   onDelete: (category: Category) => void
 }) {
@@ -115,12 +86,29 @@ function CategoryRow({
           {held ? <span className="block text-sm text-muted">{held}</span> : null}
         </span>
       </div>
-      <div className="flex justify-end gap-2">
+      {/* The three fit on one line at 390px, measured: 86 + 102 + 102 and two
+          gaps, so 306px of buttons in the 332 the row offers. `flex-wrap` is
+          what those 26px of margin buy — a longer word in some future label
+          drops to a second line instead of pushing the row into a sideways
+          scroll. Keeping the words rather than trading them for icons is the
+          deliberate half: "Désactiver" and "Supprimer" are too different to
+          press by mistake. */}
+      <div className="flex flex-wrap justify-end gap-2">
+        {/* CAT-02 and CAT-04, which had no way in at all: the name, the nature
+            and the ornament could only ever be set at creation. */}
+        <button
+          type="button"
+          onClick={() => onEdit(category)}
+          aria-label={`Modifier ${category.name}`}
+          className={SECONDARY_BUTTON_CLASS}
+        >
+          Modifier
+        </button>
         <button
           type="button"
           onClick={() => onToggle(category)}
           aria-label={`${category.active ? 'Désactiver' : 'Réactiver'} ${category.name}`}
-          className="min-h-11 shrink-0 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className={SECONDARY_BUTTON_CLASS}
         >
           {category.active ? 'Désactiver' : 'Réactiver'}
         </button>
@@ -131,7 +119,7 @@ function CategoryRow({
             type="button"
             onClick={() => onDelete(category)}
             aria-label={`Supprimer ${category.name}`}
-            className="min-h-11 shrink-0 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className={SECONDARY_BUTTON_CLASS}
           >
             Supprimer
           </button>
@@ -147,29 +135,7 @@ export function CategoriesPage() {
   const createCategory = useCreateCategory()
   const setActive = useSetCategoryActive()
   const deleteCategory = useDeleteCategory()
-
-  const { register, handleSubmit, reset, formState } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { name: '', kind: 'variable', parent: '', icon: '', color: '' },
-  })
-
-  const onSubmit = handleSubmit(async (values) => {
-    createCategory.reset()
-
-    // Removing the <option> resets what the browser shows but fires no change
-    // event, so the form can still hold a parent deactivated meanwhile. What
-    // the user sees — "Aucune" — is what gets saved.
-    const parent = selectableParents.some((category) => category.id === values.parent)
-      ? values.parent
-      : ''
-
-    try {
-      await createCategory.mutateAsync({ ...values, parent })
-      reset()
-    } catch {
-      // Surfaced through createCategory.isError below.
-    }
-  })
+  const [editing, setEditing] = useState<Category>()
 
   const roots = categories.data?.filter((category) => !category.parent) ?? []
   const childrenOf = (parentId: string) =>
@@ -203,51 +169,35 @@ export function CategoriesPage() {
 
   // A retired parent must not collect new children.
   const selectableParents = roots.filter((category) => category.active)
-  const parentOptions = [
-    { value: '', label: 'Aucune (catégorie principale)' },
-    ...selectableParents.map((category) => ({ value: category.id, label: category.name })),
-  ]
+
+  /**
+   * What may hold this one — two rules the creation form never had to state.
+   * A category cannot be filed under itself, and one that already has children
+   * cannot be filed at all: the screen draws the roots and then each root's
+   * children, so a third level would simply not be drawn.
+   *
+   * Its own parent stays on offer even once deactivated, for the reason a
+   * corrected transaction keeps its archived account: saving must not quietly
+   * move a sub-category up to the root because the screen has stopped
+   * proposing where it already sits.
+   */
+  const parentsFor = (category: Category) =>
+    childrenOf(category.id).length > 0
+      ? []
+      : roots.filter((one) => one.id !== category.id && (one.active || one.id === category.parent))
 
   return (
     <AppShell title="Catégories">
       <Disclosure summary="Ajouter une catégorie">
-        <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
-          {createCategory.isError ? (
-            <FormError message="La création de la catégorie a échoué. Vérifiez votre connexion et réessayez." />
-          ) : null}
-          <TextField label="Nom" error={formState.errors.name?.message} {...register('name')} />
-          <SelectField
-            label="Nature"
-            options={CATEGORY_KINDS.map((kind: CategoryKind) => ({
-              value: kind,
-              label: CATEGORY_KIND_LABELS[kind],
-            }))}
-            error={formState.errors.kind?.message}
-            {...register('kind')}
-          />
-          <SelectField label="Catégorie parente" options={parentOptions} {...register('parent')} />
-          <ChoiceGrid
-            legend="Icône"
-            hint={`Sans choix, l'étiquette neutre ${FALLBACK_ICON}.`}
-            options={ICONS.map((icon) => ({
-              value: icon,
-              label: icon,
-              swatch: <span className="text-xl">{icon}</span>,
-            }))}
-            {...register('icon')}
-          />
-          <ChoiceGrid
-            legend="Couleur"
-            hint="Sans choix, elle est dérivée du nom."
-            options={HUES.map((hue) => ({
-              value: hue,
-              label: HUE_LABELS[hue],
-              swatch: <span className={`size-6 rounded-full ${hueClass(hue)}`} />,
-            }))}
-            {...register('color')}
-          />
-          <SubmitButton pending={formState.isSubmitting}>Créer la catégorie</SubmitButton>
-        </form>
+        <CategoryForm
+          parents={selectableParents}
+          failed={createCategory.isError}
+          onSave={(fields) => {
+            createCategory.reset()
+
+            return createCategory.mutateAsync(fields)
+          }}
+        />
       </Disclosure>
 
       <section className="space-y-2">
@@ -257,12 +207,13 @@ export function CategoriesPage() {
         {listMutationFailed ? (
           <FormError message="L'opération sur cette catégorie a échoué. Vérifiez votre connexion et réessayez." />
         ) : null}
-        <ul className="divide-y divide-line rounded-md border border-line bg-surface">
+        <ul className="divide-y divide-line rounded-card border border-line bg-surface">
           {roots.map((category) => (
             <li key={category.id} className="p-3">
               <CategoryRow
                 category={category}
                 {...rowProps(category)}
+                onEdit={setEditing}
                 onToggle={toggle}
                 onDelete={remove}
               />
@@ -273,6 +224,7 @@ export function CategoriesPage() {
                       <CategoryRow
                         category={child}
                         {...rowProps(child)}
+                        onEdit={setEditing}
                         onToggle={toggle}
                         onDelete={remove}
                       />
@@ -284,6 +236,12 @@ export function CategoriesPage() {
           ))}
         </ul>
       </section>
+
+      <EditCategorySheet
+        category={editing}
+        parents={editing ? parentsFor(editing) : []}
+        onClose={() => setEditing(undefined)}
+      />
     </AppShell>
   )
 }

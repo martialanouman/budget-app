@@ -17,6 +17,7 @@ import {
   requestEmailChange,
   useAuth,
 } from '@/auth/auth.ts'
+import { SECONDARY_BUTTON_CLASS } from '@/components/secondary-button.ts'
 
 /**
  * The three things one does to one's own credentials, each in its own form so
@@ -157,8 +158,7 @@ function EmailForm() {
   )
 }
 
-const TOGGLE =
-  'min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60'
+const TOGGLE = `${SECONDARY_BUTTON_CLASS} disabled:opacity-60`
 
 /**
  * Asymmetric on purpose. Turning the factor ON adds protection, so a click is

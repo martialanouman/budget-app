@@ -234,3 +234,83 @@ it('carries the new fields into the data export', async () => {
   expect(alimentation?.icon).toBe('🍚')
   expect(alimentation?.color).toBe('terracotta')
 })
+
+/**
+ * Renaming a row that never chose a colour used to repaint it: the hue is
+ * derived from the name, so a corrected spelling handed the category a
+ * different colour on the way past. The edit form opens on the hue the row is
+ * actually wearing, which is what turns a derived colour into a kept one the
+ * moment anything else about the row is corrected.
+ *
+ * Discriminating: leave the edit form's colour grid unselected for a stored
+ * blank and this reddens on the second assertion.
+ */
+it('keeps the colour a row already wore when it is renamed', async () => {
+  await createSignedInUser('appear')
+
+  await pb.collection('categories').create({
+    user: currentUserId(),
+    name: 'Coifeur',
+    kind: 'variable',
+    active: true,
+    icon: '',
+    color: '',
+  })
+
+  const { screen } = await renderApp('/categories')
+
+  // The row has to be drawn before its square can be read: an ornament asked
+  // for too early is an absent element, not a wrong colour.
+  await expect.element(screen.getByRole('button', { name: 'Modifier Coifeur' })).toBeVisible()
+
+  const worn = paintIn('Coifeur')
+  expect(worn).toBe(paintOf(hueFor('Coifeur')))
+
+  await screen.getByRole('button', { name: 'Modifier Coifeur' }).click()
+  await screen.getByRole('dialog').getByLabelText('Nom').fill('Coiffeur')
+  await screen.getByRole('button', { name: 'Enregistrer les modifications' }).click()
+
+  await expect.element(screen.getByRole('button', { name: 'Désactiver Coiffeur' })).toBeVisible()
+
+  // The name derives a different hue now, so an unheld colour would be visible
+  // here as a changed square.
+  expect(paintOf(hueFor('Coiffeur'))).not.toBe(worn)
+  expect(paintIn('Coiffeur')).toBe(worn)
+})
+
+/**
+ * The way back. A hue could be chosen and, from PR 6/7, chosen again — but
+ * never un-chosen: the grid held the eight and nothing else, so the derived
+ * colour of CAT-04 became unreachable the moment anything was picked. "Aucune"
+ * is the ninth option and the checked one on creation, which also retires the
+ * grid where nothing at all was ticked — an answer nobody gave, and a radio
+ * group with no starting point for the arrow keys.
+ */
+it('gives back the derived colour when the choice is undone', async () => {
+  await createSignedInUser('appear')
+
+  await pb.collection('categories').create({
+    user: currentUserId(),
+    name: 'Coiffeur',
+    kind: 'variable',
+    active: true,
+    icon: '',
+    color: 'indigo',
+  })
+
+  const { screen } = await renderApp('/categories')
+
+  await expect.element(screen.getByRole('button', { name: 'Modifier Coiffeur' })).toBeVisible()
+  expect(paintIn('Coiffeur')).toBe(paintOf('indigo'))
+
+  await screen.getByRole('button', { name: 'Modifier Coiffeur' }).click()
+  await screen.getByRole('dialog').getByLabelText('Aucune').click()
+  await screen.getByRole('button', { name: 'Enregistrer les modifications' }).click()
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Enregistrer les modifications' }))
+    .not.toBeInTheDocument()
+
+  expect((await found('Coiffeur')).color).toBe('')
+  expect(paintIn('Coiffeur')).toBe(paintOf(hueFor('Coiffeur')))
+})

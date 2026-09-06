@@ -6,6 +6,7 @@ import { TextField } from '@/components/text-field'
 import { useAuth } from '@/auth/auth.ts'
 import { useCloseAccount, useExportData, useSaveName } from './profile-api.ts'
 import { SecuritySection } from './security-section.tsx'
+import { SECONDARY_BUTTON_CLASS } from '@/components/secondary-button.ts'
 
 /** What the `users.name` column holds; the field refuses more rather than the server. */
 const NAME_MAX_LENGTH = 255
@@ -113,7 +114,7 @@ export function ProfilePage() {
             exportData.mutate()
           }}
           disabled={exportData.isPending}
-          className="min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60"
+          className={`${SECONDARY_BUTTON_CLASS} disabled:opacity-60`}
         >
           Télécharger mes données
         </button>

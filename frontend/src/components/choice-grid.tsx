@@ -29,7 +29,7 @@ export function ChoiceGrid({
   ...radio
 }: {
   legend: string
-  hint?: string
+  hint?: string | undefined
   options: readonly { value: string; label: string; swatch: ReactNode }[]
 } & Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'aria-label'>) {
   const name = useId()

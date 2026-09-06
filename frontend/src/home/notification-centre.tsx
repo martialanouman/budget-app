@@ -91,7 +91,7 @@ export function NotificationCentre({
         {worded.map(({ notification, wording }) => (
           <li
             key={notification.id}
-            className="flex items-center gap-3 rounded-md border border-warning bg-warning-soft p-3"
+            className="flex items-center gap-3 rounded-card border border-warning bg-warning-soft p-3"
           >
             <span className="flex-1 text-sm text-warning">{wording}</span>
             {/* A check rather than the words, and the words are the accessible
@@ -103,7 +103,7 @@ export function NotificationCentre({
               type="button"
               onClick={() => onDismiss(notification.id)}
               aria-label={`Marquer comme lue : ${wording}`}
-              className="grid size-11 shrink-0 place-items-center rounded-md border border-warning outline-none focus-visible:ring-2 focus-visible:ring-warning/40"
+              className="grid size-11 shrink-0 place-items-center rounded-full border border-warning outline-none focus-visible:ring-2 focus-visible:ring-warning/40"
             >
               <Check aria-hidden="true" size={18} strokeWidth={2} className="text-warning" />
             </button>

@@ -122,11 +122,15 @@ export const ICONS = [
   '🏷️',
 ] as const
 
-/** What a category with no icon of its own shows: neutral, never a guess. */
-export const FALLBACK_ICON = '🏷️'
+export type Icon = (typeof ICONS)[number]
 
-export const iconOf = (stored: string | undefined): string =>
-  stored && (ICONS as readonly string[]).includes(stored) ? stored : FALLBACK_ICON
+/** What a category with no icon of its own shows: neutral, never a guess. */
+export const FALLBACK_ICON: Icon = '🏷️'
+
+const isIcon = (value: string): value is Icon => (ICONS as readonly string[]).includes(value)
+
+export const iconOf = (stored: string | undefined): Icon =>
+  stored && isIcon(stored) ? stored : FALLBACK_ICON
 
 /**
  * An account's icon is deduced from its type and is never chosen (CPT-02).

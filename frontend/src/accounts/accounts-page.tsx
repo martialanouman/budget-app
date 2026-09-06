@@ -1,16 +1,14 @@
-import { zodResolver } from '@hookform/resolvers/zod'
-import { formatAmount, parseAmount } from '@budget/domain'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
-import { FormError, SubmitButton } from '@/components/form-feedback'
-import { ListSkeleton } from '@/components/list-skeleton'
+import { formatAmount } from '@budget/domain'
+import { useState } from 'react'
 import { AppShell } from '@/components/app-shell'
 import { Disclosure } from '@/components/disclosure'
-import { SelectField } from '@/components/select-field'
-import { TextField } from '@/components/text-field'
-import { ChoiceGrid } from '@/components/choice-grid'
-import { ACCOUNT_TYPE_ICONS, HUES, HUE_LABELS, hueClass, hueClassOf } from '@/lib/appearance'
-import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, type Account } from '@/lib/collections'
+import { FormError } from '@/components/form-feedback'
+import { ListSkeleton } from '@/components/list-skeleton'
+import { SECONDARY_BUTTON_CLASS } from '@/components/secondary-button.ts'
+import { ACCOUNT_TYPE_ICONS, hueClassOf } from '@/lib/appearance'
+import { ACCOUNT_TYPE_LABELS, type Account } from '@/lib/collections'
+import { AccountForm } from './account-form.tsx'
+import { EditAccountSheet } from './edit-account-sheet.tsx'
 import {
   useAccountBalances,
   useAccounts,
@@ -19,60 +17,13 @@ import {
   useRestoreAccount,
 } from './accounts-api.ts'
 
-const schema = z.object({
-  // Mirrors the max: 60 on accounts.name; without it the server's rejection
-  // reaches the user as a generic failure.
-  name: z.string().min(1, 'Nom requis').max(60, '60 caractères maximum'),
-  type: z.enum(ACCOUNT_TYPES),
-  // CPT-02. The column has been on the collection since step 3 and nothing had
-  // ever written to it. Empty is the ordinary case: an account whose owner
-  // chose no colour is given one derived from its name, so a pre-selected hue
-  // would have answered for them and painted every account alike.
-  color: z.enum(HUES).or(z.literal('')),
-  // Delegated to the domain rather than re-validated here: parseAmount owns
-  // what a franc amount is, including the exactly-representable bound that a
-  // hand-rolled regex silently dropped.
-  initialBalance: z.string().transform((value, ctx) => {
-    try {
-      return parseAmount(value)
-    } catch {
-      ctx.addIssue({ code: 'custom', message: 'Montant en francs, sans décimale' })
-
-      return z.NEVER
-    }
-  }),
-})
-
-type FormInput = z.input<typeof schema>
-
 export function AccountsPage() {
   const accounts = useAccounts()
   const balances = useAccountBalances()
   const createAccount = useCreateAccount()
   const archiveAccount = useArchiveAccount()
   const restoreAccount = useRestoreAccount()
-
-  const { register, handleSubmit, reset, formState } = useForm<
-    FormInput,
-    unknown,
-    z.infer<typeof schema>
-  >({
-    resolver: zodResolver(schema),
-    defaultValues: { name: '', type: 'banque', initialBalance: '', color: '' },
-  })
-
-  const onSubmit = handleSubmit(async (values) => {
-    // react-query keeps the last result until the same mutation runs again, so
-    // a stale failure would otherwise stay on screen through a success.
-    createAccount.reset()
-
-    try {
-      await createAccount.mutateAsync(values)
-      reset()
-    } catch {
-      // Surfaced through createAccount.isError below.
-    }
-  })
+  const [editing, setEditing] = useState<Account>()
 
   const archive = (id: string) => {
     restoreAccount.reset()
@@ -99,41 +50,17 @@ export function AccountsPage() {
   return (
     <AppShell title="Comptes">
       <Disclosure summary="Ajouter un compte">
-        <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
-          {createAccount.isError ? (
-            <FormError message="La création du compte a échoué. Vérifiez votre connexion et réessayez." />
-          ) : null}
-          <TextField label="Nom" error={formState.errors.name?.message} {...register('name')} />
-          <SelectField
-            label="Type"
-            options={ACCOUNT_TYPES.map((type) => ({
-              value: type,
-              label: ACCOUNT_TYPE_LABELS[type],
-            }))}
-            error={formState.errors.type?.message}
-            {...register('type')}
-          />
-          <TextField
-            label="Solde initial"
-            inputMode="numeric"
-            error={formState.errors.initialBalance?.message}
-            {...register('initialBalance')}
-          />
-          {/* No icon picker, and that is CPT-02 to the letter: an account's
-              icon is deduced from its type. Two ways to say the same thing
-              could only disagree. */}
-          <ChoiceGrid
-            legend="Couleur"
-            hint="Sans choix, elle est dérivée du nom."
-            options={HUES.map((hue) => ({
-              value: hue,
-              label: HUE_LABELS[hue],
-              swatch: <span className={`size-6 rounded-full ${hueClass(hue)}`} />,
-            }))}
-            {...register('color')}
-          />
-          <SubmitButton pending={formState.isSubmitting}>Créer le compte</SubmitButton>
-        </form>
+        <AccountForm
+          failed={createAccount.isError}
+          onSave={(fields) => {
+            // react-query keeps the last result until the same mutation runs
+            // again, so a stale failure would otherwise stay on screen through
+            // a success.
+            createAccount.reset()
+
+            return createAccount.mutateAsync(fields)
+          }}
+        />
       </Disclosure>
 
       <section className="space-y-2">
@@ -145,12 +72,12 @@ export function AccountsPage() {
         ) : null}
         {balances.isError ? <FormError message="Les soldes n'ont pas pu être chargés." /> : null}
         {accounts.isSuccess && active.length === 0 ? <p>Aucun compte pour le moment.</p> : null}
-        <ul className="divide-y divide-line rounded-md border border-line bg-surface">
+        <ul className="divide-y divide-line rounded-card border border-line bg-surface">
           {active.map((account) => {
             const balance = balanceOf(account)
 
             return (
-              // Name alone on the first line, balance and button on the
+              // Name alone on the first line, balance and buttons on the
               // second. Measured at 390px: the type icon and the balance
               // together left "Compte courant BOA" as "Compte couran…", and a
               // truncated name tells nobody which account they are archiving.
@@ -175,18 +102,35 @@ export function AccountsPage() {
                     </span>
                   </span>
                 </div>
-                <div className="flex items-center justify-between gap-3">
+                {/* 138px of balance and 180 of buttons in 332, measured at
+                    390px — one line, with 14 to spare. The eight-figure balance
+                    a business account could carry wraps to a second line rather
+                    than truncating the amount or the buttons. */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="tabular-nums">
                     {balance === undefined ? '—' : formatAmount(balance)}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => archive(account.id)}
-                    aria-label={`Archiver ${account.name}`}
-                    className="min-h-11 shrink-0 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-                  >
-                    Archiver
-                  </button>
+                  <span className="flex flex-wrap justify-end gap-2">
+                    {/* CPT-02: the name, the type — and so the icon — and the
+                        colour, none of which could be touched after the day
+                        the account was opened. */}
+                    <button
+                      type="button"
+                      onClick={() => setEditing(account)}
+                      aria-label={`Modifier ${account.name}`}
+                      className={SECONDARY_BUTTON_CLASS}
+                    >
+                      Modifier
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => archive(account.id)}
+                      aria-label={`Archiver ${account.name}`}
+                      className={SECONDARY_BUTTON_CLASS}
+                    >
+                      Archiver
+                    </button>
+                  </span>
                 </div>
               </li>
             )
@@ -197,7 +141,11 @@ export function AccountsPage() {
       {archived.length > 0 ? (
         <section className="space-y-2">
           <h2 className="text-lg font-medium">Comptes archivés</h2>
-          <ul className="divide-y divide-line rounded-md border border-line bg-surface">
+          {/* No "Modifier" here, and the omission is the point: an archived
+              account is out of use, so restoring it is the one thing to do
+              with it. Correcting a name nobody can spend from is a button in
+              the way of the only one that matters. */}
+          <ul className="divide-y divide-line rounded-card border border-line bg-surface">
             {archived.map((account) => (
               <li key={account.id} className="flex items-center gap-3 p-3">
                 <span className="min-w-0 flex-1 truncate text-muted">{account.name}</span>
@@ -205,7 +153,7 @@ export function AccountsPage() {
                   type="button"
                   onClick={() => restore(account.id)}
                   aria-label={`Restaurer ${account.name}`}
-                  className="shrink-0 min-h-11 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className={SECONDARY_BUTTON_CLASS}
                 >
                   Restaurer
                 </button>
@@ -214,6 +162,8 @@ export function AccountsPage() {
           </ul>
         </section>
       ) : null}
+
+      <EditAccountSheet account={editing} onClose={() => setEditing(undefined)} />
     </AppShell>
   )
 }

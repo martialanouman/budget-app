@@ -20,6 +20,7 @@ import {
   useRemoveCap,
   useSetCap,
 } from './budgets-api.ts'
+import { SECONDARY_BUTTON_CLASS } from '@/components/secondary-button.ts'
 
 function Envelope({
   budget,
@@ -57,7 +58,7 @@ function Envelope({
           type="button"
           onClick={onRemove}
           aria-label={`Supprimer l’enveloppe ${budget.expand?.category?.name ?? ''}`}
-          className="min-h-11 shrink-0 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className={SECONDARY_BUTTON_CLASS}
         >
           Supprimer
         </button>
@@ -137,7 +138,7 @@ export function BudgetsPage() {
         <p>Chargement…</p>
       )}
 
-      <section className="rounded-md border border-line bg-surface p-3">
+      <section className="rounded-card border border-line bg-surface p-3">
         <h2 className="text-lg font-medium">Reste à vivre</h2>
         <p className="text-2xl tabular-nums">{formatAmount(remaining)}</p>
         <p className="text-sm text-muted">
@@ -171,7 +172,7 @@ export function BudgetsPage() {
             // screen; two words on it, because the full phrase and the heading
             // both wrapped onto two lines side by side on a phone.
             aria-label="Dupliquer le mois précédent"
-            className="min-h-11 shrink-0 rounded-md border border-line-strong px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60"
+            className={`${SECONDARY_BUTTON_CLASS} disabled:opacity-60`}
           >
             Dupliquer
           </button>
@@ -183,7 +184,7 @@ export function BudgetsPage() {
           <p>Aucune enveloppe pour ce mois.</p>
         ) : null}
 
-        <ul className="divide-y divide-line rounded-md border border-line bg-surface">
+        <ul className="divide-y divide-line rounded-card border border-line bg-surface">
           {(budgets.data ?? []).map((budget) => (
             <Envelope
               key={budget.id}

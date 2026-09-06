@@ -57,8 +57,8 @@ const Figure = ({
       aria-labelledby={labelId}
       className={
         primary
-          ? 'rounded-lg border-2 border-accent bg-surface p-4'
-          : 'rounded-md border border-line bg-surface p-3'
+          ? 'rounded-card border-2 border-accent bg-surface p-4'
+          : 'rounded-card border border-line bg-surface p-3'
       }
     >
       <h2 id={labelId} className="text-sm font-medium text-muted">
@@ -218,7 +218,7 @@ export function HomePage() {
 
         {debts.isSuccess && dues.length === 0 ? <p>Aucune échéance à venir.</p> : null}
 
-        <ul className="divide-y divide-line rounded-md border border-line bg-surface">
+        <ul className="divide-y divide-line rounded-card border border-line bg-surface">
           {dues.map(({ debt, date, inDays }) => (
             <li key={debt.id} className="flex items-center justify-between gap-3 p-3">
               <span>

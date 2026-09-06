@@ -2,10 +2,21 @@ import { useQuery } from '@tanstack/react-query'
 import { type EntryStreak } from '@/lib/collections'
 import { pb } from '@/lib/pocketbase'
 
+/**
+ * The one row the view holds for this user, or null when there is none.
+ *
+ * Null and not `undefined`: a query function that returns `undefined` is
+ * refused by TanStack Query, which logs "Query data cannot be undefined" and
+ * leaves the query in error. It has been doing so on every screen that mounts
+ * the dashboard since PR 5/7 — harmless to the reader, since the card already
+ * treats no run as no run, but it filled the journey output with an error that
+ * would have hidden a real one.
+ */
 export function useEntryStreak() {
   return useQuery({
     queryKey: ['entry-streak'],
-    queryFn: async () => (await pb.collection('entry_streaks').getFullList<EntryStreak>())[0],
+    queryFn: async () =>
+      (await pb.collection('entry_streaks').getFullList<EntryStreak>())[0] ?? null,
   })
 }
 
@@ -55,7 +66,7 @@ function dayBefore(date: string) {
  * has typed anything yet, and answering "aucune série" would punish opening the
  * app early — the screen owes the nudge instead, since today is what keeps it.
  */
-export function runToday(streak: EntryStreak | undefined, today: string) {
+export function runToday(streak: EntryStreak | null | undefined, today: string) {
   if (!streak || streak.days <= 0) return undefined
 
   const last = streak.last_day.slice(0, 10)
