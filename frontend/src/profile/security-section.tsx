@@ -18,6 +18,7 @@ import {
   useAuth,
 } from '@/auth/auth.ts'
 import { SECONDARY_BUTTON_CLASS } from '@/components/secondary-button.ts'
+import { SettingsSection } from './settings-section.tsx'
 
 /**
  * The three things one does to one's own credentials, each in its own form so
@@ -70,8 +71,7 @@ function PasswordForm() {
   })
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-lg font-medium">Mot de passe</h2>
+    <SettingsSection title="Mot de passe">
       <form onSubmit={(event) => void onSubmit(event)} className="space-y-3" noValidate>
         <FormError message={serverError} />
         {done ? (
@@ -102,7 +102,7 @@ function PasswordForm() {
         />
         <SubmitButton pending={formState.isSubmitting}>Changer mon mot de passe</SubmitButton>
       </form>
-    </section>
+    </SettingsSection>
   )
 }
 
@@ -127,8 +127,7 @@ function EmailForm() {
   })
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-lg font-medium">Adresse e-mail</h2>
+    <SettingsSection title="Adresse e-mail">
       <p className="text-sm text-muted">
         Votre adresse actuelle est {email}. La nouvelle ne prendra effet qu’une fois le lien de
         confirmation ouvert depuis celle-ci.
@@ -154,7 +153,7 @@ function EmailForm() {
           Envoyer le lien de confirmation
         </SubmitButton>
       </form>
-    </section>
+    </SettingsSection>
   )
 }
 
@@ -186,8 +185,7 @@ function SecondFactorToggle() {
   }
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-lg font-medium">Double authentification</h2>
+    <SettingsSection title="Double authentification">
       <p className="text-sm text-muted">
         {mfaEnabled
           ? 'À chaque connexion, un code vous est envoyé par e-mail en plus du mot de passe.'
@@ -232,6 +230,6 @@ function SecondFactorToggle() {
           Activer la double authentification
         </button>
       )}
-    </section>
+    </SettingsSection>
   )
 }
