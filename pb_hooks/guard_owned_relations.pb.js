@@ -46,6 +46,30 @@ function assertOwnedCategory(e) {
 onRecordCreate(assertOwnedCategory, 'budgets')
 onRecordUpdate(assertOwnedCategory, 'budgets')
 
+// A category may be filed under another of the owner's categories, and the same
+// hole applies: measured accepted on 06/09/2026, storing the foreign id. It is
+// the row's owner who loses by it — the screen draws the roots and then each
+// root's children, so a category filed under a stranger is neither, and it
+// takes its history off the screen for good. Nothing wrote `parent` after
+// creation until the correction sheet of PR 6/7, which is what finally reached
+// this path.
+function assertOwnedParent(e) {
+  const parentId = e.record.get('parent')
+
+  if (parentId) {
+    const parent = e.app.findRecordById('categories', parentId)
+
+    if (parent.get('user') !== e.record.get('user')) {
+      throw new BadRequestError('The parent category must belong to the same owner.')
+    }
+  }
+
+  e.next()
+}
+
+onRecordCreate(assertOwnedParent, 'categories')
+onRecordUpdate(assertOwnedParent, 'categories')
+
 function assertOwnedDebt(e) {
   const debt = e.app.findRecordById('debts', e.record.get('debt'))
 

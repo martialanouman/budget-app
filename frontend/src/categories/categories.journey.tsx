@@ -204,3 +204,39 @@ it('counts a sub-category as something that holds its parent', async () => {
   // The child itself is held by nothing.
   await expect.element(screen.getByRole('button', { name: 'Supprimer Concert' })).toBeVisible()
 })
+
+/**
+ * PocketBase evaluates `parent.user = @request.auth.id` when a category is
+ * created and not when it is updated — the same hole measured on transactions
+ * at step 4 and on envelopes at step 5, and the reason
+ * `pb_hooks/guard_owned_relations.pb.js` exists. Categories were the third
+ * collection to hold a relation to another of the owner's records and the only
+ * one missing from that file; nothing had ever written `parent` after creation,
+ * so nothing had ever reached it.
+ *
+ * Measured before the guard: the PATCH was accepted and the foreign id stored.
+ * The row then disappeared from its own owner's screen, which draws the roots
+ * and then each root's children — a category filed under a stranger is neither,
+ * and it takes its history out of reach.
+ */
+it('refuses to file a category under a stranger’s', async () => {
+  await createSignedInUser('cats')
+  const foreign = await pb.collection('categories').create<Category>({
+    user: currentUserId(),
+    name: 'Catégorie d’autrui',
+    kind: 'variable',
+    active: true,
+    parent: '',
+    icon: '',
+    color: '',
+  })
+
+  await createSignedInUser('other')
+  const mine = (await listCategories())[0]!
+
+  await expect(
+    pb.collection('categories').update(mine.id, { parent: foreign.id }),
+  ).rejects.toThrow()
+
+  expect((await pb.collection('categories').getOne<Category>(mine.id)).parent).toBe('')
+})
