@@ -2,10 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { ChoiceGrid } from '@/components/choice-grid'
+import { HueGrid } from '@/components/hue-grid'
 import { FormError, SubmitButton } from '@/components/form-feedback'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
-import { FALLBACK_ICON, HUES, HUE_LABELS, ICONS, hueClass, hueOf, iconOf } from '@/lib/appearance'
+import { FALLBACK_ICON, HUES, ICONS, hueOf, iconOf } from '@/lib/appearance'
 import {
   CATEGORY_KINDS,
   CATEGORY_KIND_LABELS,
@@ -35,13 +36,14 @@ export type CategoryFields = z.infer<typeof schema>
  * ornament to drift — the same reason the entry form is shared between typing
  * an expense and correcting one.
  *
- * The appearance grids behave differently in the two cases, and deliberately.
- * Creating, nothing is pre-selected: a pre-checked hue is an answer nobody gave
- * and it painted every new category alike. Editing, they open on what the row
- * is actually wearing — derived from the name when nothing was ever stored.
- * A grid with nothing checked beside a row that visibly has a colour reads as a
- * defect, and it hid a real one: since the hue is derived from the name, a
- * correction to the spelling repainted the row on the way past.
+ * The appearance grids open differently in the two cases, and deliberately.
+ * Creating, the colour rests on "Aucune" and no icon is ticked: what must never
+ * be pre-selected is a *hue*, which would paint every new category alike.
+ * Correcting, both open on what the row is actually wearing — derived from the
+ * name when nothing was ever stored. A grid with nothing checked beside a row
+ * that visibly has a colour reads as a defect, and it hid a real one: since the
+ * hue is derived from the name, a correction to the spelling repainted the row
+ * on the way past.
  */
 export function CategoryForm({
   category,
@@ -126,16 +128,7 @@ export function CategoryForm({
         }))}
         {...register('icon')}
       />
-      <ChoiceGrid
-        legend="Couleur"
-        hint={correcting ? undefined : 'Sans choix, elle est dérivée du nom.'}
-        options={HUES.map((hue) => ({
-          value: hue,
-          label: HUE_LABELS[hue],
-          swatch: <span className={`size-6 rounded-full ${hueClass(hue)}`} />,
-        }))}
-        {...register('color')}
-      />
+      <HueGrid {...register('color')} />
       <SubmitButton pending={formState.isSubmitting}>
         {correcting ? 'Enregistrer les modifications' : 'Créer la catégorie'}
       </SubmitButton>

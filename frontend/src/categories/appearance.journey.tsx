@@ -277,3 +277,40 @@ it('keeps the colour a row already wore when it is renamed', async () => {
   expect(paintOf(hueFor('Coiffeur'))).not.toBe(worn)
   expect(paintIn('Coiffeur')).toBe(worn)
 })
+
+/**
+ * The way back. A hue could be chosen and, from PR 6/7, chosen again — but
+ * never un-chosen: the grid held the eight and nothing else, so the derived
+ * colour of CAT-04 became unreachable the moment anything was picked. "Aucune"
+ * is the ninth option and the checked one on creation, which also retires the
+ * grid where nothing at all was ticked — an answer nobody gave, and a radio
+ * group with no starting point for the arrow keys.
+ */
+it('gives back the derived colour when the choice is undone', async () => {
+  await createSignedInUser('appear')
+
+  await pb.collection('categories').create({
+    user: currentUserId(),
+    name: 'Coiffeur',
+    kind: 'variable',
+    active: true,
+    icon: '',
+    color: 'indigo',
+  })
+
+  const { screen } = await renderApp('/categories')
+
+  await expect.element(screen.getByRole('button', { name: 'Modifier Coiffeur' })).toBeVisible()
+  expect(paintIn('Coiffeur')).toBe(paintOf('indigo'))
+
+  await screen.getByRole('button', { name: 'Modifier Coiffeur' }).click()
+  await screen.getByRole('dialog').getByLabelText('Aucune').click()
+  await screen.getByRole('button', { name: 'Enregistrer les modifications' }).click()
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Enregistrer les modifications' }))
+    .not.toBeInTheDocument()
+
+  expect((await found('Coiffeur')).color).toBe('')
+  expect(paintIn('Coiffeur')).toBe(paintOf(hueFor('Coiffeur')))
+})

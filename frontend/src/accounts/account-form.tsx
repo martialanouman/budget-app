@@ -2,11 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { parseAmount } from '@budget/domain'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { ChoiceGrid } from '@/components/choice-grid'
+import { HueGrid } from '@/components/hue-grid'
 import { FormError, SubmitButton } from '@/components/form-feedback'
 import { SelectField } from '@/components/select-field'
 import { TextField } from '@/components/text-field'
-import { HUES, HUE_LABELS, hueClass, hueOf } from '@/lib/appearance'
+import { HUES, hueOf } from '@/lib/appearance'
 import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, type Account } from '@/lib/collections'
 
 const schema = z.object({
@@ -50,7 +50,7 @@ export type AccountFields = z.infer<typeof schema>
  * account and its history. Nothing is rewritten by the change — every balance
  * in this application is summed from the entries at read time.
  *
- * The colour grid opens on nothing when creating and on the hue the row wears
+ * The colour grid rests on "Aucune" when creating and on the hue the row wears
  * when correcting. Pre-selecting a hue on creation is an answer nobody gave;
  * leaving the grid blank on a correction hides that the hue is derived from the
  * name, so correcting a spelling repainted the row on the way past.
@@ -121,16 +121,7 @@ export function AccountForm({
         error={formState.errors.initialBalance?.message}
         {...register('initialBalance')}
       />
-      <ChoiceGrid
-        legend="Couleur"
-        hint={correcting ? undefined : 'Sans choix, elle est dérivée du nom.'}
-        options={HUES.map((hue) => ({
-          value: hue,
-          label: HUE_LABELS[hue],
-          swatch: <span className={`size-6 rounded-full ${hueClass(hue)}`} />,
-        }))}
-        {...register('color')}
-      />
+      <HueGrid {...register('color')} />
       <SubmitButton pending={formState.isSubmitting}>
         {correcting ? 'Enregistrer les modifications' : 'Créer le compte'}
       </SubmitButton>
